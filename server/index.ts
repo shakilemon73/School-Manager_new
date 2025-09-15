@@ -409,8 +409,13 @@ app.use((req, res, next) => {
 
   // Use environment port for production deployment or default to 5000
   const port = process.env.PORT || 5000;
+  
+  // Export serverless handler for Vercel
+  const handler = serverless(app);
+  
   if (app.get("env") !== "development") {
-    module.exports.handler = serverless(app);
+    // For serverless environments (Vercel, Netlify, etc.)
+    console.log("✅ Serverless handler configured for production deployment");
   } else {
     server.listen({
       port,
@@ -420,4 +425,7 @@ app.use((req, res, next) => {
       log(`serving on port ${port}`);
     });
   }
+  
+  // Export the handler for serverless platforms
+  return { app, handler };
 })();
