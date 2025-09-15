@@ -28,11 +28,14 @@ const client = postgres(databaseUrl, {
   fetch_types: false,
   publications: 'supabase_realtime',
   
-  // Connection optimization
-  ssl: 'require',
-  max: 5,
+  // Connection optimization for serverless/pooled connections
+  ssl: process.env.NODE_ENV === 'production' 
+    ? { rejectUnauthorized: true } 
+    : (process.env.ALLOW_INSECURE_DEV_SSL === 'true' ? { rejectUnauthorized: false } : 'require'),
+  max: Number(process.env.PG_MAX || 3),
   idle_timeout: 20,
   connect_timeout: 10,
+  keep_alive: 1,
   
   // Suppress verbose output that can trigger control plane calls
   debug: false,
