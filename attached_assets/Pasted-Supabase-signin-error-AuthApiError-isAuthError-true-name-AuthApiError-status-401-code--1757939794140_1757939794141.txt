@@ -1,0 +1,33 @@
+Supabase signin error: 
+AuthApiError {__isAuthError: true, name: "AuthApiError", status: 401, code: undefined}
+
+at t.value (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Login error: 
+AuthApiError {__isAuthError: true, name: "AuthApiError", status: 401, code: undefined}
+
+Supabase signin error: 
+AuthApiError {__isAuthError: true, name: "AuthApiError", status: 401, code: undefined}
+
+at t.value (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Login error: 
+AuthApiError {__isAuthError: true, name: "AuthApiError", status: 401, code: undefined}
+code: undefined
+name: "AuthApiError"
+status: 401
+__isAuthError: true
+message: "Invalid API key"
+stack: "AuthApiError: Invalid API key↵ at handleError2 (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@supabase_supabase-js.js?v=fef46267:4524:9)↵ at async _handleRequest2 (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@supabase_supabase-js.js?v=fef46267:4565:5)↵ at async _request (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@supabase_supabase-js.js?v=fef46267:4549:16)↵ at async SupabaseAuthClient.signInWithPassword (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@supabase_supabase-js.js?v=fef46267:5302:15)↵ at async signIn (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/src/hooks/use-supabase-auth.tsx:123:31)↵ at async onLoginSubmit (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/src/pages/auth-page.tsx:96:7)↵ at async https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YGCRICWC.js?v=fef46267:1465:9"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+at t.value (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://afafa71a-dad0-487a-a04b-6e1ccdc98196-00-oecvelnlvd4g.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
