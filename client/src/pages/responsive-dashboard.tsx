@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
 import { ResponsivePageLayout } from '@/components/layout/responsive-page-layout';
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useMobile } from '@/hooks/use-mobile';
 import { 
   Card, 
@@ -81,7 +81,7 @@ interface CalendarEvent {
 }
 
 export default function ResponsiveDashboard() {
-  const { user } = useSupabaseAuth();
+  const { user } = useSupabaseDirectAuth();
   const { toast } = useToast();
   const isMobile = useMobile();
   const [currentTime, setCurrentTime] = useState(new Date());

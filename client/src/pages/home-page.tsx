@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { AppShell } from '@/components/layout/app-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLocation } from 'wouter';
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user } = useSupabaseDirectAuth();
   const [_, setLocation] = useLocation();
 
   // This will navigate to fee receipts which is our main demo page

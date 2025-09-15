@@ -107,8 +107,7 @@ import DiagnosticPage from "@/pages/diagnostic";
 
 import { ProtectedRoute } from "@/lib/protected-route";
 
-import { SupabaseAuthProvider } from "@/hooks/use-supabase-auth";
-import { AuthProvider } from "@/hooks/use-auth";
+import { SupabaseAuthProvider } from "@/hooks/use-supabase-direct-auth";
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 import { useMobile } from '@/hooks/use-mobile';
 import { UXProvider } from "@/components/ux-system";
@@ -306,16 +305,14 @@ function App() {
           <LoadingProvider>
             <LanguageProvider>
               <SupabaseAuthProvider>
-                <AuthProvider>
-                  <ProductionDataProvider>
-                    <UXProvider>
-                      <ErrorBoundary fallback={<div className="p-4 text-center">Navigation error occurred</div>}>
-                        <AppRoutes />
-                      </ErrorBoundary>
-                      <Toaster />
-                    </UXProvider>
-                  </ProductionDataProvider>
-                </AuthProvider>
+                <ProductionDataProvider>
+                  <UXProvider>
+                    <ErrorBoundary fallback={<div className="p-4 text-center">Navigation error occurred</div>}>
+                      <AppRoutes />
+                    </ErrorBoundary>
+                    <Toaster />
+                  </UXProvider>
+                </ProductionDataProvider>
               </SupabaseAuthProvider>
             </LanguageProvider>
           </LoadingProvider>

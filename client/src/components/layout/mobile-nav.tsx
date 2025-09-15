@@ -25,7 +25,7 @@ import {
   X,
   ChevronRight
 } from 'lucide-react';
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 
 interface NavGroup {
   id: string;
@@ -48,7 +48,7 @@ interface NavGroup {
 export function MobileNav() {
   const [location] = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user } = useSupabaseAuth();
+  const { user } = useSupabaseDirectAuth();
 
   const isActive = (path: string) => {
     if (path === '/' && location === '/') return true;

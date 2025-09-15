@@ -1,4 +1,4 @@
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
 
@@ -9,7 +9,7 @@ export function ProtectedRoute({
   path: string;
   component: React.ComponentType<any>;
 }) {
-  const { user, loading } = useSupabaseAuth();
+  const { user, loading } = useSupabaseDirectAuth();
 
   return (
     <Route path={path}>

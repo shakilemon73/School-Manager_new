@@ -91,11 +91,11 @@ export const db = {
   // Dashboard Stats
   async getDashboardStats(schoolId: number = 1) {
     const [studentsCount, teachersCount, booksCount, inventoryCount, notificationsCount] = await Promise.all([
-      supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
-      supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId), 
-      supabase.from('library_books').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
-      supabase.from('inventory_items').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
-      supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('is_read', false)
+      supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+      supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), 
+      supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+      supabase.from('inventory_items').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+      supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('is_read', false)
     ]);
 
     return {
@@ -114,7 +114,7 @@ export const db = {
   async getStudents(schoolId: number = 1) {
     const { data, error } = await supabase
       .from('students')
-      .select('*')
+      .select('id, name, name_in_bangla, student_id, class, section, roll_number, date_of_birth, gender, blood_group, father_name, mother_name, guardian_name, guardian_phone, present_address, phone, email, school_id, status, created_at')
       .eq('school_id', schoolId)
       .order('created_at', { ascending: false });
     
@@ -125,7 +125,7 @@ export const db = {
   async getStudentById(id: number) {
     const { data, error } = await supabase
       .from('students')
-      .select('*')
+      .select('id, name, name_in_bangla, student_id, class, section, roll_number, date_of_birth, gender, blood_group, father_name, mother_name, guardian_name, guardian_phone, present_address, phone, email, school_id, status, created_at')
       .eq('id', id)
       .single();
     
@@ -170,7 +170,7 @@ export const db = {
   async getTeachers(schoolId: number = 1) {
     const { data, error } = await supabase
       .from('teachers')
-      .select('*')
+      .select('id, teacher_id, name, qualification, subject, date_of_birth, gender, address, phone, email, school_id, status, created_at')
       .eq('school_id', schoolId)
       .order('created_at', { ascending: false });
     
@@ -181,7 +181,7 @@ export const db = {
   async getTeacherById(id: number) {
     const { data, error } = await supabase
       .from('teachers')
-      .select('*')
+      .select('id, teacher_id, name, qualification, subject, date_of_birth, gender, address, phone, email, school_id, status, created_at')
       .eq('id', id)
       .single();
     
@@ -226,7 +226,7 @@ export const db = {
   async getLibraryBooks(schoolId: number = 1) {
     const { data, error } = await supabase
       .from('library_books')
-      .select('*')
+      .select('id, title, title_bn, author, isbn, category, publisher, publish_year, total_copies, available_copies, location, description, school_id, created_at')
       .eq('school_id', schoolId)
       .order('created_at', { ascending: false });
     
@@ -261,7 +261,7 @@ export const db = {
   async getInventoryItems(schoolId: number = 1) {
     const { data, error } = await supabase
       .from('inventory_items')
-      .select('*')
+      .select('id, name, name_bn, category, subcategory, brand, model, serial_number, unit_price, current_quantity, minimum_threshold, unit, supplier, location, condition, description, school_id, created_at, updated_at')
       .eq('school_id', schoolId)
       .order('created_at', { ascending: false });
     
@@ -284,7 +284,7 @@ export const db = {
   async getCalendarEvents(schoolId: number = 1) {
     const { data, error } = await supabase
       .from('calendar_events')
-      .select('*')
+      .select('id, title, title_bn, description, description_bn, start_date, end_date, start_time, end_time, type, is_active, is_public, location, organizer, school_id, created_at')
       .eq('school_id', schoolId)
       .eq('is_active', true)
       .order('start_date', { ascending: true });
@@ -308,7 +308,7 @@ export const db = {
   async getNotifications(schoolId: number = 1, userId?: number) {
     let query = supabase
       .from('notifications')
-      .select('*')
+      .select('id, title, title_bn, message, message_bn, type, priority, category, category_bn, recipient_id, recipient_type, sender, is_read, is_live, is_active, is_public, action_required, read_at, school_id, created_at')
       .eq('school_id', schoolId)
       .eq('is_active', true)
       .order('created_at', { ascending: false });
@@ -339,8 +339,7 @@ export const db = {
   async getDocumentTemplates(schoolId: number = 1) {
     const { data, error } = await supabase
       .from('document_templates')
-      .select('*')
-      .eq('school_id', schoolId)
+      .select('id, name, name_bn, category, type, description, description_bn, is_active, credit_cost, popularity_score, usage_count, created_at, required_credits')
       .eq('is_active', true)
       .order('created_at', { ascending: false });
     

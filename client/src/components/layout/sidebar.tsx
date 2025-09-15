@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { LanguageText } from '@/components/ui/language-text';
 import { useUXNav } from '@/hooks/use-design-system';
 import { 
@@ -35,7 +35,7 @@ import {
 
 export function Sidebar() {
   const [location] = useLocation();
-  const { user } = useSupabaseAuth();
+  const { user } = useSupabaseDirectAuth();
   const navRef = useUXNav();
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['dashboard', 'people']));
   const [searchTerm, setSearchTerm] = useState('');

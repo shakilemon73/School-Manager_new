@@ -1,4 +1,4 @@
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { LanguageSelector } from './language-selector';
 import Logo from '@/components/ui/logo';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export function Header() {
-  const { user, signOut, loading } = useSupabaseAuth();
+  const { user, signOut, loading } = useSupabaseDirectAuth();
   const isMobile = useMobile();
 
   const handleLogout = async () => {

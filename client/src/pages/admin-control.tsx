@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { 
   Users, 
   School, 
@@ -63,7 +63,7 @@ import {
 
 export default function AdminControlPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user } = useSupabaseDirectAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
