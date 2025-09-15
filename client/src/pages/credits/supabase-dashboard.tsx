@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useMobile } from "@/hooks/use-mobile";
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Wallet, 
@@ -67,7 +67,7 @@ interface DocumentCost {
 export default function SupabaseDashboard() {
   const [_, setLocation] = useLocation();
   const isMobile = useMobile();
-  const { user: supabaseUser, loading: authLoading } = useSupabaseAuth();
+  const { user: supabaseUser, loading: authLoading } = useSupabaseDirectAuth();
   const user = supabaseUser;
   const queryClient = useQueryClient();
   

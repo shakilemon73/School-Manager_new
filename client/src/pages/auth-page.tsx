@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import {
@@ -54,7 +54,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
-  const { user: supabaseUser, loading: supabaseLoading, signIn, signUp } = useSupabaseAuth();
+  const { user: supabaseUser, loading: supabaseLoading, signIn, signUp } = useSupabaseDirectAuth();
   const [_, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();

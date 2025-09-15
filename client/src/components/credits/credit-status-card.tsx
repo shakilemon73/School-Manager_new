@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { Wallet, AlertCircle, TrendingUp, Gift } from "lucide-react";
 
 interface CreditStatusCardProps {
@@ -14,7 +14,7 @@ interface CreditStatusCardProps {
 
 export function CreditStatusCard({ className }: CreditStatusCardProps) {
   const [_, setLocation] = useLocation();
-  const { user } = useSupabaseAuth();
+  const { user } = useSupabaseDirectAuth();
   
   // Fetch credit balance directly from working endpoint
   const { data: userCreditBalance } = useQuery({

@@ -33,7 +33,7 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useToast } from '@/hooks/use-toast';
 
 // Form validation schemas
@@ -65,7 +65,7 @@ export default function UnifiedAuthPage() {
   const { toast } = useToast();
   
   // Supabase auth
-  const { user: supabaseUser, loading: supabaseLoading, signIn, signUp } = useSupabaseAuth();
+  const { user: supabaseUser, loading: supabaseLoading, signIn, signUp } = useSupabaseDirectAuth();
   
   // Traditional auth
   const { user: traditionalUser, loginMutation, registerMutation } = useAuth();

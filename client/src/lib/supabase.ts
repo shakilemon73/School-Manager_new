@@ -86,6 +86,71 @@ export const auth = {
   }
 };
 
+// Student field mapping utilities to handle camelCase (UI) to snake_case (DB) conversion
+const studentFieldMapping = {
+  // UI camelCase -> DB snake_case
+  studentId: 'student_id',
+  rollNumber: 'roll_number', 
+  presentAddress: 'present_address',
+  nameInBangla: 'name_in_bangla',
+  dateOfBirth: 'date_of_birth',
+  guardianName: 'guardian_name',
+  guardianPhone: 'guardian_phone',
+  bloodGroup: 'blood_group',
+  fatherName: 'father_name',
+  motherName: 'mother_name',
+  fatherNameInBangla: 'father_name_in_bangla',
+  motherNameInBangla: 'mother_name_in_bangla',
+  permanentAddress: 'permanent_address',
+  emergencyContactName: 'emergency_contact_name',
+  emergencyContactRelation: 'emergency_contact_relation',
+  emergencyContactPhone: 'emergency_contact_phone',
+  guardianRelation: 'guardian_relation',
+  postOffice: 'post_office',
+  schoolId: 'school_id',
+  idCardIssueDate: 'id_card_issue_date',
+  idCardValidUntil: 'id_card_valid_until',
+  createdAt: 'created_at',
+};
+
+// Convert camelCase student object to snake_case for database
+function toDbStudent(camelCaseStudent: any): any {
+  if (!camelCaseStudent) return null;
+  
+  const dbStudent: any = {};
+  
+  // Map camelCase fields to snake_case
+  Object.entries(camelCaseStudent).forEach(([camelKey, value]) => {
+    const dbKey = studentFieldMapping[camelKey as keyof typeof studentFieldMapping] || camelKey;
+    if (value !== undefined && value !== '') {
+      dbStudent[dbKey] = value;
+    }
+  });
+  
+  return dbStudent;
+}
+
+// Convert snake_case student object from database to camelCase for UI
+function fromDbStudent(dbStudent: any): any {
+  if (!dbStudent) return null;
+  
+  const camelStudent: any = {};
+  
+  // Create reverse mapping
+  const reverseMapping: { [key: string]: string } = {};
+  Object.entries(studentFieldMapping).forEach(([camelKey, dbKey]) => {
+    reverseMapping[dbKey] = camelKey;
+  });
+  
+  // Map snake_case fields to camelCase
+  Object.entries(dbStudent).forEach(([dbKey, value]) => {
+    const camelKey = reverseMapping[dbKey] || dbKey;
+    camelStudent[camelKey] = value;
+  });
+  
+  return camelStudent;
+}
+
 // Direct Database Query Functions (replacing Express API calls)
 export const db = {
   // Dashboard Stats
@@ -119,7 +184,9 @@ export const db = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+    
+    // Convert snake_case fields to camelCase for UI
+    return data ? data.map(student => fromDbStudent(student)) : [];
   },
 
   async getStudentById(id: number) {
@@ -130,30 +197,42 @@ export const db = {
       .single();
     
     if (error) throw error;
-    return data;
+    
+    // Convert snake_case fields to camelCase for UI
+    return data ? fromDbStudent(data) : null;
   },
 
-  async createStudent(student: Database['public']['Tables']['students']['Insert']) {
+  async createStudent(camelCaseStudent: any) {
+    // Convert camelCase fields to snake_case for database
+    const dbStudent = toDbStudent(camelCaseStudent);
+    
     const { data, error } = await supabase
       .from('students')
-      .insert(student)
+      .insert(dbStudent)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    
+    // Convert result back to camelCase for UI
+    return data ? fromDbStudent(data) : null;
   },
 
-  async updateStudent(id: number, updates: Database['public']['Tables']['students']['Update']) {
+  async updateStudent(id: number, camelCaseUpdates: any) {
+    // Convert camelCase fields to snake_case for database
+    const dbUpdates = toDbStudent(camelCaseUpdates);
+    
     const { data, error } = await supabase
       .from('students')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    
+    // Convert result back to camelCase for UI
+    return data ? fromDbStudent(data) : null;
   },
 
   async deleteStudent(id: number) {

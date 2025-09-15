@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { AppShell } from "@/components/layout/app-shell";
 import { ResponsivePageLayout } from "@/components/layout/responsive-page-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,7 +65,7 @@ interface NotificationSettings {
 }
 
 export default function LiveNotifications() {
-  const { user } = useSupabaseAuth();
+  const { user } = useSupabaseDirectAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("live");

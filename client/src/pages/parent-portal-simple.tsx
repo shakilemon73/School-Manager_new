@@ -1,4 +1,4 @@
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,7 @@ interface NotificationData {
 }
 
 export default function ParentPortalSimple() {
-  const { user } = useSupabaseAuth();
+  const { user } = useSupabaseDirectAuth();
 
   // Mock data for demonstration
   const children: StudentData[] = [

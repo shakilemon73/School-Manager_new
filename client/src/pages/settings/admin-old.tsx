@@ -37,7 +37,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import {
@@ -213,7 +213,7 @@ const pricingPlanSchema = z.object({
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
-  const { user } = useSupabaseAuth();
+  const { user } = useSupabaseDirectAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("profile");
   const [isLoading, setIsLoading] = useState(false);

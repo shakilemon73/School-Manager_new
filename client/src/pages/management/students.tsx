@@ -90,7 +90,7 @@ export default function StudentsPage() {
   const createStudent = useMutation({
     mutationFn: async (studentData: any) => {
       console.log('🔄 Creating student in Supabase...', studentData);
-      const studentWithSchool = { ...studentData, school_id: 1 };
+      const studentWithSchool = { ...studentData, schoolId: 1 };
       const newStudent = await db.createStudent(studentWithSchool);
       console.log('✅ Student created in Supabase:', newStudent);
       return newStudent;

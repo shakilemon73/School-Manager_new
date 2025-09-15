@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ interface FeeItem {
 }
 
 export default function PaymentGateway() {
-  const { user } = useSupabaseAuth();
+  const { user } = useSupabaseDirectAuth();
   const [selectedMethod, setSelectedMethod] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");

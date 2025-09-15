@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { BnText } from '@/components/ui/bn-text';
 import { Button } from '@/components/ui/button';
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
 
@@ -142,7 +142,7 @@ function UpcomingEvent({ title, date, type }: UpcomingEventProps) {
 }
 
 export default function MobileDashboard() {
-  const { user } = useSupabaseAuth();
+  const { user } = useSupabaseDirectAuth();
 
   const [activeTab, setActiveTab] = useState("overview");
 

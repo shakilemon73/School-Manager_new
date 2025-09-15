@@ -1,9 +1,9 @@
 import React from 'react';
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useQuery } from '@tanstack/react-query';
 
 export default function DiagnosticPage() {
-  const { user, loading: authLoading } = useSupabaseAuth();
+  const { user, loading: authLoading } = useSupabaseDirectAuth();
   
   const { data: dashboardStats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['/api/dashboard/stats?schoolId=1'],
