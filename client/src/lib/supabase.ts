@@ -313,6 +313,23 @@ export const db = {
     return true;
   },
 
+  async getTeacherStats(schoolId: number) {
+    if (!schoolId) {
+      throw new Error('School ID is required to get teacher stats');
+    }
+    const [totalTeachers, activeTeachers, inactiveTeachers] = await Promise.all([
+      supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+      supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
+      supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'inactive')
+    ]);
+
+    return {
+      total_teachers: totalTeachers.count || 0,
+      active_teachers: activeTeachers.count || 0,
+      inactive_teachers: inactiveTeachers.count || 0
+    };
+  },
+
   // Library Books
   async getLibraryBooks(schoolId: number) {
     if (!schoolId) {

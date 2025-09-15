@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { db } from '@/lib/supabase';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -93,28 +93,42 @@ export default function TeachersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<any>(null);
 
-  // Fetch teachers from database
+  // Fetch teachers directly from Supabase
   const { data: teachersData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/teachers'],
-    staleTime: 0,
-    gcTime: 0,
+    queryKey: ['teachers', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching teachers directly from Supabase...');
+      const teachers = await db.getTeachers(1);
+      console.log('✅ Teachers from Supabase:', teachers?.length || 0);
+      return teachers || [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Fetch teacher stats
+  // Fetch teacher stats directly from Supabase
   const { data: stats } = useQuery({
-    queryKey: ['/api/teachers/stats'],
+    queryKey: ['teacher-stats', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching teacher stats directly from Supabase...');
+      const stats = await db.getTeacherStats(1);
+      console.log('✅ Teacher stats from Supabase:', stats);
+      return stats || { total_teachers: 0, active_teachers: 0, inactive_teachers: 0 };
+    },
   });
 
-  // Create teacher mutation
+  // Create teacher mutation with direct Supabase
   const createTeacher = useMutation({
-    mutationFn: (teacherData: any) => 
-      apiRequest('/api/teachers', {
-        method: 'POST',
-        body: JSON.stringify(teacherData),
-      }),
+    mutationFn: async (teacherData: any) => {
+      console.log('🔄 Creating teacher in Supabase...', teacherData);
+      const teacherWithSchool = { ...teacherData, school_id: 1 };
+      const newTeacher = await db.createTeacher(teacherWithSchool);
+      console.log('✅ Teacher created in Supabase:', newTeacher);
+      return newTeacher;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/teachers/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
+      queryClient.invalidateQueries({ queryKey: ['teacher-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "নতুন শিক্ষক যোগ করা হয়েছে",
@@ -131,16 +145,17 @@ export default function TeachersPage() {
     },
   });
 
-  // Update teacher mutation
+  // Update teacher mutation with direct Supabase
   const updateTeacher = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest(`/api/teachers/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      console.log('🔄 Updating teacher in Supabase...', { id, data });
+      const updatedTeacher = await db.updateTeacher(id, data);
+      console.log('✅ Teacher updated in Supabase:', updatedTeacher);
+      return updatedTeacher;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/teachers/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
+      queryClient.invalidateQueries({ queryKey: ['teacher-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "শিক্ষকের তথ্য আপডেট করা হয়েছে",
@@ -158,15 +173,17 @@ export default function TeachersPage() {
     },
   });
 
-  // Delete teacher mutation
+  // Delete teacher mutation with direct Supabase
   const deleteTeacher = useMutation({
-    mutationFn: (id: number) => 
-      apiRequest(`/api/teachers/${id}`, {
-        method: 'DELETE',
-      }),
+    mutationFn: async (id: number) => {
+      console.log('🔄 Deleting teacher from Supabase...', id);
+      const result = await db.deleteTeacher(id);
+      console.log('✅ Teacher deleted from Supabase:', result);
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/teachers/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
+      queryClient.invalidateQueries({ queryKey: ['teacher-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "শিক্ষক মুছে ফেলা হয়েছে",

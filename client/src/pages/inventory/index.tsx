@@ -16,7 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { db } from '@/lib/supabase';
 import { 
   Search, 
   Package, 
@@ -117,33 +117,65 @@ export default function InventoryPage() {
     },
   });
 
-  // Real-time data queries with proper typing
+  // Real-time data queries with direct Supabase calls
   const { data: items = [], isLoading: itemsLoading } = useQuery<any[]>({
-    queryKey: ['/api/inventory/items'],
+    queryKey: ['inventory-items', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching inventory items directly from Supabase...');
+      const items = await db.getInventoryItems(1);
+      console.log('✅ Inventory items from Supabase:', items?.length || 0);
+      return items || [];
+    },
     refetchInterval: 30000, // Real-time updates every 30 seconds
   });
 
   const { data: stockMovements = [], isLoading: movementsLoading } = useQuery<any[]>({
-    queryKey: ['/api/inventory/movements'],
+    queryKey: ['inventory-movements', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching inventory movements directly from Supabase...');
+      const movements = await db.getInventoryMovements(1);
+      console.log('✅ Inventory movements from Supabase:', movements?.length || 0);
+      return movements || [];
+    },
     refetchInterval: 30000,
   });
 
   const { data: inventoryStats = {} } = useQuery<any>({
-    queryKey: ['/api/inventory/stats'],
+    queryKey: ['inventory-stats', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching inventory stats directly from Supabase...');
+      const stats = await db.getInventoryStats(1);
+      console.log('✅ Inventory stats from Supabase:', stats);
+      return stats || { total_items: 0, low_stock_items: 0 };
+    },
     refetchInterval: 60000,
   });
 
   const { data: lowStockItems = [] } = useQuery<any[]>({
-    queryKey: ['/api/inventory/low-stock'],
+    queryKey: ['inventory-low-stock', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching low stock items directly from Supabase...');
+      // Get items where current_quantity <= minimum_threshold
+      const items = await db.getInventoryItems(1);
+      const lowStockItems = items?.filter(item => item.current_quantity <= item.minimum_threshold) || [];
+      console.log('✅ Low stock items from Supabase:', lowStockItems?.length || 0);
+      return lowStockItems;
+    },
     refetchInterval: 60000,
   });
 
-  // Mutations for CRUD operations
+  // Mutations for CRUD operations with direct Supabase
   const addItemMutation = useMutation({
-    mutationFn: (data: ItemFormData) => apiRequest('/api/inventory/items', 'POST', data),
+    mutationFn: async (data: ItemFormData) => {
+      console.log('🔄 Adding inventory item via Supabase...', data);
+      const itemWithSchool = { ...data, school_id: 1 };
+      const result = await db.createInventoryItem(itemWithSchool);
+      console.log('✅ Inventory item added via Supabase:', result);
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/items'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-stats'] });
       setIsAddItemOpen(false);
       itemForm.reset();
       toast({
@@ -161,11 +193,17 @@ export default function InventoryPage() {
   });
 
   const stockMovementMutation = useMutation({
-    mutationFn: (data: StockMovementFormData) => apiRequest('/api/inventory/movements', 'POST', data),
+    mutationFn: async (data: StockMovementFormData) => {
+      console.log('🔄 Creating inventory movement via Supabase...', data);
+      const movementWithSchool = { ...data, school_id: 1 };
+      const result = await db.createInventoryMovement(movementWithSchool);
+      console.log('✅ Inventory movement created via Supabase:', result);
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/items'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/movements'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-stats'] });
       setIsStockMovementOpen(false);
       stockMovementForm.reset();
       toast({
@@ -183,10 +221,15 @@ export default function InventoryPage() {
   });
 
   const deleteItemMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/inventory/items/${id}`, 'DELETE'),
+    mutationFn: async (id: number) => {
+      console.log('🔄 Deleting inventory item via Supabase...', id);
+      const result = await db.deleteInventoryItem(id);
+      console.log('✅ Inventory item deleted via Supabase:', result);
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/items'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/movements'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-movements'] });
       toast({
         title: "সফল",
         description: "পণ্য সফলভাবে মুছে ফেলা হয়েছে",
@@ -202,10 +245,14 @@ export default function InventoryPage() {
   });
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: ItemFormData }) => 
-      apiRequest(`/api/inventory/items/${id}`, 'PUT', data),
+    mutationFn: async ({ id, data }: { id: number; data: ItemFormData }) => {
+      console.log('🔄 Updating inventory item via Supabase...', { id, data });
+      const result = await db.updateInventoryItem(id, data);
+      console.log('✅ Inventory item updated via Supabase:', result);
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
       setIsItemOpen(false);
       setEditingItem(null);
       itemForm.reset();

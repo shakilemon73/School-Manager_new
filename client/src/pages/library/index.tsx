@@ -16,7 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { db } from '@/lib/supabase';
 import { 
   Search, 
   BookOpen, 
@@ -100,32 +100,62 @@ export default function LibraryPage() {
     },
   });
 
-  // Real-time data queries
+  // Real-time data queries with direct Supabase calls
   const { data: books = [], isLoading: booksLoading } = useQuery({
-    queryKey: ['/api/library/books'],
+    queryKey: ['library-books', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching library books directly from Supabase...');
+      const books = await db.getLibraryBooks(1);
+      console.log('✅ Library books from Supabase:', books?.length || 0);
+      return books || [];
+    },
     refetchInterval: 30000, // Real-time updates every 30 seconds
   });
 
   const { data: borrowedBooks = [], isLoading: borrowedLoading } = useQuery({
-    queryKey: ['/api/library/borrowed'],
+    queryKey: ['library-borrowed', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching borrowed books directly from Supabase...');
+      const borrowed = await db.getBorrowedBooks(1);
+      console.log('✅ Borrowed books from Supabase:', borrowed?.length || 0);
+      return borrowed || [];
+    },
     refetchInterval: 30000,
   });
 
   const { data: libraryStats = {}, isLoading: statsLoading, error: statsError } = useQuery({
-    queryKey: ['/api/library/stats'],
+    queryKey: ['library-stats', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching library stats directly from Supabase...');
+      const stats = await db.getLibraryStats(1);
+      console.log('✅ Library stats from Supabase:', stats);
+      return stats || { total_books: 0, borrowed_books: 0, available_books: 0 };
+    },
     refetchInterval: 60000,
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['/api/students'],
+    queryKey: ['students', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching students for library from Supabase...');
+      const students = await db.getStudents(1);
+      console.log('✅ Students from Supabase:', students?.length || 0);
+      return students || [];
+    },
   });
 
-  // Mutations for CRUD operations
+  // Mutations for CRUD operations with direct Supabase
   const addBookMutation = useMutation({
-    mutationFn: (data: BookFormData) => apiRequest('/api/library/books', 'POST', data),
+    mutationFn: async (data: BookFormData) => {
+      console.log('🔄 Adding book to Supabase...', data);
+      const bookWithSchool = { ...data, school_id: 1 };
+      const newBook = await db.createLibraryBook(bookWithSchool);
+      console.log('✅ Book added to Supabase:', newBook);
+      return newBook;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/library/books'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/library/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['library-books'] });
+      queryClient.invalidateQueries({ queryKey: ['library-stats'] });
       setIsAddBookOpen(false);
       bookForm.reset();
       toast({
@@ -143,11 +173,16 @@ export default function LibraryPage() {
   });
 
   const borrowBookMutation = useMutation({
-    mutationFn: (data: BorrowFormData) => apiRequest('/api/library/borrow', 'POST', data),
+    mutationFn: async (data: BorrowFormData) => {
+      console.log('🔄 Borrowing book via Supabase...', data);
+      const result = await db.borrowBook(parseInt(data.bookId), parseInt(data.studentId), 1);
+      console.log('✅ Book borrowed via Supabase:', result);
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/library/borrowed'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/library/books'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/library/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['library-borrowed'] });
+      queryClient.invalidateQueries({ queryKey: ['library-books'] });
+      queryClient.invalidateQueries({ queryKey: ['library-stats'] });
       setIsBorrowBookOpen(false);
       borrowForm.reset();
       toast({
@@ -165,11 +200,16 @@ export default function LibraryPage() {
   });
 
   const returnBookMutation = useMutation({
-    mutationFn: (borrowId: number) => apiRequest('/api/library/return', 'POST', { borrowId }),
+    mutationFn: async (borrowId: number) => {
+      console.log('🔄 Returning book via Supabase...', borrowId);
+      const result = await db.returnBook(borrowId);
+      console.log('✅ Book returned via Supabase:', result);
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/library/borrowed'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/library/books'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/library/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['library-borrowed'] });
+      queryClient.invalidateQueries({ queryKey: ['library-books'] });
+      queryClient.invalidateQueries({ queryKey: ['library-stats'] });
       toast({
         title: "সফল",
         description: "বই ফেরত নেওয়া হয়েছে",
@@ -185,10 +225,15 @@ export default function LibraryPage() {
   });
 
   const deleteBookMutation = useMutation({
-    mutationFn: (bookId: number) => apiRequest(`/api/library/books/${bookId}`, 'DELETE'),
+    mutationFn: async (bookId: number) => {
+      console.log('🔄 Deleting book via Supabase...', bookId);
+      const result = await db.deleteLibraryBook(bookId);
+      console.log('✅ Book deleted via Supabase:', result);
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/library/books'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/library/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['library-books'] });
+      queryClient.invalidateQueries({ queryKey: ['library-stats'] });
       toast({
         title: "সফল",
         description: "বই মুছে ফেলা হয়েছে",
@@ -204,13 +249,17 @@ export default function LibraryPage() {
   });
 
   const editBookMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest(`/api/library/books/${id}`, 'PATCH', data),
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      console.log('🔄 Updating book via Supabase...', { id, data });
+      const result = await db.updateLibraryBook(id, data);
+      console.log('✅ Book updated via Supabase:', result);
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/library/books'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/library/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['library-books'] });
+      queryClient.invalidateQueries({ queryKey: ['library-stats'] });
       setIsEditBookOpen(false);
-      editForm.reset();
+      bookForm.reset();
       toast({
         title: "সফল",
         description: "বই আপডেট করা হয়েছে",
