@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout/app-shell';
 import { ResponsivePageLayout } from '@/components/layout/responsive-page-layout';
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useMobile } from '@/hooks/use-mobile';
+import { db } from '@/lib/supabase';
 import { 
   Card, 
   CardContent, 
@@ -92,13 +93,22 @@ export default function ResponsiveDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch real data from Supabase with proper schoolId
+  // Fetch real data directly from Supabase
   const { data: dashboardStats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStats>({
-    queryKey: ['/api/dashboard/stats', { schoolId: 1 }],
+    queryKey: ['dashboard-stats', { schoolId: 1 }],
     queryFn: async () => {
-      const response = await fetch('/api/dashboard/stats?schoolId=1');
-      if (!response.ok) throw new Error('Failed to fetch dashboard stats');
-      return response.json();
+      console.log('🔄 Fetching dashboard stats directly from Supabase...');
+      const stats = await db.getDashboardStats(1);
+      console.log('✅ Dashboard stats from Supabase:', stats);
+      return {
+        students: stats.students,
+        teachers: stats.teachers, 
+        books: stats.books,
+        inventory: stats.inventory_items,
+        monthlyIncome: stats.total_revenue,
+        events: stats.upcoming_events,
+        documents: stats.active_notifications
+      };
     },
     enabled: !!user,
     retry: 2,
@@ -106,33 +116,58 @@ export default function ResponsiveDashboard() {
   });
 
   const { data: notifications, isLoading: notificationsLoading } = useQuery<NotificationItem[]>({
-    queryKey: ['/api/notifications', { schoolId: 1 }],
+    queryKey: ['notifications', { schoolId: 1 }],
     queryFn: async () => {
-      const response = await fetch('/api/notifications?schoolId=1');
-      if (!response.ok) throw new Error('Failed to fetch notifications');
-      return response.json();
+      console.log('🔄 Fetching notifications directly from Supabase...');
+      const notifs = await db.getNotifications(1);
+      console.log('✅ Notifications from Supabase:', notifs?.length || 0);
+      return notifs?.map(n => ({
+        id: n.id!,
+        title: n.title!,
+        message: n.message!,
+        type: (n.type || 'info') as 'info' | 'success' | 'warning' | 'error',
+        created_at: n.created_at!,
+        read: n.is_read || false
+      })) || [];
     },
     enabled: !!user,
     retry: 2,
   });
 
   const { data: documentTemplates, isLoading: documentsLoading } = useQuery<DocumentTemplate[]>({
-    queryKey: ['/api/documents/templates'],
+    queryKey: ['document-templates'],
     queryFn: async () => {
-      const response = await fetch('/api/documents/templates');
-      if (!response.ok) throw new Error('Failed to fetch document templates');
-      return response.json();
+      console.log('🔄 Fetching document templates directly from Supabase...');
+      const templates = await db.getDocumentTemplates(1);
+      console.log('✅ Document templates from Supabase:', templates?.length || 0);
+      return templates?.map(t => ({
+        id: t.id!,
+        name: t.name!,
+        nameBn: t.name_bn || t.name!,
+        category: t.category!,
+        icon: t.icon || 'FileText',
+        usageCount: t.usage_count || 0,
+        isActive: t.is_active || false
+      })) || [];
     },
     enabled: !!user,
     retry: 2,
   });
 
   const { data: calendarEvents, isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
-    queryKey: ['/api/calendar/events', { schoolId: 1 }],
+    queryKey: ['calendar-events', { schoolId: 1 }],
     queryFn: async () => {
-      const response = await fetch('/api/calendar/events?schoolId=1');
-      if (!response.ok) throw new Error('Failed to fetch calendar events');
-      return response.json();
+      console.log('🔄 Fetching calendar events directly from Supabase...');
+      const events = await db.getCalendarEvents(1);
+      console.log('✅ Calendar events from Supabase:', events?.length || 0);
+      return events?.map(e => ({
+        id: e.id!,
+        title: e.title!,
+        titleBn: e.title_bn || e.title!,
+        date: e.start_date!,
+        type: e.event_type!,
+        description: e.description || undefined
+      })) || [];
     },
     enabled: !!user,
     retry: 2,
