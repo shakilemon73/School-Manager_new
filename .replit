@@ -38,8 +38,8 @@ externalPort = 80
 exposeLocalhost = true
 
 [[ports]]
-localPort = 37391
-externalPort = 3000
+localPort = 34377
+externalPort = 3001
 
 [agent]
 integrations = ["javascript_supabase:1.0.0"]
