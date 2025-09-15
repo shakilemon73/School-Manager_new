@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/pagination";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { db } from '@/lib/supabase';
 import { ProfileDetailsModal } from '@/components/profile-details-modal';
 import { Trash2, Edit, Plus, Users, CheckCircle, AlertCircle, Search, Download } from 'lucide-react';
 
@@ -73,22 +73,30 @@ export default function StudentsPage() {
     dateOfBirth: '',
   });
 
-  // Fetch students from database
+  // Fetch students directly from Supabase
   const { data: studentsData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/students'],
-    staleTime: 0,
-    gcTime: 0,
+    queryKey: ['students', { schoolId: 1 }],
+    queryFn: async () => {
+      console.log('🔄 Fetching students directly from Supabase...');
+      const students = await db.getStudents(1);
+      console.log('✅ Students from Supabase:', students?.length || 0);
+      return students || [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Create student mutation
+  // Create student mutation with direct Supabase
   const createStudent = useMutation({
-    mutationFn: (studentData: any) => 
-      apiRequest('/api/students', {
-        method: 'POST',
-        body: JSON.stringify(studentData),
-      }),
+    mutationFn: async (studentData: any) => {
+      console.log('🔄 Creating student in Supabase...', studentData);
+      const studentWithSchool = { ...studentData, school_id: 1 };
+      const newStudent = await db.createStudent(studentWithSchool);
+      console.log('✅ Student created in Supabase:', newStudent);
+      return newStudent;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
       toast({
         title: "সফল হয়েছে!",
         description: "নতুন শিক্ষার্থী যোগ করা হয়েছে",
@@ -97,6 +105,7 @@ export default function StudentsPage() {
       resetForm();
     },
     onError: (error: any) => {
+      console.error('❌ Student creation failed:', error);
       toast({
         title: "ত্রুটি!",
         description: error.message || "শিক্ষার্থী যোগ করতে সমস্যা হয়েছে",
@@ -105,15 +114,16 @@ export default function StudentsPage() {
     },
   });
 
-  // Update student mutation
+  // Update student mutation with direct Supabase
   const updateStudent = useMutation({
-    mutationFn: ({ id, ...studentData }: any) => 
-      apiRequest(`/api/students/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(studentData),
-      }),
+    mutationFn: async ({ id, ...studentData }: any) => {
+      console.log('🔄 Updating student in Supabase...', { id, studentData });
+      const updatedStudent = await db.updateStudent(id, studentData);
+      console.log('✅ Student updated in Supabase:', updatedStudent);
+      return updatedStudent;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
       toast({
         title: "সফল হয়েছে!",
         description: "শিক্ষার্থীর তথ্য আপডেট করা হয়েছে",
@@ -122,6 +132,7 @@ export default function StudentsPage() {
       resetForm();
     },
     onError: (error: any) => {
+      console.error('❌ Student update failed:', error);
       toast({
         title: "ত্রুটি!",
         description: error.message || "তথ্য আপডেট করতে সমস্যা হয়েছে",
@@ -130,17 +141,19 @@ export default function StudentsPage() {
     },
   });
 
-  // Delete student mutation
+  // Delete student mutation with direct Supabase
   const deleteStudent = useMutation({
-    mutationFn: (id: number) => 
-      apiRequest(`/api/students/${id}`, {
-        method: 'DELETE',
-      }),
+    mutationFn: async (id: number) => {
+      console.log('🔄 Deleting student from Supabase...', id);
+      const result = await db.deleteStudent(id);
+      console.log('✅ Student deleted from Supabase:', result);
+      return result;
+    },
     onSuccess: async (data, variables) => {
       console.log('Delete successful for student ID:', variables);
       
-      // Force manual refetch from server
-      await refetch();
+      // Invalidate cache to refresh student list
+      queryClient.invalidateQueries({ queryKey: ['students'] });
       
       toast({
         title: "সফল হয়েছে!",
@@ -148,7 +161,7 @@ export default function StudentsPage() {
       });
     },
     onError: (error: any) => {
-      console.error('Delete error:', error);
+      console.error('❌ Student deletion failed:', error);
       toast({
         title: "ত্রুটি!",
         description: error.message || "মুছে ফেলতে সমস্যা হয়েছে",
