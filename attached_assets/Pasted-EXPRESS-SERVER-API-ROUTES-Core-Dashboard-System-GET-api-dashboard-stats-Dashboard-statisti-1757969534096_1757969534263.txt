@@ -1,0 +1,160 @@
+EXPRESS SERVER API ROUTES
+🏥 Core Dashboard & System
+GET /api/dashboard/stats - Dashboard statistics
+GET /api/dashboard/activities - Recent activities
+GET /api/dashboard/documents - Document overview
+GET /api/health - Health check
+GET /api/system/status - System status
+GET /api/test-env-config - Environment config test
+👤 Authentication & User Management
+GET /api/users/stats - User statistics
+GET /api/users - List all users
+POST /api/users - Create new user
+PATCH /api/users/:id/status - Update user status
+DELETE /api/users/:id - Delete user
+GET /api/setup/status - Setup status
+🎓 Student Management
+GET /api/students - List students
+GET /api/students/:id - Get specific student
+POST /api/students - Create student
+PUT /api/students/:id - Update student
+PATCH /api/students/:id - Patch student
+DELETE /api/students/:id - Delete student
+GET /api/students/me - Student profile (authenticated)
+GET /api/students/attendance - Student attendance
+GET /api/students/attendance/stats - Attendance statistics
+GET /api/students/fees/summary - Fee summary
+GET /api/students/results - Student results
+GET /api/students/performance - Performance data
+GET /api/students/class-schedule - Class schedule
+GET /api/students/exam-schedule - Exam schedule
+GET /api/students/notifications - Student notifications
+POST /api/students/import-excel - Import students from Excel
+GET /api/students/import-history - Import history
+GET /api/students/import-status/:batchId - Import status
+👨‍🏫 Teacher Management
+GET /api/teachers - List teachers
+POST /api/teachers - Create teacher
+PATCH /api/teachers/:id - Update teacher
+DELETE /api/teachers/:id - Delete teacher
+GET /api/teachers/stats - Teacher statistics
+GET /api/teachers/dashboard - Teacher dashboard
+GET /api/teachers/classes - Teacher classes
+GET /api/teachers/subjects - Teacher subjects
+GET /api/teachers/schedule - Teacher schedule
+GET /api/teachers/overview - Teacher overview
+GET /api/teachers/notifications - Teacher notifications
+👥 Staff & Parent Management
+GET /api/staff - List staff
+POST /api/staff - Create staff
+PATCH /api/staff/:id - Update staff
+DELETE /api/staff/:id - Delete staff
+GET /api/parents - List parents
+POST /api/parents - Create parent
+PATCH /api/parents/:id - Update parent
+DELETE /api/parents/:id - Delete parent
+📚 Library Management
+GET /api/library/stats - Library statistics
+GET /api/library/books - List books
+GET /api/library/borrowed - Borrowed books
+POST /api/library/books - Add book
+POST /api/library/borrow - Borrow book
+POST /api/library/return - Return book
+PATCH /api/library/books/:id - Update book
+DELETE /api/library/books/:id - Delete book
+📦 Inventory Management
+GET /api/inventory - List inventory
+POST /api/inventory - Add inventory item
+PATCH /api/inventory/:id - Update item
+DELETE /api/inventory/:id - Delete item
+GET /api/inventory/movements - Inventory movements
+POST /api/inventory/movements - Add movement
+GET /api/inventory/stats - Inventory statistics
+🚌 Transport Management
+GET /api/transport/stats - Transport statistics
+GET /api/transport/routes - Transport routes
+POST /api/transport/routes - Create route
+PUT /api/transport/routes-fixed/:id - Update route
+DELETE /api/transport/routes-fixed/:id - Delete route
+GET /api/transport/vehicles - List vehicles
+POST /api/transport/vehicles - Add vehicle
+GET /api/transport/assignments - Transport assignments
+POST /api/transport/assignments - Create assignment
+💰 Financial Management
+GET /api/finance/transactions - Financial transactions
+POST /api/finance/transactions - Add transaction
+GET /api/finance/stats - Financial statistics
+GET /api/fee-receipts - Fee receipts
+GET /api/fee-receipts/:id - Specific receipt
+POST /api/fee-receipts - Create receipt
+PUT /api/fee-receipts/:id - Update receipt
+DELETE /api/fee-receipts/:id - Delete receipt
+GET /api/fee-items - Fee items
+📄 Document Management
+GET /api/documents/templates - Document templates
+GET /api/documents/templates/:docType - Templates by type
+GET /api/documents/stats - Document statistics
+GET /api/documents/recent - Recent documents
+POST /api/documents/generate - Generate document
+POST /api/documents/seed-templates - Seed templates
+POST /api/documents/track-usage - Track usage
+GET /api/documents/user-stats - User statistics
+GET /api/documents/check-permission/:documentId - Check permissions
+🎫 Admit Card System
+GET /api/admit-cards/templates - Admit card templates
+GET /api/admit-cards/stats - Admit card statistics
+GET /api/admit-cards/recent - Recent admit cards
+GET /api/admit-cards/history - Admit card history
+POST /api/admit-cards/generate-single - Generate single card
+POST /api/admit-cards/generate-batch - Generate batch cards
+POST /api/admit-cards/templates - Create template
+🔔 Notification System
+GET /api/notifications - List notifications
+GET /api/notifications/live - Live notifications
+POST /api/notifications - Create notification
+PATCH /api/notifications/:id/read - Mark as read
+DELETE /api/notifications/:id - Delete notification
+GET /api/notifications/stats - Notification statistics
+📅 Calendar & Events
+GET /api/calendar/events - Calendar events
+POST /api/calendar/events - Create event
+💳 Payment System (SSLCommerz)
+POST /api/payment/initiate - Initiate payment
+POST /api/payment/success - Payment success
+POST /api/payment/fail - Payment failure
+🎯 Academic Management
+GET /api/academic-years - Academic years
+GET /api/academic-years/current - Current academic year
+GET /api/class-routines - Class routines
+GET /api/lesson-plans - Lesson plans
+POST /api/lesson-plans - Create lesson plan
+PATCH /api/lesson-plans/:id - Update lesson plan
+DELETE /api/lesson-plans/:id - Delete lesson plan
+GET /api/assignments - Assignments
+POST /api/assignments - Create assignment
+PATCH /api/assignments/:id - Update assignment
+DELETE /api/assignments/:id - Delete assignment
+🎪 Meeting & Video Conference
+GET /api/meetings - List meetings
+POST /api/meetings - Create meeting
+PATCH /api/meetings/:id/status - Update meeting status
+GET /api/meetings/stats - Meeting statistics
+⚙️ Admin & Settings
+GET /api/admin/stats - Admin statistics
+GET /api/admin/users - Admin user management
+GET /api/admin/schools - School management
+POST /api/admin/document-permissions - Document permissions
+POST /api/admin/document-permissions/bulk - Bulk permissions
+GET /api/admin/user-document-access - User access
+GET /api/admin/document-usage-stats - Usage statistics
+🏢 Multi-School Management
+GET /api/standalone-admin/schools - List schools
+POST /api/standalone-admin/schools/:schoolId/supabase/setup - Setup Supabase
+POST /api/standalone-admin/schools/:schoolId/supabase/test - Test connection
+GET /api/standalone-admin/schools/:schoolId/supabase/config - Get config
+PATCH /api/standalone-admin/schools/:schoolId/supabase/config - Update config
+POST /api/standalone-admin/schools/:schoolId/reset-keys - Reset keys
+GET /api/standalone-admin/overview - Admin overview
+🎭 Public Routes
+GET /api/public/transport/init - Transport initialization
+GET /api/public/transport/routes-fixed - Public transport routes
