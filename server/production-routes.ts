@@ -284,78 +284,17 @@ export function registerProductionRoutes(app: Express) {
     }
   });
 
-  // Notifications - Real Data Only
-  app.get('/api/notifications', async (req: Request, res: Response) => {
-    try {
-      const schoolId = req.query.schoolId ? parseInt(req.query.schoolId as string) : 1;
-      const userId = req.query.userId ? parseInt(req.query.userId as string) : null;
-      
-      let whereClause = eq(notifications.schoolId, schoolId);
-      
-      if (userId) {
-        whereClause = and(whereClause, eq(notifications.recipientId, userId)) as any;
-      }
-      
-      const notificationList = await db.select().from(notifications).where(whereClause).orderBy(desc(notifications.createdAt)).limit(50);
-      res.json(notificationList);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch notifications' });
-    }
-  });
+  // SECURITY: Notifications endpoint REMOVED - vulnerable to school data leakage
+  // This endpoint had critical vulnerability: unprotected access + schoolId from query params
+  // Use secure notification endpoints with proper authentication and tenant scoping instead
 
-  // Real-time Statistics - Real Data Only
-  app.get('/api/dashboard/stats', async (req: Request, res: Response) => {
-    try {
-      const schoolId = req.query.schoolId ? parseInt(req.query.schoolId as string) : 1;
-      
-      // Get real counts from database
-      const [studentCount] = await db.select({ count: count() }).from(students).where(eq(students.schoolId, schoolId));
-      const [teacherCount] = await db.select({ count: count() }).from(teachers).where(eq(teachers.schoolId, schoolId));
-      const [bookCount] = await db.select({ count: count() }).from(libraryBooks).where(eq(libraryBooks.schoolId, schoolId));
-      const [inventoryCount] = await db.select({ count: count() }).from(inventoryItems).where(eq(inventoryItems.schoolId, schoolId));
-      
-      res.json({
-        students: studentCount.count,
-        teachers: teacherCount.count,
-        books: bookCount.count,
-        inventory: inventoryCount.count,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
-    }
-  });
+  // SECURITY: Dashboard stats endpoint REMOVED - use secure version in dashboard-routes.ts
+  // This endpoint had critical vulnerability: unprotected access + schoolId from query params
+  // Secure alternative available at dashboard-routes.ts with proper authentication and tenant scoping
 
-  // Financial Statistics - Real Data Only
-  app.get('/api/financial/stats', async (req: Request, res: Response) => {
-    try {
-      const schoolId = req.query.schoolId ? parseInt(req.query.schoolId as string) : 1;
-      
-      const [totalRevenue] = await db
-        .select({ total: sum(paymentTransactions.amount) })
-        .from(paymentTransactions)
-        .where(and(
-          eq(paymentTransactions.schoolId, schoolId),
-          eq(paymentTransactions.status, 'success')
-        ));
-      
-      const [pendingPayments] = await db
-        .select({ count: count() })
-        .from(paymentTransactions)
-        .where(and(
-          eq(paymentTransactions.schoolId, schoolId),
-          eq(paymentTransactions.status, 'pending')
-        ));
-      
-      res.json({
-        totalRevenue: totalRevenue.total || 0,
-        pendingPayments: pendingPayments.count,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch financial statistics' });
-    }
-  });
+  // SECURITY: Financial stats endpoint REMOVED - vulnerable to school data leakage  
+  // This endpoint had critical vulnerability: unprotected access + schoolId from query params
+  // Use secure financial endpoints with proper authentication and tenant scoping instead
 
   // School Management - Real Data Only
   app.get('/api/schools', async (req: Request, res: Response) => {

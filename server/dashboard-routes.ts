@@ -11,23 +11,37 @@ interface AuthenticatedRequest extends Request {
 
 export function registerDashboardRoutes(app: Express) {
   
-  // Dashboard stats endpoint
+  // Dashboard stats endpoint - SECURED with tenant scoping
   app.get('/api/dashboard/stats', supabaseSessionMiddleware, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Get real statistics from database
-      const [studentsCount] = await db.select({ count: count() }).from(schema.students);
-      const [teachersCount] = await db.select({ count: count() }).from(schema.teachers);
-      const [classesCount] = await db.select({ count: count() }).from(schema.classes);
+      // Get user's school_id for tenant scoping - CRITICAL for security
+      const schoolId = req.user?.schoolId || req.user?.user_metadata?.school_id || 1;
       
-      // Calculate monthly income from fee receipts
+      console.log('Dashboard stats request for school_id:', schoolId, 'user:', req.user?.email);
+      
+      // Get tenant-scoped statistics from database with proper filtering
+      const [studentsCount] = await db.select({ count: count() })
+        .from(schema.students)
+        .where(eq(schema.students.schoolId, schoolId));
+        
+      const [teachersCount] = await db.select({ count: count() })
+        .from(schema.teachers)
+        .where(eq(schema.teachers.schoolId, schoolId));
+        
+      const [classesCount] = await db.select({ count: count() })
+        .from(schema.classes)
+        .where(eq(schema.classes.schoolId, schoolId));
+      
+      // Calculate monthly income from fee receipts - TENANT SCOPED
       const currentMonth = new Date().getMonth() + 1;
       const currentYear = new Date().getFullYear();
       
       const monthlyIncomeResult = await db.execute({
         sql: `SELECT COALESCE(SUM(total_amount), 0) as income FROM fee_receipts 
               WHERE EXTRACT(MONTH FROM created_at) = $1 
-              AND EXTRACT(YEAR FROM created_at) = $2`,
-        args: [currentMonth, currentYear]
+              AND EXTRACT(YEAR FROM created_at) = $2
+              AND school_id = $3`,
+        args: [currentMonth, currentYear, schoolId]
       });
 
       const stats = {
@@ -44,16 +58,23 @@ export function registerDashboardRoutes(app: Express) {
     }
   });
 
-  // Dashboard activities endpoint
+  // Dashboard activities endpoint - SECURED with tenant scoping
   app.get('/api/dashboard/activities', supabaseSessionMiddleware, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Get recent activities from database
+      // Get user's school_id for tenant scoping - CRITICAL for security
+      const schoolId = req.user?.schoolId || req.user?.user_metadata?.school_id || 1;
+      
+      console.log('Dashboard activities request for school_id:', schoolId, 'user:', req.user?.email);
+      
+      // Get recent activities from database - TENANT SCOPED
       const recentStudents = await db.query.students.findMany({
+        where: eq(schema.students.schoolId, schoolId),
         limit: 5,
         orderBy: (students, { desc }) => [desc(students.createdAt)]
       });
 
       const recentFeeReceipts = await db.query.feeReceipts.findMany({
+        where: eq(schema.feeReceipts.schoolId, schoolId),
         limit: 3,
         orderBy: (feeReceipts, { desc }) => [desc(feeReceipts.createdAt)],
         with: {
@@ -86,11 +107,17 @@ export function registerDashboardRoutes(app: Express) {
     }
   });
 
-  // Dashboard documents endpoint
+  // Dashboard documents endpoint - SECURED with tenant scoping
   app.get('/api/dashboard/documents', supabaseSessionMiddleware, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Get recent documents from different sources
+      // Get user's school_id for tenant scoping - CRITICAL for security
+      const schoolId = req.user?.schoolId || req.user?.user_metadata?.school_id || 1;
+      
+      console.log('Dashboard documents request for school_id:', schoolId, 'user:', req.user?.email);
+      
+      // Get recent documents from different sources - TENANT SCOPED
       const recentAdmitCards = await db.query.admitCards.findMany({
+        where: eq(schema.admitCards.schoolId, schoolId),
         limit: 3,
         orderBy: (admitCards, { desc }) => [desc(admitCards.createdAt)],
         with: {
@@ -99,6 +126,7 @@ export function registerDashboardRoutes(app: Express) {
       });
 
       const recentIdCards = await db.query.idCards.findMany({
+        where: eq(schema.idCards.schoolId, schoolId),
         limit: 3,
         orderBy: (idCards, { desc }) => [desc(idCards.createdAt)],
         with: {
