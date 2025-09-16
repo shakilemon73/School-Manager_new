@@ -1,0 +1,222 @@
+1:13:25 PM [express] GET /api/teachers 200 in 1928ms :: [{"id":2,"teacherId":"TCH-2023-002","name":"…
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats?schoolId=1 401 in 4ms
+Security: GET /api/dashboard/stats?schoolId=1 401 from 10.81.10.47
+1:13:25 PM [express] GET /api/dashboard/stats 401 in 4ms :: {"message":"Not authenticated"}
+GET /api/students?schoolId=1 200 in 2148ms
+1:13:25 PM [express] GET /api/students 200 in 2146ms :: [{"id":3,"name":"Ahmed Khan","nameInBangla":…
+GET /api/notifications?schoolId=1 200 in 2132ms
+1:13:25 PM [express] GET /api/notifications 200 in 2133ms :: [{"id":11,"title":"Library Book Return"…
+GET /api/calendar/events?schoolId=1 200 in 2335ms
+1:13:26 PM [express] GET /api/calendar/events 200 in 2335ms :: [{"id":1,"title":"School Assembly","t…
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats 401 in 2ms
+Security: GET /api/dashboard/stats 401 from 10.81.6.69
+1:14:26 PM [express] GET /api/dashboard/stats 401 in 2ms :: {"message":"Not authenticated"}
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats 401 in 3ms
+Security: GET /api/dashboard/stats 401 from 10.81.6.69
+1:14:28 PM [express] GET /api/dashboard/stats 401 in 3ms :: {"message":"Not authenticated"}
+GET /api/notifications 200 in 1743ms
+1:14:28 PM [express] GET /api/notifications 200 in 1744ms :: [{"id":11,"title":"Library Book Return"…
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats 401 in 4ms
+Security: GET /api/dashboard/stats 401 from 10.81.7.56
+1:14:30 PM [express] GET /api/dashboard/stats 401 in 1ms :: {"message":"Not authenticated"}
+GET /api/calendar/events 200 in 420ms
+1:14:44 PM [express] GET /api/calendar/events 200 in 419ms :: [{"id":1,"title":"School Assembly","ti…
+GET /api/notifications 304 in 212ms
+1:14:48 PM [express] GET /api/notifications 304 in 212ms :: [{"id":11,"title":"Library Book Return",…
+GET /api/staff 200 in 213ms
+1:14:59 PM [express] GET /api/staff 200 in 213ms :: [{"id":8,"staffId":"STF-001","name":"Abdul Rahma…
+GET /api/parents 200 in 878ms
+1:15:03 PM [express] GET /api/parents 200 in 877ms :: [{"id":488,"name":"Mohammad Ali","nameInBangla…
+GET /api/documents/user-stats 200 in 1ms
+1:15:07 PM [express] GET /api/documents/user-stats 200 in 1ms :: {"totalGenerated":0,"creditsUsed":0…
+GET /api/documents/recent 200 in 4ms
+1:15:07 PM [express] GET /api/documents/recent 200 in 2ms :: []
+GET /api/document-costs 200 in 628ms
+1:15:08 PM [express] GET /api/document-costs 200 in 628ms :: [{"id":1,"name":"Student ID Card","name…
+✓ Successfully loaded 54 document templates from database
+GET /api/documents/templates?isActive=true&lang=bn 200 in 833ms
+1:15:08 PM [express] GET /api/documents/templates 200 in 833ms :: [{"id":1,"name":"Student ID Card",…
+✓ Successfully loaded 54 document templates from database
+GET /api/documents/templates?isActive=true&lang=bn 304 in 753ms
+1:15:09 PM [express] GET /api/documents/templates 304 in 753ms :: [{"id":1,"name":"Student ID Card",…
+GET /api/simple-credit-stats/7324a820-4c85-4a60-b791-57b9cfad6bf9 200 in 2035ms
+1:15:10 PM [express] GET /api/simple-credit-stats/7324a820-4c85-4a60-b791-57b9cfad6bf9 200 in 2035ms…
+GET /api/finance/transactions 200 in 212ms
+1:15:14 PM [express] GET /api/finance/transactions 200 in 212ms :: [{"id":16,"transactionType":"inco…
+GET /api/finance/stats 200 in 1669ms
+1:15:16 PM [express] GET /api/finance/stats 200 in 1669ms :: {"totalIncome":"92710.00","totalExpense…
+GET /api/transport/routes 200 in 419ms
+1:15:35 PM [express] GET /api/transport/routes 200 in 419ms :: [{"id":1,"routeName":"Route A - Dhanm…
+GET /api/transport/vehicles 200 in 424ms
+1:15:35 PM [express] GET /api/transport/vehicles 200 in 424ms :: [{"id":1,"vehicleNumber":"DHK-GA-11…
+GET /api/transport/students 200 in 569ms
+1:15:35 PM [express] GET /api/transport/students 200 in 568ms :: [{"id":1,"student_id":"STD-2023-003…
+GET /api/students 200 in 976ms
+1:15:36 PM [express] GET /api/students 200 in 975ms :: [{"id":3,"name":"Ahmed Khan","nameInBangla":n…
+GET /api/transport/stats 200 in 2148ms
+1:15:37 PM [express] GET /api/transport/stats 200 in 2148ms :: {"totalRoutes":4,"totalVehicles":4,"t…
+Simple credit balance request for user: 7324a820-4c85-4a60-b791-57b9cfad6bf9
+GET /api/credit-transactions 401 in 1ms
+Security: GET /api/credit-transactions 401 from 10.81.7.56
+1:15:46 PM [express] GET /api/credit-transactions 401 in 1ms :: {"error":"Unauthorized"}
+GET /api/credit-usage 401 in 1ms
+Security: GET /api/credit-usage 401 from 10.81.10.47
+1:15:46 PM [express] GET /api/credit-usage 401 in 1ms :: {"error":"Unauthorized"}
+Found balance for user: {
+  user_id: '7324a820-4c85-4a60-b791-57b9cfad6bf9',
+  username: 'shakilemon73',
+  email: 'shakilemon73@gmail.com',
+  current_credits: 100001,
+  bonus_credits: 0,
+  used_credits: 0,
+  status: 'active'
+}
+GET /api/simple-credit-balance/7324a820-4c85-4a60-b791-57b9cfad6bf9 200 in 419ms
+1:15:46 PM [express] GET /api/simple-credit-balance/7324a820-4c85-4a60-b791-57b9cfad6bf9 200 in 419m…
+GET /api/credit-packages 200 in 421ms
+1:15:46 PM [express] GET /api/credit-packages 200 in 421ms :: [{"id":1,"name":"Basic","description":…
+GET /api/document-templates 200 in 1ms
+GET /api/inventory/items?schoolId=1 304 in 1759ms
+GET /api/teachers?schoolId=1 304 in 1966ms
+1:16:31 PM [express] GET /api/teachers 304 in 1965ms :: [{"id":2,"teacherId":"TCH-2023-002","name":"…
+GET /api/library/books?schoolId=1 304 in 1967ms
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats?schoolId=1 401 in 2ms
+Security: GET /api/dashboard/stats?schoolId=1 401 from 10.81.0.77
+1:16:32 PM [express] GET /api/dashboard/stats 401 in 2ms :: {"message":"Not authenticated"}
+GET /api/notifications?schoolId=1 304 in 2174ms
+1:16:32 PM [express] GET /api/notifications 304 in 2174ms :: [{"id":11,"title":"Library Book Return"…
+GET /api/students?schoolId=1 304 in 2192ms
+1:16:32 PM [express] GET /api/students 304 in 2192ms :: [{"id":3,"name":"Ahmed Khan","nameInBangla":…
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats 401 in 1ms
+Security: GET /api/dashboard/stats 401 from 10.81.1.74
+1:16:32 PM [express] GET /api/dashboard/stats 401 in 1ms :: {"message":"Not authenticated"}
+GET /api/calendar/events?schoolId=1 304 in 2383ms
+1:16:32 PM [express] GET /api/calendar/events 304 in 2383ms :: [{"id":1,"title":"School Assembly","t…
+GET /api/notifications 304 in 209ms
+1:16:32 PM [express] GET /api/notifications 304 in 209ms :: [{"id":11,"title":"Library Book Return",…
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats 401 in 2ms
+Security: GET /api/dashboard/stats 401 from 10.81.10.47
+1:16:33 PM [express] GET /api/dashboard/stats 401 in 1ms :: {"message":"Not authenticated"}
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats 401 in 1ms
+Security: GET /api/dashboard/stats 401 from 10.81.10.47
+1:16:35 PM [express] GET /api/dashboard/stats 401 in 1ms :: {"message":"Not authenticated"}
+[SUPABASE-DIRECT] Fetching admin stats from Supabase...
+GET /api/admin/users 403 in 1ms
+Security: GET /api/admin/users 403 from 10.81.2.41
+1:16:38 PM [express] GET /api/admin/users 403 in 2ms :: {"error":"Admin access required"}
+GET /api/admin/system/health/public 200 in 1ms
+1:16:38 PM [express] GET /api/admin/system/health/public 200 in 1ms :: {"success":true,"health":{"da…
+GET /api/admin/schools 401 in 1ms
+Security: GET /api/admin/schools 401 from 10.81.1.74
+1:16:38 PM [express] GET /api/admin/schools 401 in 1ms :: {"error":"Authentication required"}
+GET /api/admin/analytics/realtime 401 in 1ms
+Security: GET /api/admin/analytics/realtime 401 from 10.81.2.41
+1:16:38 PM [express] GET /api/admin/analytics/realtime 401 in 0ms :: {"error":"Authentication requir…
+GET /api/admin/stats/public 200 in 213ms
+1:16:38 PM [express] GET /api/admin/stats/public 200 in 213ms :: {"success":true,"stats":{"totalUser…
+[SUPABASE-CRUD] Fetching complete school settings from Supabase PostgreSQL...
+[SUPABASE-CRUD] Fetching comprehensive system stats from Supabase...
+GET /api/supabase/school/stats 200 in 209ms
+1:16:42 PM [express] GET /api/supabase/school/stats 200 in 208ms :: {"success":true,"stats":{"databa…
+[SUPABASE-CRUD] School settings retrieved successfully from Supabase
+GET /api/supabase/school/settings 200 in 420ms
+1:16:42 PM [express] GET /api/supabase/school/settings 200 in 419ms :: {"success":true,"data":{"id":…
+Loading Supabase with URL: Found
+Loading Supabase with Key: Found
+✓ Supabase client initialized successfully
+GET /api/academic-years/stats 200 in 435ms
+1:16:48 PM [express] GET /api/academic-years/stats 200 in 435ms :: {"totalYears":"1046","activeYears…
+GET /api/enhanced-academic-terms 200 in 807ms
+1:16:49 PM [express] GET /api/enhanced-academic-terms 200 in 808ms :: [{"id":1059,"name":"Final Term…
+GET /api/academic-years 200 in 1082ms
+1:16:49 PM [express] GET /api/academic-years 200 in 1082ms :: [{"id":1008,"name":"2026 Academic Year…
+GET /api/documents/user-stats 304 in 0ms
+1:17:33 PM [express] GET /api/documents/user-stats 304 in 0ms :: {"totalGenerated":0,"creditsUsed":0…
+GET /api/documents/recent 304 in 0ms
+1:17:33 PM [express] GET /api/documents/recent 304 in 0ms :: []
+✓ Successfully loaded 54 document templates from database
+GET /api/documents/templates?isActive=true&lang=bn 304 in 818ms
+1:17:33 PM [express] GET /api/documents/templates 304 in 818ms :: [{"id":1,"name":"Student ID Card",…
+✓ Successfully loaded 54 document templates from database
+GET /api/documents/templates?isActive=true&lang=bn 304 in 766ms
+1:17:34 PM [express] GET /api/documents/templates 304 in 766ms :: [{"id":1,"name":"Student ID Card",…
+GET /api/simple-credit-stats/7324a820-4c85-4a60-b791-57b9cfad6bf9 304 in 2021ms
+1:17:35 PM [express] GET /api/simple-credit-stats/7324a820-4c85-4a60-b791-57b9cfad6bf9 304 in 2022ms…
+GET /api/document-costs 304 in 2158ms
+1:17:35 PM [express] GET /api/document-costs 304 in 2159ms :: [{"id":1,"name":"Student ID Card","nam…
+GET /api/library/books?schoolId=1 200 in 257ms
+GET /api/inventory/items?schoolId=1 200 in 257ms
+GET /api/notifications?schoolId=1 200 in 470ms
+1:17:35 PM [express] GET /api/notifications 200 in 470ms :: [{"id":11,"title":"Library Book Return",…
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats?schoolId=1 401 in 2ms
+Security: GET /api/dashboard/stats?schoolId=1 401 from 10.81.10.47
+1:17:35 PM [express] GET /api/dashboard/stats 401 in 1ms :: {"message":"Not authenticated"}
+GET /api/students?schoolId=1 200 in 652ms
+1:17:35 PM [express] GET /api/students 200 in 651ms :: [{"id":3,"name":"Ahmed Khan","nameInBangla":n…
+GET /api/calendar/events?schoolId=1 200 in 888ms
+1:17:36 PM [express] GET /api/calendar/events 200 in 888ms :: [{"id":1,"title":"School Assembly","ti…
+GET /api/teachers?schoolId=1 200 in 2060ms
+1:17:37 PM [express] GET /api/teachers 200 in 2060ms :: [{"id":2,"teacherId":"TCH-2023-002","name":"…
+Simple credit balance request for user: 7324a820-4c85-4a60-b791-57b9cfad6bf9
+GET /api/credit-transactions 401 in 1ms
+Security: GET /api/credit-transactions 401 from 10.81.2.41
+1:17:40 PM [express] GET /api/credit-transactions 401 in 2ms :: {"error":"Unauthorized"}
+GET /api/credit-usage 401 in 1ms
+Security: GET /api/credit-usage 401 from 10.81.10.47
+1:17:40 PM [express] GET /api/credit-usage 401 in 1ms :: {"error":"Unauthorized"}
+Found balance for user: {
+  user_id: '7324a820-4c85-4a60-b791-57b9cfad6bf9',
+  username: 'shakilemon73',
+  email: 'shakilemon73@gmail.com',
+  current_credits: 100001,
+  bonus_credits: 0,
+  used_credits: 0,
+  status: 'active'
+}
+GET /api/simple-credit-balance/7324a820-4c85-4a60-b791-57b9cfad6bf9 200 in 433ms
+1:17:40 PM [express] GET /api/simple-credit-balance/7324a820-4c85-4a60-b791-57b9cfad6bf9 200 in 434m…
+GET /api/credit-packages 200 in 419ms
+1:17:40 PM [express] GET /api/credit-packages 200 in 418ms :: [{"id":1,"name":"Basic","description":…
+GET /api/document-templates 200 in 1ms
+GET /api/calendar/events 304 in 429ms
+1:17:52 PM [express] GET /api/calendar/events 304 in 429ms :: [{"id":1,"title":"School Assembly","ti…
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats 401 in 1ms
+Security: GET /api/dashboard/stats 401 from 10.81.5.26
+1:17:54 PM [express] GET /api/dashboard/stats 401 in 1ms :: {"message":"Not authenticated"}
+Found cookie token: No
+No access token found in: { headers: false, cookies: [], body: false }
+GET /api/dashboard/stats 401 in 1ms
+Security: GET /api/dashboard/stats 401 from 10.81.5.26
+1:17:55 PM [express] GET /api/dashboard/stats 401 in 1ms :: {"message":"Not authenticated"}
+GET /api/notifications 304 in 219ms
+1:17:57 PM [express] GET /api/notifications 304 in 219ms :: [{"id":11,"title":"Library Book Return",…
+GET /api/staff 304 in 217ms
+1:18:04 PM [express] GET /api/staff 304 in 217ms :: [{"id":8,"staffId":"STF-001","name":"Abdul Rahma…
+GET /api/parents 304 in 874ms
+1:18:07 PM [express] GET /api/parents 304 in 874ms :: [{"id":488,"name":"Mohammad Ali","nameInBangla…
+GET /api/notifications 304 in 217ms
+1:18:11 PM [express] GET /api/notifications 304 in 216ms :: [{"id":11,"title":"Library Book Return",…
+GET /api/finance/transactions 304 in 216ms
+1:18:15 PM [express] GET /api/finance/transactions 304 in 216ms :: [{"id":16,"transactionType":"inco…
+GET /api/finance/stats 304 in 1732ms
+1:18:16 PM [express] GET /api/finance/stats 304 in 1731ms :: {"totalIncome":"92710.00","totalExpense…
