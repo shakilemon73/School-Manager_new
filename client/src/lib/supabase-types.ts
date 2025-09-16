@@ -1031,6 +1031,490 @@ export interface Database {
           is_active: boolean | null
         }>
       }
+
+      // Library Borrowed Books Table
+      library_borrowed_books: {
+        Row: {
+          id: number
+          book_id: number
+          student_id: number
+          borrow_date: string
+          due_date: string
+          return_date: string | null
+          status: string
+          fine: string | null
+          notes: string | null
+          school_id: number
+          created_at: string
+        }
+        Insert: {
+          book_id: number
+          student_id: number
+          borrow_date?: string
+          due_date: string
+          return_date?: string | null
+          status?: string
+          fine?: string | null
+          notes?: string | null
+          school_id?: number
+        }
+        Update: Partial<{
+          book_id: number
+          student_id: number
+          borrow_date: string
+          due_date: string
+          return_date: string | null
+          status: string
+          fine: string | null
+          notes: string | null
+          school_id: number
+        }>
+      }
+
+      // Video Conferences Table
+      video_conferences: {
+        Row: {
+          id: number
+          name: string
+          name_bn: string
+          subject: string
+          host: string
+          status: string
+          start_time: string
+          end_time: string | null
+          participants: number | null
+          max_participants: number | null
+          meeting_id: string
+          is_recording: boolean | null
+          recording_url: string | null
+          school_id: number
+          created_at: string
+        }
+        Insert: {
+          name: string
+          name_bn: string
+          subject: string
+          host: string
+          status?: string
+          start_time: string
+          end_time?: string | null
+          participants?: number | null
+          max_participants?: number | null
+          meeting_id: string
+          is_recording?: boolean | null
+          recording_url?: string | null
+          school_id?: number
+        }
+        Update: Partial<{
+          name: string
+          name_bn: string
+          subject: string
+          host: string
+          status: string
+          start_time: string
+          end_time: string | null
+          participants: number | null
+          max_participants: number | null
+          meeting_id: string
+          is_recording: boolean | null
+          recording_url: string | null
+          school_id: number
+        }>
+      }
+
+      // Student Import Batches Table
+      student_import_batches: {
+        Row: {
+          id: number
+          file_name: string
+          file_size: number | null
+          total_records: number
+          successful_imports: number | null
+          failed_imports: number | null
+          status: string
+          error_log: any | null
+          uploaded_by: string | null
+          school_id: number | null
+          created_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          file_name: string
+          file_size?: number | null
+          total_records: number
+          successful_imports?: number | null
+          failed_imports?: number | null
+          status?: string
+          error_log?: any | null
+          uploaded_by?: string | null
+          school_id?: number | null
+        }
+        Update: Partial<{
+          file_name: string
+          file_size: number | null
+          total_records: number
+          successful_imports: number | null
+          failed_imports: number | null
+          status: string
+          error_log: any | null
+          uploaded_by: string | null
+          school_id: number | null
+          completed_at: string | null
+        }>
+      }
+
+      // School Document Permissions Table
+      school_document_permissions: {
+        Row: {
+          id: number
+          school_id: number
+          document_type_id: number
+          is_allowed: boolean
+          credits_per_use: number
+          granted_at: string | null
+          revoked_at: string | null
+          granted_by: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          school_id: number
+          document_type_id: number
+          is_allowed?: boolean
+          credits_per_use?: number
+          granted_at?: string | null
+          revoked_at?: string | null
+          granted_by?: string | null
+          notes?: string | null
+        }
+        Update: Partial<{
+          school_id: number
+          document_type_id: number
+          is_allowed: boolean
+          credits_per_use: number
+          granted_at: string | null
+          revoked_at: string | null
+          granted_by: string | null
+          notes: string | null
+          updated_at: string | null
+        }>
+      }
+
+      // Transport Student Assignments Table
+      transport_student_assignments: {
+        Row: {
+          id: number
+          student_id: number
+          route_id: number
+          vehicle_id: number | null
+          pickup_point: string
+          drop_point: string
+          monthly_fee: string
+          is_active: boolean | null
+          school_id: number
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          student_id: number
+          route_id: number
+          vehicle_id?: number | null
+          pickup_point: string
+          drop_point: string
+          monthly_fee: string
+          is_active?: boolean | null
+          school_id?: number
+        }
+        Update: Partial<{
+          student_id: number
+          route_id: number
+          vehicle_id: number | null
+          pickup_point: string
+          drop_point: string
+          monthly_fee: string
+          is_active: boolean | null
+          school_id: number
+          updated_at: string | null
+        }>
+      }
+
+      // School Settings Table (comprehensive configuration)
+      school_settings: {
+        Row: {
+          id: number
+          school_id: number
+          name: string
+          name_in_bangla: string
+          address: string
+          address_in_bangla: string
+          email: string
+          phone: string
+          website: string | null
+          school_type: string
+          establishment_year: number
+          eiin: string | null
+          registration_number: string | null
+          principal_name: string | null
+          principal_phone: string | null
+          description: string | null
+          description_in_bangla: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          accent_color: string | null
+          motto: string | null
+          motto_bn: string | null
+          logo_url: string | null
+          favicon_url: string | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          school_id?: number
+          name: string
+          name_in_bangla: string
+          address: string
+          address_in_bangla: string
+          email: string
+          phone: string
+          website?: string | null
+          school_type?: string
+          establishment_year: number
+          eiin?: string | null
+          registration_number?: string | null
+          principal_name?: string | null
+          principal_phone?: string | null
+          description?: string | null
+          description_in_bangla?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          accent_color?: string | null
+          motto?: string | null
+          motto_bn?: string | null
+          logo_url?: string | null
+          favicon_url?: string | null
+        }
+        Update: Partial<{
+          school_id: number
+          name: string
+          name_in_bangla: string
+          address: string
+          address_in_bangla: string
+          email: string
+          phone: string
+          website: string | null
+          school_type: string
+          establishment_year: number
+          eiin: string | null
+          registration_number: string | null
+          principal_name: string | null
+          principal_phone: string | null
+          description: string | null
+          description_in_bangla: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          accent_color: string | null
+          motto: string | null
+          motto_bn: string | null
+          logo_url: string | null
+          favicon_url: string | null
+          updated_at: string | null
+        }>
+      }
+
+      // Attendance Table
+      attendance: {
+        Row: {
+          id: number
+          student_id: number
+          class: string
+          section: string | null
+          date: string
+          status: string
+          remarks: string | null
+          marked_by: number | null
+          school_id: number
+          created_at: string
+        }
+        Insert: {
+          student_id: number
+          class: string
+          section?: string | null
+          date: string
+          status?: string
+          remarks?: string | null
+          marked_by?: number | null
+          school_id?: number
+        }
+        Update: Partial<{
+          student_id: number
+          class: string
+          section: string | null
+          date: string
+          status: string
+          remarks: string | null
+          marked_by: number | null
+          school_id: number
+        }>
+      }
+
+      // Exams Table
+      exams: {
+        Row: {
+          id: number
+          name: string
+          name_bn: string
+          description: string | null
+          type: string
+          class: string
+          subject: string
+          total_marks: number
+          pass_marks: number
+          date: string
+          start_time: string | null
+          end_time: string | null
+          duration: number | null
+          status: string
+          school_id: number
+          created_at: string
+        }
+        Insert: {
+          name: string
+          name_bn: string
+          description?: string | null
+          type?: string
+          class: string
+          subject: string
+          total_marks?: number
+          pass_marks?: number
+          date: string
+          start_time?: string | null
+          end_time?: string | null
+          duration?: number | null
+          status?: string
+          school_id?: number
+        }
+        Update: Partial<{
+          name: string
+          name_bn: string
+          description: string | null
+          type: string
+          class: string
+          subject: string
+          total_marks: number
+          pass_marks: number
+          date: string
+          start_time: string | null
+          end_time: string | null
+          duration: number | null
+          status: string
+          school_id: number
+        }>
+      }
+
+      // Exam Results Table
+      exam_results: {
+        Row: {
+          id: number
+          exam_id: number
+          student_id: number
+          marks_obtained: number
+          grade: string | null
+          remarks: string | null
+          is_absent: boolean | null
+          school_id: number
+          created_at: string
+        }
+        Insert: {
+          exam_id: number
+          student_id: number
+          marks_obtained: number
+          grade?: string | null
+          remarks?: string | null
+          is_absent?: boolean | null
+          school_id?: number
+        }
+        Update: Partial<{
+          exam_id: number
+          student_id: number
+          marks_obtained: number
+          grade: string | null
+          remarks: string | null
+          is_absent: boolean | null
+          school_id: number
+        }>
+      }
+
+      // Events Table
+      events: {
+        Row: {
+          id: number
+          name: string
+          name_bn: string
+          description: string | null
+          description_bn: string | null
+          date: string
+          start_time: string | null
+          end_time: string | null
+          location: string | null
+          type: string
+          is_active: boolean | null
+          organizer: string | null
+          contact_info: string | null
+          max_participants: number | null
+          current_participants: number | null
+          registration_required: boolean | null
+          registration_fee: string | null
+          image_url: string | null
+          school_id: number
+          created_by: number | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          name: string
+          name_bn: string
+          description?: string | null
+          description_bn?: string | null
+          date: string
+          start_time?: string | null
+          end_time?: string | null
+          location?: string | null
+          type?: string
+          is_active?: boolean | null
+          organizer?: string | null
+          contact_info?: string | null
+          max_participants?: number | null
+          current_participants?: number | null
+          registration_required?: boolean | null
+          registration_fee?: string | null
+          image_url?: string | null
+          school_id?: number
+          created_by?: number | null
+        }
+        Update: Partial<{
+          name: string
+          name_bn: string
+          description: string | null
+          description_bn: string | null
+          date: string
+          start_time: string | null
+          end_time: string | null
+          location: string | null
+          type: string
+          is_active: boolean | null
+          organizer: string | null
+          contact_info: string | null
+          max_participants: number | null
+          current_participants: number | null
+          registration_required: boolean | null
+          registration_fee: string | null
+          image_url: string | null
+          school_id: number
+          created_by: number | null
+          updated_at: string | null
+        }>
+      }
     }
     Views: {
       [_ in never]: never
@@ -1117,6 +1601,48 @@ export type ParentUpdate = TablesUpdate<'parents'>
 export type InventoryMovement = TablesRow<'inventory_movements'>
 export type InventoryMovementInsert = TablesInsert<'inventory_movements'>
 export type InventoryMovementUpdate = TablesUpdate<'inventory_movements'>
+
+// New table type exports
+export type LibraryBorrowedBook = TablesRow<'library_borrowed_books'>
+export type LibraryBorrowedBookInsert = TablesInsert<'library_borrowed_books'>
+export type LibraryBorrowedBookUpdate = TablesUpdate<'library_borrowed_books'>
+
+export type VideoConference = TablesRow<'video_conferences'>
+export type VideoConferenceInsert = TablesInsert<'video_conferences'>
+export type VideoConferenceUpdate = TablesUpdate<'video_conferences'>
+
+export type StudentImportBatch = TablesRow<'student_import_batches'>
+export type StudentImportBatchInsert = TablesInsert<'student_import_batches'>
+export type StudentImportBatchUpdate = TablesUpdate<'student_import_batches'>
+
+export type SchoolDocumentPermission = TablesRow<'school_document_permissions'>
+export type SchoolDocumentPermissionInsert = TablesInsert<'school_document_permissions'>
+export type SchoolDocumentPermissionUpdate = TablesUpdate<'school_document_permissions'>
+
+export type TransportStudentAssignment = TablesRow<'transport_student_assignments'>
+export type TransportStudentAssignmentInsert = TablesInsert<'transport_student_assignments'>
+export type TransportStudentAssignmentUpdate = TablesUpdate<'transport_student_assignments'>
+
+export type SchoolSettings = TablesRow<'school_settings'>
+export type SchoolSettingsInsert = TablesInsert<'school_settings'>
+export type SchoolSettingsUpdate = TablesUpdate<'school_settings'>
+
+// New Academic & Management Tables
+export type Attendance = TablesRow<'attendance'>
+export type AttendanceInsert = TablesInsert<'attendance'>
+export type AttendanceUpdate = TablesUpdate<'attendance'>
+
+export type Exam = TablesRow<'exams'>
+export type ExamInsert = TablesInsert<'exams'>
+export type ExamUpdate = TablesUpdate<'exams'>
+
+export type ExamResult = TablesRow<'exam_results'>
+export type ExamResultInsert = TablesInsert<'exam_results'>
+export type ExamResultUpdate = TablesUpdate<'exam_results'>
+
+export type Event = TablesRow<'events'>
+export type EventInsert = TablesInsert<'events'>
+export type EventUpdate = TablesUpdate<'events'>
 
 // Dashboard Stats Type
 export interface DashboardStats {
