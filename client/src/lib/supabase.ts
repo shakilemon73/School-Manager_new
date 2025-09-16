@@ -211,28 +211,46 @@ function fromDbStudent(dbStudent: Database['public']['Tables']['students']['Row'
 // Direct Database Query Functions (replacing Express API calls)
 export const db = {
   // Dashboard Stats
-  async getDashboardStats(schoolId: number) {
-    if (!schoolId) {
-      throw new Error('School ID is required for dashboard stats');
-    }
-    const [studentsCount, teachersCount, booksCount, inventoryCount, notificationsCount] = await Promise.all([
-      supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
-      supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), 
-      supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
-      supabase.from('inventory_items').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
-      supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('is_read', false)
-    ]);
+  async getDashboardStats(schoolId?: number) {
+    const targetSchoolId = schoolId || 1; // Default to school 1 if not provided
+    console.log('📊 Fetching dashboard stats for school ID:', targetSchoolId);
+    
+    try {
+      const [studentsCount, teachersCount, booksCount, inventoryCount, notificationsCount] = await Promise.all([
+        supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', targetSchoolId),
+        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', targetSchoolId), 
+        supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('school_id', targetSchoolId),
+        supabase.from('inventory_items').select('id', { count: 'exact', head: true }).eq('school_id', targetSchoolId),
+        supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('school_id', targetSchoolId).eq('is_read', false)
+      ]);
 
-    return {
-      students: studentsCount.count || 0,
-      teachers: teachersCount.count || 0, 
-      books: booksCount.count || 0,
-      inventory_items: inventoryCount.count || 0,
-      pending_fees: 0, // Will implement with fee system
-      total_revenue: 0, // Will implement with payment system
-      active_notifications: notificationsCount.count || 0,
-      upcoming_events: 0 // Will implement with calendar system
-    };
+      const stats = {
+        students: studentsCount.count || 0,
+        teachers: teachersCount.count || 0, 
+        books: booksCount.count || 0,
+        inventory_items: inventoryCount.count || 0,
+        pending_fees: 0, // Will implement with fee system
+        total_revenue: 0, // Will implement with payment system
+        active_notifications: notificationsCount.count || 0,
+        upcoming_events: 0 // Will implement with calendar system
+      };
+
+      console.log('✅ Dashboard stats fetched successfully:', stats);
+      return stats;
+    } catch (error) {
+      console.error('❌ Error fetching dashboard stats:', error);
+      // Return fallback stats
+      return {
+        students: 0,
+        teachers: 0, 
+        books: 0,
+        inventory_items: 0,
+        pending_fees: 0,
+        total_revenue: 0,
+        active_notifications: 0,
+        upcoming_events: 0
+      };
+    }
   },
 
   // Dashboard Activities (replacing Express API call)
