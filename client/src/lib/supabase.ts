@@ -6,44 +6,95 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 console.log('Supabase Config Check:', {
   url: supabaseUrl ? 'Found' : 'Missing',
-  key: supabaseAnonKey ? 'Found' : 'Missing'
+  key: supabaseAnonKey ? 'Found' : 'Missing',
+  urlValue: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'undefined',
+  keyValue: supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'undefined'
 });
 
 let supabase: ReturnType<typeof createClient<Database>>;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase configuration missing:', { supabaseUrl, supabaseAnonKey });
-  console.error('Make sure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in your environment');
+  console.error('❌ Supabase configuration missing!');
+  console.error('Please check your .env file and ensure these variables are set:');
+  console.error('- VITE_SUPABASE_URL=https://your-project.supabase.co');
+  console.error('- VITE_SUPABASE_ANON_KEY=your-anon-key-here');
   
   // Create fallback client for development
   supabase = {
     auth: {
-      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      getSession: () => Promise.resolve({ data: { session: null }, error: { message: 'Supabase not configured', __isAuthError: true } }),
       onAuthStateChange: (callback: any) => {
         callback('INITIAL_SESSION', null);
         return { data: { subscription: { unsubscribe: () => {}, id: 'fallback', callback } } };
       },
       signInWithPassword: () => Promise.resolve({ 
         data: { user: null, session: null }, 
-        error: { message: 'Supabase not configured', name: 'AuthError', status: 500, __isAuthError: true }
+        error: { message: 'Supabase API keys not configured. Please check your .env file.', name: 'ConfigurationError', status: 500, __isAuthError: true }
       }),
-      signOut: () => Promise.resolve({ error: null })
+      signUp: () => Promise.resolve({ 
+        data: { user: null, session: null }, 
+        error: { message: 'Supabase API keys not configured. Please check your .env file.', name: 'ConfigurationError', status: 500, __isAuthError: true }
+      }),
+      signOut: () => Promise.resolve({ error: null }),
+      updateUser: () => Promise.resolve({ 
+        data: { user: null }, 
+        error: { message: 'Supabase not configured', __isAuthError: true }
+      }),
+      getUser: () => Promise.resolve({ 
+        data: { user: null }, 
+        error: { message: 'Supabase not configured', __isAuthError: true }
+      })
     },
-    from: () => ({ select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }) })
+    from: () => ({ 
+      select: () => ({ 
+        eq: () => ({ 
+          single: () => Promise.resolve({ data: null, error: { message: 'Database not configured' } }),
+          order: () => ({ limit: () => Promise.resolve({ data: [], error: { message: 'Database not configured' } }) })
+        }) 
+      }),
+      insert: () => ({ 
+        select: () => ({ 
+          single: () => Promise.resolve({ data: null, error: { message: 'Database not configured' } }) 
+        }) 
+      }),
+      update: () => ({ 
+        eq: () => ({ 
+          select: () => ({ 
+            single: () => Promise.resolve({ data: null, error: { message: 'Database not configured' } }) 
+          }) 
+        }) 
+      })
+    })
   } as any;
-  console.warn('Using fallback Supabase client - authentication will not work');
+  console.warn('⚠️ Using fallback Supabase client - authentication will not work');
 } else {
   try {
+    // Validate URL format
+    if (!supabaseUrl.startsWith('https://') || !supabaseUrl.includes('.supabase.co')) {
+      throw new Error('Invalid Supabase URL format. Expected: https://your-project.supabase.co');
+    }
+    
+    // Validate key format
+    if (!supabaseAnonKey.startsWith('eyJ')) {
+      console.warn('⚠️ Supabase anon key might be invalid (should start with "eyJ")');
+    }
+    
     supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: true,
+        flowType: 'pkce'
+      },
+      global: {
+        headers: {
+          'x-application-name': 'school-management-system'
+        }
       }
     });
     console.log('✓ Supabase client initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize Supabase client:', error);
+    console.error('❌ Failed to initialize Supabase client:', error);
     throw error;
   }
 }

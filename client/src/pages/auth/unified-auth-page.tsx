@@ -34,6 +34,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
+import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 
 // Form validation schemas
@@ -67,8 +68,19 @@ export default function UnifiedAuthPage() {
   // Supabase auth
   const { user: supabaseUser, loading: supabaseLoading, signIn, signUp } = useSupabaseDirectAuth();
   
-  // Traditional auth
-  const { user: traditionalUser, loginMutation, registerMutation } = useAuth();
+  // Traditional auth (fallback)
+  let traditionalAuth = null;
+  try {
+    traditionalAuth = useAuth();
+  } catch (error) {
+    console.log('Traditional auth not available:', error);
+  }
+  
+  const { user: traditionalUser, loginMutation, registerMutation } = traditionalAuth || {
+    user: null,
+    loginMutation: null,
+    registerMutation: null
+  };
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -103,7 +115,26 @@ export default function UnifiedAuthPage() {
         const isEmail = data.identifier.includes('@');
         
         if (isEmail) {
-          await signIn(data.identifier, data.password);
+          const result = await signIn(data.identifier, data.password);
+          
+          if (!result.success) {
+            // Handle specific Supabase errors
+            let errorMessage = result.error || "লগইন ব্যর্থ";
+            
+            if (result.error?.includes('Invalid API key') || result.error?.includes('Invalid login credentials')) {
+              errorMessage = "ইমেইল বা পাসওয়ার্ড ভুল। অনুগ্রহ করে আবার চেষ্টা করুন।";
+            } else if (result.error?.includes('Email not confirmed')) {
+              errorMessage = "আপনার ইমেইল যাচাই করুন";
+            }
+            
+            toast({
+              title: "লগইন ব্যর্থ",
+              description: errorMessage,
+              variant: "destructive",
+            });
+            return;
+          }
+          
           toast({
             title: "স্বাগতম!",
             description: "সফলভাবে লগইন হয়েছে",
@@ -111,6 +142,15 @@ export default function UnifiedAuthPage() {
           setLocation('/');
         } else {
           // For username, fallback to traditional auth
+          if (!loginMutation) {
+            toast({
+              title: "ত্রুটি",
+              description: "ট্র্যাডিশনাল অথ উপলব্ধ নেই",
+              variant: "destructive",
+            });
+            return;
+          }
+          
           loginMutation.mutate({
             username: data.identifier,
             password: data.password,
@@ -121,11 +161,27 @@ export default function UnifiedAuthPage() {
                 description: "সফলভাবে লগইন হয়েছে",
               });
               setLocation('/');
+            },
+            onError: (error: any) => {
+              toast({
+                title: "লগইন ব্যর্থ",
+                description: error.message || "ইউজারনেম বা পাসওয়ার্ড ভুল",
+                variant: "destructive",
+              });
             }
           });
         }
       } else {
         // Traditional auth
+        if (!loginMutation) {
+          toast({
+            title: "ত্রুটি",
+            description: "ট্র্যাডিশনাল অথ উপলব্ধ নেই",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         loginMutation.mutate({
           username: data.identifier,
           password: data.password,
@@ -136,13 +192,21 @@ export default function UnifiedAuthPage() {
               description: "সফলভাবে লগইন হয়েছে",
             });
             setLocation('/');
+          },
+          onError: (error: any) => {
+            toast({
+              title: "লগইন ব্যর্থ",
+              description: error.message || "ইউজারনেম বা পাসওয়ার্ড ভুল",
+              variant: "destructive",
+            });
           }
         });
       }
     } catch (error: any) {
+      console.error('Login submit error:', error);
       toast({
-        title: "লগইন ব্যর্থ",
-        description: error.message || "অনুগ্রহ করে আবার চেষ্টা করুন",
+        title: "লগইন সমস্যা",
+        description: "অনুগ্রহ করে আবার চেষ্টা করুন",
         variant: "destructive",
       });
     }
@@ -422,16 +486,23 @@ export default function UnifiedAuthPage() {
                       </form>
                     </Form>
 
-                    {authMode === 'traditional' && (
-                      <Alert className="border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20">
-                        <CheckCircle className="h-4 w-4 text-emerald-600" />
-                        <AlertDescription className="text-emerald-800 dark:text-emerald-300">
-                          <strong>ডেমো অ্যাকাউন্ট:</strong><br/>
-                          ইউজারনেম: emon2001<br/>
-                          পাসওয়ার্ড: admin123
-                        </AlertDescription>
-                      </Alert>
-                    )}
+                    <Alert className="border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20">
+                      <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      <AlertDescription className="text-emerald-800 dark:text-emerald-300">
+                        <strong>টেস্ট অ্যাকাউন্ট:</strong><br/>
+                        {authMode === 'supabase' ? (
+                          <>
+                            ইমেইল: admin@school.com<br/>
+                            পাসওয়ার্ড: admin123
+                          </>
+                        ) : (
+                          <>
+                            ইউজারনেম: emon2001<br/>
+                            পাসওয়ার্ড: admin123
+                          </>
+                        )}
+                      </AlertDescription>
+                    </Alert>
                   </TabsContent>
 
                   <TabsContent value="register" className="space-y-6">
