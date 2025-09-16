@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '../client/src/lib/supabase-types'
 
 // Lazy initialization of Supabase client
-let clientInstance: any = null;
+let clientInstance: SupabaseClient<Database> | null = null;
 
 function createFallbackClient() {
   return {
@@ -17,38 +19,84 @@ function createFallbackClient() {
       }),
       signOut: () => Promise.resolve({ error: null })
     },
-    channel: () => ({ 
-      on: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }) 
+    channel: (name: string) => ({
+      on: () => ({ 
+        subscribe: () => ({ unsubscribe: () => {} })
+      })
     }),
     storage: {
-      from: () => ({
+      from: (bucket: string) => ({
         upload: () => Promise.resolve({ 
           data: null, 
           error: new Error('Storage unavailable - Supabase connection failed') 
         }),
-        getPublicUrl: () => ({ data: { publicUrl: '' } })
+        getPublicUrl: () => ({ data: { publicUrl: '' } }),
+        download: () => Promise.resolve({
+          data: null,
+          error: new Error('Storage unavailable - Supabase connection failed')
+        }),
+        remove: () => Promise.resolve({
+          data: null,
+          error: new Error('Storage unavailable - Supabase connection failed')
+        }),
+        list: () => Promise.resolve({
+          data: [],
+          error: new Error('Storage unavailable - Supabase connection failed')
+        })
       }),
       listBuckets: () => Promise.resolve({ 
         data: [], 
         error: new Error('Storage unavailable - Supabase connection failed') 
       })
     },
-    from: () => ({
-      select: () => Promise.resolve({ 
-        data: [], 
-        error: new Error('Database unavailable - Supabase connection failed') 
+    from: (table: string) => ({
+      select: (columns?: string) => ({
+        eq: () => ({
+          single: () => Promise.resolve({ 
+            data: null, 
+            error: new Error('Database unavailable - Supabase connection failed') 
+          }),
+          order: () => ({
+            limit: () => Promise.resolve({ 
+              data: [], 
+              error: new Error('Database unavailable - Supabase connection failed') 
+            })
+          })
+        }),
+        order: () => ({
+          limit: () => Promise.resolve({ 
+            data: [], 
+            error: new Error('Database unavailable - Supabase connection failed') 
+          })
+        }),
+        then: () => Promise.resolve({ 
+          data: [], 
+          error: new Error('Database unavailable - Supabase connection failed') 
+        })
       }),
-      insert: () => Promise.resolve({ 
-        data: null, 
-        error: new Error('Database unavailable - Supabase connection failed') 
+      insert: (data: any) => ({
+        select: () => ({
+          single: () => Promise.resolve({ 
+            data: null, 
+            error: new Error('Database unavailable - Supabase connection failed') 
+          })
+        })
       }),
-      update: () => Promise.resolve({ 
-        data: null, 
-        error: new Error('Database unavailable - Supabase connection failed') 
+      update: (data: any) => ({
+        eq: (column: string, value: any) => ({
+          select: () => ({
+            single: () => Promise.resolve({ 
+              data: null, 
+              error: new Error('Database unavailable - Supabase connection failed') 
+            })
+          })
+        })
       }),
-      delete: () => Promise.resolve({ 
-        data: null, 
-        error: new Error('Database unavailable - Supabase connection failed') 
+      delete: () => ({
+        eq: (column: string, value: any) => Promise.resolve({ 
+          data: null, 
+          error: new Error('Database unavailable - Supabase connection failed') 
+        })
       })
     })
   };
@@ -82,23 +130,26 @@ function initializeSupabaseClient() {
       console.log('✓ Supabase client initialized successfully');
     } catch (error) {
       console.error('Failed to create Supabase client:', error);
-      clientInstance = createFallbackClient();
+      clientInstance = createFallbackClient() as SupabaseClient<Database>;
     }
   } else {
     console.warn('Supabase environment variables not found. Using fallback client.');
-    clientInstance = createFallbackClient();
+    clientInstance = createFallbackClient() as SupabaseClient<Database>;
   }
   
-  return clientInstance;
+  return clientInstance as SupabaseClient<Database>;
 }
 
 // Export a proxy that lazily initializes the client
-export const supabase = new Proxy({}, {
+export const supabase = new Proxy({} as SupabaseClient<Database>, {
   get(target, prop) {
     const client = initializeSupabaseClient();
-    return client[prop];
+    if (client && prop in client) {
+      return (client as any)[prop];
+    }
+    return undefined;
   }
-});
+}) as SupabaseClient<Database>;
 
 // Enhanced features for your school management system
 export const supabaseFeatures = {

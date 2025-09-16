@@ -858,6 +858,153 @@ export interface Database {
         }>
       }
 
+      // Staff Tables
+      staff: {
+        Row: {
+          id: number
+          staff_id: string
+          name: string
+          name_in_bangla: string | null
+          designation: string | null
+          department: string | null
+          phone: string | null
+          email: string | null
+          date_of_birth: string | null
+          gender: string | null
+          blood_group: string | null
+          present_address: string | null
+          permanent_address: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          join_date: string | null
+          salary: string | null
+          status: string | null
+          photo: string | null
+          school_id: number | null
+          created_at: string
+        }
+        Insert: {
+          staff_id: string
+          name: string
+          name_in_bangla?: string | null
+          designation?: string | null
+          department?: string | null
+          phone?: string | null
+          email?: string | null
+          date_of_birth?: string | null
+          gender?: string | null
+          blood_group?: string | null
+          present_address?: string | null
+          permanent_address?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          join_date?: string | null
+          salary?: string | null
+          status?: string | null
+          photo?: string | null
+          school_id?: number | null
+        }
+        Update: Partial<{
+          staff_id: string
+          name: string
+          name_in_bangla: string | null
+          designation: string | null
+          department: string | null
+          phone: string | null
+          email: string | null
+          date_of_birth: string | null
+          gender: string | null
+          blood_group: string | null
+          present_address: string | null
+          permanent_address: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          join_date: string | null
+          salary: string | null
+          status: string | null
+          photo: string | null
+          school_id: number | null
+        }>
+      }
+
+      // Parents Tables
+      parents: {
+        Row: {
+          id: number
+          name: string
+          name_in_bangla: string | null
+          father_name: string | null
+          mother_name: string | null
+          phone: string | null
+          email: string | null
+          address: string | null
+          occupation: string | null
+          relation: string | null
+          emergency_contact: string | null
+          school_id: number | null
+          created_at: string
+        }
+        Insert: {
+          name: string
+          name_in_bangla?: string | null
+          father_name?: string | null
+          mother_name?: string | null
+          phone?: string | null
+          email?: string | null
+          address?: string | null
+          occupation?: string | null
+          relation?: string | null
+          emergency_contact?: string | null
+          school_id?: number | null
+        }
+        Update: Partial<{
+          name: string
+          name_in_bangla: string | null
+          father_name: string | null
+          mother_name: string | null
+          phone: string | null
+          email: string | null
+          address: string | null
+          occupation: string | null
+          relation: string | null
+          emergency_contact: string | null
+          school_id: number | null
+        }>
+      }
+
+      // Inventory Movements Tables
+      inventory_movements: {
+        Row: {
+          id: number
+          item_id: number
+          type: string
+          quantity: number
+          reason: string | null
+          reference_number: string | null
+          created_by: number | null
+          created_at: string
+          school_id: number | null
+        }
+        Insert: {
+          item_id: number
+          type: string
+          quantity: number
+          reason?: string | null
+          reference_number?: string | null
+          created_by?: number | null
+          school_id?: number | null
+        }
+        Update: Partial<{
+          item_id: number
+          type: string
+          quantity: number
+          reason: string | null
+          reference_number: string | null
+          created_by: number | null
+          school_id: number | null
+        }>
+      }
+
       // Classes Table
       classes: {
         Row: {
@@ -958,6 +1105,18 @@ export type PaymentTransactionUpdate = TablesUpdate<'payment_transactions'>
 export type FinancialTransaction = TablesRow<'financial_transactions'>
 export type FinancialTransactionInsert = TablesInsert<'financial_transactions'>
 export type FinancialTransactionUpdate = TablesUpdate<'financial_transactions'>
+
+export type Staff = TablesRow<'staff'>
+export type StaffInsert = TablesInsert<'staff'>
+export type StaffUpdate = TablesUpdate<'staff'>
+
+export type Parent = TablesRow<'parents'>
+export type ParentInsert = TablesInsert<'parents'>
+export type ParentUpdate = TablesUpdate<'parents'>
+
+export type InventoryMovement = TablesRow<'inventory_movements'>
+export type InventoryMovementInsert = TablesInsert<'inventory_movements'>
+export type InventoryMovementUpdate = TablesUpdate<'inventory_movements'>
 
 // Dashboard Stats Type
 export interface DashboardStats {

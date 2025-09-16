@@ -165,15 +165,20 @@ const studentFieldMapping = {
 };
 
 // Convert camelCase student object to snake_case for database
-function toDbStudent(camelCaseStudent: Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update'] | null): Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update'] | null {
-  if (!camelCaseStudent) return null;
+function toDbStudent(camelCaseStudent: any): Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update'] {
+  if (!camelCaseStudent) return {} as any;
   
   const dbStudent: any = {};
   
-  // Map camelCase fields to snake_case
+  // List of fields that should be excluded from Insert operations
+  const readOnlyFields = ['id', 'created_at'];
+  
+  // Map camelCase fields to snake_case, excluding read-only fields for safety
   Object.entries(camelCaseStudent).forEach(([camelKey, value]) => {
     const dbKey = studentFieldMapping[camelKey as keyof typeof studentFieldMapping] || camelKey;
-    if (value !== undefined && value !== '') {
+    
+    // Skip read-only fields and undefined/empty values
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
       dbStudent[dbKey] = value;
     }
   });
@@ -193,9 +198,10 @@ function fromDbStudent(dbStudent: Database['public']['Tables']['students']['Row'
     reverseMapping[dbKey] = camelKey;
   });
   
-  // Map snake_case fields to camelCase
+  // Map snake_case fields to camelCase, preserving all fields from database
   Object.entries(dbStudent).forEach(([dbKey, value]) => {
     const camelKey = reverseMapping[dbKey] || dbKey;
+    // Preserve all fields including id and created_at for UI display
     camelStudent[camelKey] = value;
   });
   
@@ -482,12 +488,12 @@ export const db = {
     return data ? fromDbStudent(data) : null;
   },
 
-  async createStudent(camelCaseStudent: Database['public']['Tables']['students']['Insert']) {
-    if (!camelCaseStudent.school_id) {
+  async createStudent(camelCaseStudent: any) {
+    if (!camelCaseStudent.school_id && !camelCaseStudent.schoolId) {
       throw new Error('School ID is required to create a student');
     }
-    // Convert camelCase fields to snake_case for database
-    const dbStudent = toDbStudent(camelCaseStudent);
+    // Convert camelCase fields to snake_case for database, excluding read-only fields
+    const dbStudent = toDbStudent(camelCaseStudent) as Database['public']['Tables']['students']['Insert'];
     
     const { data, error } = await supabase
       .from('students')
@@ -501,9 +507,9 @@ export const db = {
     return data ? fromDbStudent(data) : null;
   },
 
-  async updateStudent(id: number, camelCaseUpdates: Database['public']['Tables']['students']['Update']) {
-    // Convert camelCase fields to snake_case for database
-    const dbUpdates = toDbStudent(camelCaseUpdates);
+  async updateStudent(id: number, camelCaseUpdates: any) {
+    // Convert camelCase fields to snake_case for database, excluding read-only fields
+    const dbUpdates = toDbStudent(camelCaseUpdates) as Database['public']['Tables']['students']['Update'];
     
     const { data, error } = await supabase
       .from('students')
@@ -1614,11 +1620,11 @@ export const db = {
         response_time: responseTime,
         last_check: new Date().toISOString()
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         status: 'error',
         database_connection: 'disconnected', 
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         last_check: new Date().toISOString()
       };
     }
@@ -1676,8 +1682,8 @@ export const db = {
     try {
       await this.getDashboardStats(schoolId);
       return { status: 'connected', message: 'School database connection successful' };
-    } catch (error) {
-      return { status: 'error', message: error.message };
+    } catch (error: unknown) {
+      return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
 
