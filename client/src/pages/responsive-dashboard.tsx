@@ -5,6 +5,7 @@ import { ResponsivePageLayout } from '@/components/layout/responsive-page-layout
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useMobile } from '@/hooks/use-mobile';
 import { db } from '@/lib/supabase';
+import { dashboardAdapter, notificationsAdapter, calendarAdapter, documentTemplatesAdapter, logFeatureFlags } from '@/lib/data-adapter';
 import { 
   Card, 
   CardContent, 
@@ -93,21 +94,24 @@ export default function ResponsiveDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch real data directly from Supabase
+  // Log feature flags on mount
+  useEffect(() => {
+    logFeatureFlags();
+  }, []);
+
+  // Fetch dashboard stats using data adapter
   const { data: dashboardStats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats', { schoolId: 1 }],
     queryFn: async () => {
-      console.log('🔄 Fetching dashboard stats directly from Supabase...');
-      const stats = await db.getDashboardStats(1);
-      console.log('✅ Dashboard stats from Supabase:', stats);
+      const stats = await dashboardAdapter.getStats();
       return {
         students: stats.students,
         teachers: stats.teachers, 
         books: stats.books,
-        inventory: stats.inventory_items,
-        monthlyIncome: stats.total_revenue,
-        events: stats.upcoming_events,
-        documents: stats.active_notifications
+        inventory: stats.inventory_items || stats.inventory,
+        monthlyIncome: stats.total_revenue || stats.monthlyIncome,
+        events: stats.upcoming_events || stats.events,
+        documents: stats.active_notifications || stats.documents
       };
     },
     enabled: !!user,
@@ -118,10 +122,8 @@ export default function ResponsiveDashboard() {
   const { data: notifications, isLoading: notificationsLoading } = useQuery<NotificationItem[]>({
     queryKey: ['notifications', { schoolId: 1 }],
     queryFn: async () => {
-      console.log('🔄 Fetching notifications directly from Supabase...');
-      const notifs = await db.getNotifications(1);
-      console.log('✅ Notifications from Supabase:', notifs?.length || 0);
-      return notifs?.map(n => ({
+      const notifs = await notificationsAdapter.getNotifications();
+      return notifs?.map((n: any) => ({
         id: n.id!,
         title: n.title!,
         message: n.message!,

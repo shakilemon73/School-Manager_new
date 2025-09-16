@@ -227,10 +227,10 @@ export default function UnifiedAuthPage() {
         });
       } else {
         // Traditional registration
-        registerMutation.mutate({
+        registerMutation?.mutate({
           username: data.email.split('@')[0], // Use email prefix as username
           email: data.email,
-          password: data.password,
+          passwordHash: data.password, // Change to passwordHash
           full_name: data.full_name,
           phone: data.phone,
           role: 'user',
@@ -254,7 +254,7 @@ export default function UnifiedAuthPage() {
     }
   };
 
-  const isLoading = supabaseLoading || loginMutation.isPending || registerMutation.isPending;
+  const isLoading = supabaseLoading || loginMutation?.isPending || registerMutation?.isPending;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative overflow-hidden">

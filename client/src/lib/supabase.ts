@@ -165,7 +165,7 @@ const studentFieldMapping = {
 };
 
 // Convert camelCase student object to snake_case for database
-function toDbStudent(camelCaseStudent: Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update']): Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update'] {
+function toDbStudent(camelCaseStudent: Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update'] | null): Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update'] | null {
   if (!camelCaseStudent) return null;
   
   const dbStudent: any = {};
@@ -227,6 +227,229 @@ export const db = {
       active_notifications: notificationsCount.count || 0,
       upcoming_events: 0 // Will implement with calendar system
     };
+  },
+
+  // Dashboard Activities (replacing Express API call)
+  async getDashboardActivities(schoolId: number) {
+    if (!schoolId) {
+      throw new Error('School ID is required for dashboard activities');
+    }
+    
+    // Get recent activities from multiple sources
+    const [recentStudents, recentNotifications, recentEvents, recentDocuments] = await Promise.all([
+      // Recent student registrations
+      supabase
+        .from('students')
+        .select('id, name, created_at')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(5),
+      
+      // Recent notifications
+      supabase
+        .from('notifications')
+        .select('id, title, type, created_at, sender')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(5),
+      
+      // Recent calendar events
+      supabase
+        .from('calendar_events')
+        .select('id, title, type, start_date, created_at')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(5),
+      
+      // Recent document activities (if document_activities table exists, fallback to templates)
+      supabase
+        .from('document_templates')
+        .select('id, name, category, created_at')
+        .eq('is_active', true)
+        .order('usage_count', { ascending: false })
+        .limit(3)
+    ]);
+
+    const activities: any[] = [];
+
+    // Add student activities
+    if (recentStudents.data) {
+      recentStudents.data.forEach(student => {
+        activities.push({
+          id: `student_${student.id}`,
+          type: 'student_registration',
+          title: 'New Student Registered',
+          description: `${student.name} joined the school`,
+          timestamp: student.created_at,
+          user: student.name,
+          details: { studentId: student.id }
+        });
+      });
+    }
+
+    // Add notification activities
+    if (recentNotifications.data) {
+      recentNotifications.data.forEach(notification => {
+        activities.push({
+          id: `notification_${notification.id}`,
+          type: 'notification',
+          title: notification.title,
+          description: `${notification.type} notification sent`,
+          timestamp: notification.created_at,
+          user: notification.sender || 'System',
+          details: { notificationId: notification.id, notificationType: notification.type }
+        });
+      });
+    }
+
+    // Add calendar activities
+    if (recentEvents.data) {
+      recentEvents.data.forEach(event => {
+        activities.push({
+          id: `event_${event.id}`,
+          type: 'calendar_event',
+          title: 'Event Created',
+          description: `${event.title} scheduled`,
+          timestamp: event.created_at,
+          user: 'Admin',
+          details: { eventId: event.id, eventType: event.type, startDate: event.start_date }
+        });
+      });
+    }
+
+    // Add document activities
+    if (recentDocuments.data) {
+      recentDocuments.data.forEach(doc => {
+        activities.push({
+          id: `document_${doc.id}`,
+          type: 'document_template',
+          title: 'Template Activity',
+          description: `${doc.name} template used`,
+          timestamp: doc.created_at,
+          user: 'System',
+          details: { templateId: doc.id, category: doc.category }
+        });
+      });
+    }
+
+    // Sort by timestamp and return latest 10
+    return activities
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 10);
+  },
+
+  // Recent Documents (replacing Express API call)
+  async getRecentDocuments(schoolId: number) {
+    if (!schoolId) {
+      throw new Error('School ID is required for recent documents');
+    }
+    
+    // Get recent document generations/activities from multiple sources
+    const [admitCards, idCards, certificates, templates] = await Promise.all([
+      // Recent admit cards (if table exists)
+      supabase
+        .from('admit_cards')
+        .select('id, student_name, exam_name, created_at')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(5)
+        .then(result => ({ data: result.data || [], error: result.error })),
+      
+      // Recent ID cards (if table exists)
+      supabase
+        .from('id_cards')
+        .select('id, student_name, card_type, created_at')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(5)
+        .then(result => ({ data: result.data || [], error: result.error })),
+      
+      // Recent certificates (if table exists)
+      supabase
+        .from('certificates')
+        .select('id, student_name, certificate_type, created_at')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(5)
+        .then(result => ({ data: result.data || [], error: result.error })),
+      
+      // Popular document templates as fallback
+      supabase
+        .from('document_templates')
+        .select('id, name, category, type, created_at, usage_count')
+        .eq('is_active', true)
+        .order('usage_count', { ascending: false })
+        .limit(10)
+    ]);
+
+    const documents: any[] = [];
+
+    // Add admit cards
+    if (admitCards.data) {
+      admitCards.data.forEach(card => {
+        documents.push({
+          id: `admit_card_${card.id}`,
+          name: `Admit Card - ${card.student_name}`,
+          type: 'admit_card',
+          category: 'Academic Documents',
+          created_at: card.created_at,
+          created_by: 'Admin',
+          url: `/documents/admit-cards/${card.id}`
+        });
+      });
+    }
+
+    // Add ID cards
+    if (idCards.data) {
+      idCards.data.forEach(card => {
+        documents.push({
+          id: `id_card_${card.id}`,
+          name: `ID Card - ${card.student_name}`,
+          type: 'id_card',
+          category: 'Identity Documents',
+          created_at: card.created_at,
+          created_by: 'Admin',
+          url: `/documents/id-cards/${card.id}`
+        });
+      });
+    }
+
+    // Add certificates
+    if (certificates.data) {
+      certificates.data.forEach(cert => {
+        documents.push({
+          id: `certificate_${cert.id}`,
+          name: `${cert.certificate_type} - ${cert.student_name}`,
+          type: 'certificate',
+          category: 'Certificates',
+          created_at: cert.created_at,
+          created_by: 'Admin',
+          url: `/documents/certificates/${cert.id}`
+        });
+      });
+    }
+
+    // Add popular templates as recent activity
+    if (templates.data) {
+      templates.data.slice(0, 5).forEach(template => {
+        documents.push({
+          id: `template_${template.id}`,
+          name: template.name,
+          type: template.type || 'template',
+          category: template.category || 'Templates',
+          created_at: template.created_at,
+          created_by: 'System',
+          url: `/documents/templates/${template.id}`
+        });
+      });
+    }
+
+    // Sort by creation date and return latest 8
+    return documents
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 8);
   },
 
   // Students

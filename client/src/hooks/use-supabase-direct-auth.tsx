@@ -6,6 +6,8 @@ import type { User } from '@supabase/supabase-js';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  schoolId: number | null;
+  getUserSchoolId: () => number | null;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (email: string, password: string, userData?: any) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
@@ -18,11 +20,22 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [schoolId, setSchoolId] = useState<number | null>(null);
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      
+      // Extract school ID from user metadata
+      if (session?.user) {
+        const userSchoolId = session.user.user_metadata?.school_id || session.user.user_metadata?.schoolId || 1;
+        setSchoolId(typeof userSchoolId === 'number' ? userSchoolId : parseInt(userSchoolId) || 1);
+        console.log('🏫 Initial user school ID:', userSchoolId);
+      } else {
+        setSchoolId(null);
+      }
+      
       setLoading(false);
     });
 
@@ -31,6 +44,16 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.email || null);
         setUser(session?.user ?? null);
+        
+        // Extract school ID from user metadata
+        if (session?.user) {
+          const userSchoolId = session.user.user_metadata?.school_id || session.user.user_metadata?.schoolId || 1;
+          setSchoolId(typeof userSchoolId === 'number' ? userSchoolId : parseInt(userSchoolId) || 1);
+          console.log('🏫 User school ID:', userSchoolId);
+        } else {
+          setSchoolId(null);
+        }
+        
         setLoading(false);
       }
     );
@@ -166,9 +189,28 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     }
   };
 
+  // Helper function to get current school ID
+  const getUserSchoolId = (): number | null => {
+    if (!user) return null;
+    
+    // Try multiple possible locations for school ID
+    const metadata = user.user_metadata || {};
+    const schoolId = metadata.school_id || metadata.schoolId;
+    
+    if (schoolId) {
+      return typeof schoolId === 'number' ? schoolId : parseInt(schoolId) || null;
+    }
+    
+    // Fallback to default school for development
+    console.warn('⚠️ No school ID found in user metadata, using fallback school ID: 1');
+    return 1;
+  };
+
   const value: AuthContextType = {
     user,
     loading,
+    schoolId,
+    getUserSchoolId,
     signIn,
     signUp,
     signOut,
@@ -211,6 +253,21 @@ export const userProfile = {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
     return user;
+  },
+
+  // Get current user's school ID
+  getCurrentUserSchoolId: async (): Promise<number | null> => {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return null;
+    
+    const metadata = user.user_metadata || {};
+    const schoolId = metadata.school_id || metadata.schoolId;
+    
+    if (schoolId) {
+      return typeof schoolId === 'number' ? schoolId : parseInt(schoolId) || null;
+    }
+    
+    return 1; // Fallback for development
   },
 
   // Check if user is authenticated
