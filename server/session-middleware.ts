@@ -85,7 +85,7 @@ export async function supabaseSessionMiddleware(
       
       // Attach user and session to request
       req.user = user;
-      req.session = { user, accessToken };
+      (req as any).session = { user, accessToken };
     } catch (validationError) {
       console.error('Token validation exception:', validationError);
       return res.status(401).json({ message: 'Authentication service unavailable' });
