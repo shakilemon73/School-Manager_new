@@ -2352,11 +2352,19 @@ export const db = {
 
       if (creditError) throw creditError;
 
-      // Update template usage count
-      await supabase
+      // Update template usage count - using RPC for atomic increment
+      const { data: currentTemplate } = await supabase
         .from('document_templates')
-        .update({ usage_count: supabase.sql`usage_count + 1` })
-        .eq('id', documentData.templateId);
+        .select('usage_count')
+        .eq('id', documentData.templateId)
+        .single();
+        
+      if (currentTemplate) {
+        await supabase
+          .from('document_templates')
+          .update({ usage_count: (currentTemplate.usage_count || 0) + 1 })
+          .eq('id', documentData.templateId);
+      }
 
       return {
         success: true,
