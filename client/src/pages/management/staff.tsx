@@ -33,7 +33,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { db } from '@/lib/supabase';
 import { ProfileDetailsModal } from '@/components/profile-details-modal';
 import { Trash2, Edit, Plus, Users, CheckCircle, AlertCircle, Search, Download } from 'lucide-react';
 
@@ -58,9 +58,13 @@ export default function StaffPage() {
     salary: '',
   });
 
-  // Fetch staff from database
+  // Fetch staff from Supabase
   const { data: staffData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/staff'],
+    queryKey: ['staff'],
+    queryFn: async () => {
+      const data = await db.getStaff(1); // schoolId = 1, RLS will handle filtering
+      return data;
+    },
     staleTime: 0,
     gcTime: 0,
   });
@@ -77,14 +81,10 @@ export default function StaffPage() {
         schoolId: 1
       };
       
-      return apiRequest('/api/staff', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(staffData),
-      });
+      return await db.createStaff(staffData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
       toast({
         title: "কর্মচারী যোগ করা হয়েছে",
         description: "নতুন কর্মচারী সফলভাবে যোগ করা হয়েছে।",
@@ -109,14 +109,10 @@ export default function StaffPage() {
         salary: parseInt(staff.salary) || 0,
       };
       
-      return apiRequest(`/api/staff/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(staffData),
-      });
+      return await db.updateStaff(id, staffData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
       toast({
         title: "কর্মচারী আপডেট করা হয়েছে",
         description: "কর্মচারীর তথ্য সফলভাবে আপডেট করা হয়েছে।",
@@ -136,12 +132,10 @@ export default function StaffPage() {
   // Delete staff mutation
   const deleteStaffMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/staff/${id}`, {
-        method: 'DELETE',
-      });
+      return await db.deleteStaff(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
       toast({
         title: "কর্মচারী মুছে ফেলা হয়েছে",
         description: "কর্মচারী সফলভাবে মুছে ফেলা হয়েছে।",

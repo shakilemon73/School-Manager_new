@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { db } from '@/lib/supabase';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -109,13 +109,21 @@ export default function FinancesPage() {
   const [reportType, setReportType] = useState('summary');
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
-  // Fetch financial data
+  // Fetch financial data from Supabase
   const { data: financialStats } = useQuery({
-    queryKey: ['/api/finance/stats'],
+    queryKey: ['finance-stats'],
+    queryFn: async () => {
+      const stats = await db.getFinancialStats(1); // schoolId = 1, RLS will handle filtering
+      return stats;
+    },
   });
 
   const { data: transactions = [], isLoading: transactionsLoading } = useQuery({
-    queryKey: ['/api/finance/transactions'],
+    queryKey: ['finance-transactions'],
+    queryFn: async () => {
+      const data = await db.getFinancialTransactions(1); // schoolId = 1, RLS will handle filtering
+      return data;
+    },
   });
 
   // Transaction form
@@ -134,11 +142,14 @@ export default function FinancesPage() {
 
   // Create transaction mutation
   const createTransaction = useMutation({
-    mutationFn: (data: TransactionFormData) => 
-      apiRequest('/api/finance/transactions', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: TransactionFormData) => {
+      return await db.createFinancialTransaction({
+        ...data,
+        amount: parseFloat(data.amount),
+        schoolId: 1,
+        createdAt: new Date().toISOString().split('T')[0]
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/finance/stats'] });

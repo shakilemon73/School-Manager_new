@@ -33,7 +33,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { db } from '@/lib/supabase';
 import { ProfileDetailsModal } from '@/components/profile-details-modal';
 import { Trash2, Edit, Plus, Users, CheckCircle, AlertCircle, Search, Download } from 'lucide-react';
 
@@ -58,9 +58,13 @@ export default function ParentsPage() {
     emergencyContact: '',
   });
 
-  // Fetch parents from database
+  // Fetch parents from Supabase
   const { data: parentsData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/parents'],
+    queryKey: ['parents'],
+    queryFn: async () => {
+      const data = await db.getParents(1); // schoolId = 1, RLS will handle filtering
+      return data;
+    },
     staleTime: 0,
     gcTime: 0,
   });
@@ -75,14 +79,10 @@ export default function ParentsPage() {
         schoolId: 1
       };
       
-      return apiRequest('/api/parents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parentData),
-      });
+      return await db.createParent(parentData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/parents'] });
+      queryClient.invalidateQueries({ queryKey: ['parents'] });
       toast({
         title: "অভিভাবক যোগ করা হয়েছে",
         description: "নতুন অভিভাবক সফলভাবে যোগ করা হয়েছে।",
@@ -102,14 +102,10 @@ export default function ParentsPage() {
   // Update parent mutation
   const updateParentMutation = useMutation({
     mutationFn: async ({ id, ...parent }: any) => {
-      return apiRequest(`/api/parents/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parent),
-      });
+      return await db.updateParent(id, parent);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/parents'] });
+      queryClient.invalidateQueries({ queryKey: ['parents'] });
       toast({
         title: "অভিভাবক আপডেট করা হয়েছে",
         description: "অভিভাবকের তথ্য সফলভাবে আপডেট করা হয়েছে।",
@@ -129,12 +125,10 @@ export default function ParentsPage() {
   // Delete parent mutation
   const deleteParentMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/parents/${id}`, {
-        method: 'DELETE',
-      });
+      return await db.deleteParent(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/parents'] });
+      queryClient.invalidateQueries({ queryKey: ['parents'] });
       toast({
         title: "অভিভাবক মুছে ফেলা হয়েছে",
         description: "অভিভাবক সফলভাবে মুছে ফেলা হয়েছে।",
