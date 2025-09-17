@@ -15,7 +15,12 @@ export function registerDashboardRoutes(app: Express) {
   app.get('/api/dashboard/stats', supabaseSessionMiddleware, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // Get user's school_id for tenant scoping - CRITICAL for security
-      const schoolId = req.user?.schoolId || req.user?.user_metadata?.school_id || 1;
+      const schoolId = req.user?.schoolId || req.user?.user_metadata?.school_id;
+      
+      if (!schoolId) {
+        console.error('No school_id found for user:', req.user?.email);
+        return res.status(403).json({ error: 'Access denied: No school association found' });
+      }
       
       console.log('Dashboard stats request for school_id:', schoolId, 'user:', req.user?.email);
       
@@ -36,19 +41,18 @@ export function registerDashboardRoutes(app: Express) {
       const currentMonth = new Date().getMonth() + 1;
       const currentYear = new Date().getFullYear();
       
-      const monthlyIncomeResult = await db.execute({
-        sql: `SELECT COALESCE(SUM(total_amount), 0) as income FROM fee_receipts 
-              WHERE EXTRACT(MONTH FROM created_at) = $1 
-              AND EXTRACT(YEAR FROM created_at) = $2
-              AND school_id = $3`,
-        args: [currentMonth, currentYear, schoolId]
-      });
+      const monthlyIncomeResult = await db.execute(`
+        SELECT COALESCE(SUM(total_amount), 0) as income FROM fee_receipts 
+        WHERE EXTRACT(MONTH FROM created_at) = ${currentMonth}
+        AND EXTRACT(YEAR FROM created_at) = ${currentYear}
+        AND school_id = ${schoolId}
+      `);
 
       const stats = {
         students: studentsCount.count || 0,
         teachers: teachersCount.count || 0,
         classes: classesCount.count || 0,
-        monthlyIncome: monthlyIncomeResult.rows[0]?.income || 0
+        monthlyIncome: monthlyIncomeResult[0]?.income || 0
       };
 
       res.json(stats);
@@ -62,7 +66,12 @@ export function registerDashboardRoutes(app: Express) {
   app.get('/api/dashboard/activities', supabaseSessionMiddleware, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // Get user's school_id for tenant scoping - CRITICAL for security
-      const schoolId = req.user?.schoolId || req.user?.user_metadata?.school_id || 1;
+      const schoolId = req.user?.schoolId || req.user?.user_metadata?.school_id;
+      
+      if (!schoolId) {
+        console.error('No school_id found for user:', req.user?.email);
+        return res.status(403).json({ error: 'Access denied: No school association found' });
+      }
       
       console.log('Dashboard activities request for school_id:', schoolId, 'user:', req.user?.email);
       
@@ -111,7 +120,12 @@ export function registerDashboardRoutes(app: Express) {
   app.get('/api/dashboard/documents', supabaseSessionMiddleware, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // Get user's school_id for tenant scoping - CRITICAL for security
-      const schoolId = req.user?.schoolId || req.user?.user_metadata?.school_id || 1;
+      const schoolId = req.user?.schoolId || req.user?.user_metadata?.school_id;
+      
+      if (!schoolId) {
+        console.error('No school_id found for user:', req.user?.email);
+        return res.status(403).json({ error: 'Access denied: No school association found' });
+      }
       
       console.log('Dashboard documents request for school_id:', schoolId, 'user:', req.user?.email);
       
