@@ -261,28 +261,25 @@ export const db = {
     
     // Get recent activities from multiple sources
     const [recentStudents, recentNotifications, recentEvents, recentDocuments] = await Promise.all([
-      // Recent student registrations
+      // Recent student registrations (RLS handles school filtering)
       supabase
         .from('students')
         .select('id, name, created_at')
-        .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
         .limit(5),
       
-      // Recent notifications
+      // Recent notifications (RLS handles school filtering)
       supabase
         .from('notifications')
         .select('id, title, type, created_at, sender')
-        .eq('school_id', schoolId)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(5),
       
-      // Recent calendar events
+      // Recent calendar events (RLS handles school filtering)
       supabase
         .from('calendar_events')
         .select('id, title, type, start_date, created_at')
-        .eq('school_id', schoolId)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(5),
@@ -476,15 +473,12 @@ export const db = {
       .slice(0, 8);
   },
 
-  // Students
-  async getStudents(schoolId: number) {
-    if (!schoolId) {
-      throw new Error('School ID is required to fetch students');
-    }
+  // Students (RLS automatically filters by user's school access)
+  async getStudents(schoolId?: number) {
+    // schoolId parameter kept for backward compatibility but RLS handles filtering
     const { data, error } = await supabase
       .from('students')
       .select('*')
-      .eq('school_id', schoolId)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -552,15 +546,12 @@ export const db = {
     return true;
   },
 
-  // Teachers
-  async getTeachers(schoolId: number) {
-    if (!schoolId) {
-      throw new Error('School ID is required to fetch teachers');
-    }
+  // Teachers (RLS automatically filters by user's school access)
+  async getTeachers(schoolId?: number) {
+    // schoolId parameter kept for backward compatibility but RLS handles filtering
     const { data, error } = await supabase
       .from('teachers')
       .select('id, teacher_id, name, qualification, subject, date_of_birth, gender, address, phone, email, school_id, status, created_at')
-      .eq('school_id', schoolId)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -628,15 +619,12 @@ export const db = {
     };
   },
 
-  // Library Books
-  async getLibraryBooks(schoolId: number) {
-    if (!schoolId) {
-      throw new Error('School ID is required to fetch library books');
-    }
+  // Library Books (RLS automatically filters by user's school access)
+  async getLibraryBooks(schoolId?: number) {
+    // schoolId parameter kept for backward compatibility but RLS handles filtering
     const { data, error } = await supabase
       .from('library_books')
       .select('id, title, title_bn, author, isbn, category, publisher, publish_year, total_copies, available_copies, location, description, school_id, created_at')
-      .eq('school_id', schoolId)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -666,15 +654,12 @@ export const db = {
     return data;
   },
 
-  // Inventory Items
-  async getInventoryItems(schoolId: number) {
-    if (!schoolId) {
-      throw new Error('School ID is required to fetch inventory items');
-    }
+  // Inventory Items (RLS automatically filters by user's school access)
+  async getInventoryItems(schoolId?: number) {
+    // schoolId parameter kept for backward compatibility but RLS handles filtering
     const { data, error } = await supabase
       .from('inventory_items')
       .select('id, name, name_bn, category, subcategory, brand, model, serial_number, unit_price, current_quantity, minimum_threshold, unit, supplier, location, condition, description, school_id, created_at, updated_at')
-      .eq('school_id', schoolId)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -692,15 +677,12 @@ export const db = {
     return data;
   },
 
-  // Calendar Events
-  async getCalendarEvents(schoolId: number) {
-    if (!schoolId) {
-      throw new Error('School ID is required to fetch calendar events');
-    }
+  // Calendar Events (RLS automatically filters by user's school access)
+  async getCalendarEvents(schoolId?: number) {
+    // schoolId parameter kept for backward compatibility but RLS handles filtering
     const { data, error } = await supabase
       .from('calendar_events')
       .select('id, title, title_bn, description, description_bn, start_date, end_date, start_time, end_time, type, is_active, is_public, location, organizer, school_id, created_at')
-      .eq('school_id', schoolId)
       .eq('is_active', true)
       .order('start_date', { ascending: true });
     
