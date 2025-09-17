@@ -108,10 +108,10 @@ export default function ResponsiveDashboard() {
         students: stats.students,
         teachers: stats.teachers, 
         books: stats.books,
-        inventory: stats.inventory_items || stats.inventory,
-        monthlyIncome: stats.total_revenue || stats.monthlyIncome,
-        events: stats.upcoming_events || stats.events,
-        documents: stats.active_notifications || stats.documents
+        inventory: stats.inventory_items || 0,
+        monthlyIncome: stats.total_revenue || 0,
+        events: stats.upcoming_events || 0,
+        documents: stats.active_notifications || 0
       };
     },
     enabled: !!user,
