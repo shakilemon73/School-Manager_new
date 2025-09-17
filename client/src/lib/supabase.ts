@@ -2375,63 +2375,108 @@ export const db = {
 // Helper functions for Bengali translations and metadata
 function getBengaliName(type: string): string {
   const names: Record<string, string> = {
-    'student-id-cards': 'শিক্ষার্থী আইডি কার্ড',
-    'admit-cards': 'এডমিট কার্ড',
-    'fee-receipts': 'ফি রসিদ',
-    'marksheets': 'মার্কশীট',
-    'teacher-id-cards': 'শিক্ষক আইডি কার্ড',
-    'class-routines': 'ক্লাস রুটিন',
-    'testimonials': 'প্রশংসাপত্র',
-    'result-sheets': 'রেজাল্ট শিট',
-    'transfer-certificates': 'স্থানান্তর সনদপত্র'
+    // Match real database type values
+    'id_card': 'ছাত্র পরিচয়পত্র',
+    'admit_card': 'প্রবেশপত্র',
+    'transcript': 'একাডেমিক ট্রান্সক্রিপ্ট',
+    'progress_report': 'অগ্রগতি প্রতিবেদন',
+    'routine': 'ক্লাসের রুটিন',
+    'excellence_certificate': 'একাডেমিক শ্রেষ্ঠত্ব সনদপত্র',
+    'participation_certificate': 'অংশগ্রহণ সনদপত্র',
+    'sports_certificate': 'ক্রীড়া সনদপত্র',
+    'character_certificate': 'চরিত্র সনদপত্র',
+    'transfer_certificate': 'স্থানান্তর সনদপত্র',
+    'bonafide_certificate': 'প্রত্যয়ন পত্র',
+    'attendance_certificate': 'উপস্থিতি সনদপত্র',
+    'fee_receipt': 'ফি রসিদ',
+    'salary_slip': 'বেতন স্লিপ',
+    'library_card': 'লাইব্রেরি কার্ড',
+    'bus_pass': 'বাস পাস',
+    'medical_certificate': 'মেডিকেল সার্টিফিকেট',
+    'leave_application': 'ছুটির আবেদন',
+    'appointment_letter': 'নিয়োগপত্র'
   };
   return names[type] || type;
 }
 
 function getBengaliDescription(type: string): string {
   const descriptions: Record<string, string> = {
-    'student-id-cards': 'পেশাদার শিক্ষার্থী পরিচয়পত্র তৈরি করুন',
-    'admit-cards': 'পরীক্ষার প্রবেশপত্র তৈরি করুন',
-    'fee-receipts': 'শিক্ষার্থীদের ফি রসিদ তৈরি করুন',
-    'marksheets': 'একাডেমিক মার্কশীট তৈরি করুন',
-    'teacher-id-cards': 'পেশাদার শিক্ষক পরিচয়পত্র তৈরি করুন',
-    'class-routines': 'ক্লাসের সময়সূচী তৈরি করুন'
+    // Match real database type values
+    'id_card': 'ছবি এবং বিস্তারিত তথ্যসহ অফিসিয়াল ছাত্র পরিচয়পত্র',
+    'admit_card': 'রোল নম্বর এবং পরীক্ষার বিস্তারিত তথ্যসহ পরীক্ষার প্রবেশপত্র',
+    'transcript': 'গ্রেড এবং বিষয়সহ অফিসিয়াল একাডেমিক ট্রান্সক্রিপ্ট',
+    'progress_report': 'বিস্তারিত বিশ্লেষণসহ ছাত্রের একাডেমিক অগ্রগতি প্রতিবেদন',
+    'routine': 'বিষয় এবং সময়সূচিসহ সাপ্তাহিক ক্লাসের সময়সূচি',
+    'character_certificate': 'ছাত্রের চরিত্র এবং আচরণের সনদপত্র',
+    'transfer_certificate': 'স্কুল পরিবর্তনের জন্য স্থানান্তর সনদপত্র',
+    'fee_receipt': 'ফি প্রদানের অফিসিয়াল রসিদ',
+    'library_card': 'গ্রন্থাগার ব্যবহারের জন্য পরিচয়পত্র',
+    'medical_certificate': 'স্বাস্থ্য সংক্রান্ত সনদপত্র'
   };
   return descriptions[type] || 'ডকুমেন্ট তৈরি করুন';
 }
 
 function getDocumentIcon(type: string): string {
   const icons: Record<string, string> = {
-    'student-id-cards': '🪪',
-    'admit-cards': '🎫',
-    'fee-receipts': '🧾',
-    'marksheets': '📊',
-    'teacher-id-cards': '👨‍🏫',
-    'class-routines': '📅'
+    // Match real database type values
+    'id_card': '🪪',
+    'admit_card': '🎫',
+    'fee_receipt': '🧾',
+    'transcript': '📊',
+    'teacher_id_card': '👨‍🏫',
+    'routine': '📅',
+    'progress_report': '📈',
+    'character_certificate': '📜',
+    'transfer_certificate': '📋',
+    'bonafide_certificate': '🏛️',
+    'attendance_certificate': '✅',
+    'sports_certificate': '🏆',
+    'excellence_certificate': '🥇',
+    'participation_certificate': '🎭',
+    'library_card': '📚',
+    'bus_pass': '🚌',
+    'medical_certificate': '⚕️',
+    'salary_slip': '💰',
+    'leave_application': '📝',
+    'appointment_letter': '💼'
   };
   return icons[type] || '📄';
 }
 
 function getDifficulty(type: string): string {
   const difficulties: Record<string, string> = {
-    'student-id-cards': 'easy',
-    'admit-cards': 'easy',
-    'fee-receipts': 'easy',
-    'marksheets': 'medium',
-    'teacher-id-cards': 'easy',
-    'class-routines': 'medium'
+    // Match real database type values
+    'id_card': 'easy',
+    'admit_card': 'easy',
+    'fee_receipt': 'easy',
+    'library_card': 'easy',
+    'bus_pass': 'easy',
+    'transcript': 'medium',
+    'progress_report': 'medium',
+    'routine': 'medium',
+    'character_certificate': 'medium',
+    'transfer_certificate': 'medium',
+    'salary_slip': 'advanced',
+    'appointment_letter': 'advanced'
   };
   return difficulties[type] || 'medium';
 }
 
 function getEstimatedTime(type: string): string {
   const times: Record<string, string> = {
-    'student-id-cards': '২-৩ মিনিট',
-    'admit-cards': '১-২ মিনিট',
-    'fee-receipts': '১ মিনিট',
-    'marksheets': '৩-৫ মিনিট',
-    'teacher-id-cards': '২-৩ মিনিট',
-    'class-routines': '৫-৭ মিনিট'
+    // Match real database type values
+    'id_card': '২-ৃ মিনিট',
+    'admit_card': '১-২ মিনিট',
+    'fee_receipt': '১ মিনিট',
+    'library_card': '১ মিনিট',
+    'bus_pass': '১ মিনিট',
+    'transcript': '৩-৫ মিনিট',
+    'progress_report': '৪-৬ মিনিট',
+    'routine': '৫-৭ মিনিট',
+    'character_certificate': '৩-৪ মিনিট',
+    'transfer_certificate': '৩-৪ মিনিট',
+    'salary_slip': '৬-৮ মিনিট',
+    'appointment_letter': '৮-১০ মিনিট'
   };
   return times[type] || '২-৩ মিনিট';
 }

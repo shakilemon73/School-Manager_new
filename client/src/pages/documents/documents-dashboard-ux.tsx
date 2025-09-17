@@ -20,7 +20,7 @@ import {
   MessageSquare, FileCheck, UserPlus, Heart, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { db } from '@/lib/supabase';
+import { db, supabase } from '@/lib/supabase';
 
 interface DocumentType {
   id: string;
@@ -107,11 +107,14 @@ export default function DocumentsDashboardUX() {
     }
   });
 
-  // Fetch user credit balance from Supabase
+  // Fetch user credit balance from Supabase using authenticated user
   const { data: creditBalance, isLoading: creditLoading } = useQuery({
-    queryKey: ['credit-stats', '7324a820-4c85-4a60-b791-57b9cfad6bf9', 1], // User ID and School ID
+    queryKey: ['credit-stats', 1], // School ID
     queryFn: async () => {
-      return await db.getUserCreditStats('7324a820-4c85-4a60-b791-57b9cfad6bf9', 1);
+      // Get current authenticated user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || 'default-user';
+      return await db.getUserCreditStats(userId, 1);
     }
   });
 
