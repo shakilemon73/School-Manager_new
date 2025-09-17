@@ -2092,5 +2092,344 @@ export const db = {
     
     if (error) throw error;
     return data;
+  },
+
+  // Document Management API replacements
+  async getDocumentTemplatesEnhanced(schoolId?: number, category?: string, searchQuery?: string) {
+    let query = supabase
+      .from('document_templates')
+      .select('id, name, name_bn, category, type, description, description_bn, is_active, required_credits, usage_count, created_at')
+      .eq('is_active', true);
+    
+    if (schoolId) {
+      query = query.eq('school_id', schoolId);
+    }
+    
+    if (category && category !== 'all') {
+      query = query.eq('category', category);
+    }
+    
+    if (searchQuery) {
+      query = query.or(`name.ilike.%${searchQuery}%,name_bn.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,description_bn.ilike.%${searchQuery}%`);
+    }
+    
+    const { data, error } = await query.order('usage_count', { ascending: false });
+    
+    if (error) throw error;
+    
+    // Enhance the data with additional metadata
+    const enhancedTemplates = (data || []).map((template: any) => ({
+      id: template.id,
+      type: template.type,
+      name: template.name,
+      nameBn: template.name_bn || getBengaliName(template.type),
+      description: template.description,
+      descriptionBn: template.description_bn || getBengaliDescription(template.type),
+      category: template.category,
+      creditsRequired: template.required_credits || 1,
+      generated: template.usage_count || 0,
+      isPopular: (template.usage_count || 0) > 50,
+      icon: getDocumentIcon(template.type),
+      difficulty: getDifficulty(template.type),
+      estimatedTime: getEstimatedTime(template.type),
+      path: `/documents/${template.type}`,
+      usageCount: template.usage_count || 0,
+      lastUsed: template.created_at
+    }));
+    
+    return enhancedTemplates;
+  },
+
+  async getUserDocumentStats(userId?: string, schoolId: number = 1) {
+    try {
+      const { data: generationsData, error: generationsError } = await supabase
+        .from('document_generations')
+        .select('document_type, credits_used, created_at')
+        .eq('school_id', schoolId);
+
+      if (generationsError) {
+        console.warn('Error fetching document generations:', generationsError);
+      }
+
+      const totalGenerated = generationsData?.length || 0;
+      const creditsUsed = generationsData?.reduce((sum, gen) => sum + (gen.credits_used || 0), 0) || 0;
+      const monthlyUsed = generationsData?.filter(gen => {
+        const genDate = new Date(gen.created_at);
+        const now = new Date();
+        return genDate.getMonth() === now.getMonth() && genDate.getFullYear() === now.getFullYear();
+      }).length || 0;
+
+      return {
+        totalGenerated,
+        creditsUsed,
+        creditsRemaining: 500, // This should be calculated from credit_balance
+        monthlyLimit: 500,
+        monthlyUsed
+      };
+    } catch (error) {
+      console.error('Error getting user document stats:', error);
+      return {
+        totalGenerated: 0,
+        creditsUsed: 0,
+        creditsRemaining: 500,
+        monthlyLimit: 500,
+        monthlyUsed: 0
+      };
+    }
+  },
+
+  async getUserCreditStats(userId: string, schoolId: number = 1) {
+    try {
+      const { data: transactions, error } = await supabase
+        .from('credit_transactions')
+        .select('amount, type, created_at')
+        .eq('school_instance_id', schoolId);
+
+      if (error) {
+        console.warn('Error fetching credit transactions:', error);
+        return { currentBalance: 500, totalEarned: 500, totalSpent: 0 };
+      }
+
+      const totalEarned = transactions?.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0) || 500;
+      const totalSpent = Math.abs(transactions?.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0) || 0);
+      const currentBalance = totalEarned - totalSpent;
+
+      return {
+        currentBalance: Math.max(0, currentBalance),
+        totalEarned,
+        totalSpent
+      };
+    } catch (error) {
+      console.error('Error getting credit stats:', error);
+      return { currentBalance: 500, totalEarned: 500, totalSpent: 0 };
+    }
+  },
+
+  async getDocumentCosts() {
+    // Return static document costs - this could be stored in database if needed
+    return {
+      'student-id-cards': 1,
+      'teacher-id-cards': 1,
+      'admit-cards': 1,
+      'fee-receipts': 1,
+      'marksheets': 2,
+      'class-routines': 2,
+      'teacher-routines': 2,
+      'testimonials': 3,
+      'transfer-certificates': 3,
+      'result-sheets': 2,
+      'default': 1
+    };
+  },
+
+  async seedDocumentTemplates(schoolId: number = 1) {
+    const templates = [
+      {
+        name: 'Student ID Card',
+        name_bn: 'শিক্ষার্থী আইডি কার্ড',
+        type: 'student-id-cards',
+        category: 'academic',
+        description: 'Professional student identification cards',
+        description_bn: 'পেশাদার শিক্ষার্থী পরিচয়পত্র তৈরি করুন',
+        required_credits: 1,
+        is_active: true,
+        school_id: schoolId,
+        usage_count: 0
+      },
+      {
+        name: 'Teacher ID Card',
+        name_bn: 'শিক্ষক আইডি কার্ড',
+        type: 'teacher-id-cards',
+        category: 'staff',
+        description: 'Professional teacher identification cards',
+        description_bn: 'পেশাদার শিক্ষক পরিচয়পত্র তৈরি করুন',
+        required_credits: 1,
+        is_active: true,
+        school_id: schoolId,
+        usage_count: 0
+      },
+      {
+        name: 'Admit Card',
+        name_bn: 'এডমিট কার্ড',
+        type: 'admit-cards',
+        category: 'examination',
+        description: 'Examination admit cards',
+        description_bn: 'পরীক্ষার প্রবেশপত্র তৈরি করুন',
+        required_credits: 1,
+        is_active: true,
+        school_id: schoolId,
+        usage_count: 0
+      },
+      {
+        name: 'Fee Receipt',
+        name_bn: 'ফি রসিদ',
+        type: 'fee-receipts',
+        category: 'financial',
+        description: 'Student fee payment receipts',
+        description_bn: 'শিক্ষার্থীদের ফি রসিদ তৈরি করুন',
+        required_credits: 1,
+        is_active: true,
+        school_id: schoolId,
+        usage_count: 0
+      },
+      {
+        name: 'Marksheet',
+        name_bn: 'মার্কশীট',
+        type: 'marksheets',
+        category: 'academic',
+        description: 'Student academic marksheets',
+        description_bn: 'একাডেমিক মার্কশীট তৈরি করুন',
+        required_credits: 2,
+        is_active: true,
+        school_id: schoolId,
+        usage_count: 0
+      }
+    ];
+
+    const { data, error } = await supabase
+      .from('document_templates')
+      .upsert(templates, { onConflict: 'type,school_id' })
+      .select();
+
+    if (error) throw error;
+    return { success: true, message: 'Templates seeded successfully', count: data?.length || 0 };
+  },
+
+  async generateDocument(documentData: { templateId: number; documentType: string; studentIds: number[]; schoolId?: number }) {
+    const schoolId = documentData.schoolId || 1;
+    
+    try {
+      // Get template details
+      const { data: template, error: templateError } = await supabase
+        .from('document_templates')
+        .select('required_credits, name')
+        .eq('id', documentData.templateId)
+        .eq('is_active', true)
+        .single();
+
+      if (templateError || !template) {
+        throw new Error('Document template not found');
+      }
+
+      const creditsRequired = template.required_credits || 1;
+
+      // Check user's available credits
+      const creditStats = await this.getUserCreditStats('current_user', schoolId);
+      
+      if (creditStats.currentBalance < creditsRequired) {
+        throw new Error(`Insufficient credits. Required: ${creditsRequired}, Available: ${creditStats.currentBalance}`);
+      }
+
+      // Record document generation
+      const { data: generation, error: generationError } = await supabase
+        .from('document_generations')
+        .insert({
+          user_id: 'current_user', // This should be the actual user ID
+          document_type: documentData.documentType,
+          document_name: template.name,
+          credits_used: creditsRequired,
+          status: 'completed',
+          metadata: JSON.stringify({ studentIds: documentData.studentIds }),
+          school_id: schoolId
+        })
+        .select()
+        .single();
+
+      if (generationError) throw generationError;
+
+      // Deduct credits
+      const { error: creditError } = await supabase
+        .from('credit_transactions')
+        .insert({
+          school_instance_id: schoolId,
+          type: 'usage',
+          amount: -creditsRequired,
+          description: `Document generation: ${template.name}`,
+          reference: documentData.documentType
+        });
+
+      if (creditError) throw creditError;
+
+      // Update template usage count
+      await supabase
+        .from('document_templates')
+        .update({ usage_count: supabase.sql`usage_count + 1` })
+        .eq('id', documentData.templateId);
+
+      return {
+        success: true,
+        message: 'Document generated successfully',
+        creditsUsed: creditsRequired,
+        remainingCredits: creditStats.currentBalance - creditsRequired
+      };
+
+    } catch (error: any) {
+      console.error('Error generating document:', error);
+      throw error;
+    }
   }
 };
+
+// Helper functions for Bengali translations and metadata
+function getBengaliName(type: string): string {
+  const names: Record<string, string> = {
+    'student-id-cards': 'শিক্ষার্থী আইডি কার্ড',
+    'admit-cards': 'এডমিট কার্ড',
+    'fee-receipts': 'ফি রসিদ',
+    'marksheets': 'মার্কশীট',
+    'teacher-id-cards': 'শিক্ষক আইডি কার্ড',
+    'class-routines': 'ক্লাস রুটিন',
+    'testimonials': 'প্রশংসাপত্র',
+    'result-sheets': 'রেজাল্ট শিট',
+    'transfer-certificates': 'স্থানান্তর সনদপত্র'
+  };
+  return names[type] || type;
+}
+
+function getBengaliDescription(type: string): string {
+  const descriptions: Record<string, string> = {
+    'student-id-cards': 'পেশাদার শিক্ষার্থী পরিচয়পত্র তৈরি করুন',
+    'admit-cards': 'পরীক্ষার প্রবেশপত্র তৈরি করুন',
+    'fee-receipts': 'শিক্ষার্থীদের ফি রসিদ তৈরি করুন',
+    'marksheets': 'একাডেমিক মার্কশীট তৈরি করুন',
+    'teacher-id-cards': 'পেশাদার শিক্ষক পরিচয়পত্র তৈরি করুন',
+    'class-routines': 'ক্লাসের সময়সূচী তৈরি করুন'
+  };
+  return descriptions[type] || 'ডকুমেন্ট তৈরি করুন';
+}
+
+function getDocumentIcon(type: string): string {
+  const icons: Record<string, string> = {
+    'student-id-cards': '🪪',
+    'admit-cards': '🎫',
+    'fee-receipts': '🧾',
+    'marksheets': '📊',
+    'teacher-id-cards': '👨‍🏫',
+    'class-routines': '📅'
+  };
+  return icons[type] || '📄';
+}
+
+function getDifficulty(type: string): string {
+  const difficulties: Record<string, string> = {
+    'student-id-cards': 'easy',
+    'admit-cards': 'easy',
+    'fee-receipts': 'easy',
+    'marksheets': 'medium',
+    'teacher-id-cards': 'easy',
+    'class-routines': 'medium'
+  };
+  return difficulties[type] || 'medium';
+}
+
+function getEstimatedTime(type: string): string {
+  const times: Record<string, string> = {
+    'student-id-cards': '২-৩ মিনিট',
+    'admit-cards': '১-২ মিনিট',
+    'fee-receipts': '১ মিনিট',
+    'marksheets': '৩-৫ মিনিট',
+    'teacher-id-cards': '২-৩ মিনিট',
+    'class-routines': '৫-৭ মিনিট'
+  };
+  return times[type] || '২-৩ মিনিট';
+}

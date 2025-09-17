@@ -20,6 +20,7 @@ import {
   MessageSquare, FileCheck, UserPlus, Heart, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/supabase';
 
 interface DocumentType {
   id: string;
@@ -70,102 +71,66 @@ export default function DocumentsDashboardUX() {
   const [showPopularFirst, setShowPopularFirst] = useState<boolean>(true);
   const { language } = useLanguage();
 
-  // Fetch user statistics from API
+  // Fetch user statistics from Supabase
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['/api/documents/user-stats'],
+    queryKey: ['document-user-stats', 1], // School ID 1
     queryFn: async () => {
-      const response = await fetch('/api/documents/user-stats');
-      if (!response.ok) {
-        throw new Error('Failed to fetch user stats');
-      }
-      return response.json();
+      return await db.getUserDocumentStats('current_user', 1);
     }
   });
 
   // Fetch ALL document templates for category counts (without filtering)
   const { data: allTemplatesData, isLoading: allTemplatesLoading } = useQuery({
-    queryKey: ['/api/documents/templates', 'all', language],
+    queryKey: ['document-templates-all', 1, language], // School ID 1
     queryFn: async () => {
-      const params = new URLSearchParams();
-      params.append('isActive', 'true');
-      params.append('lang', language);
-      
-      const response = await fetch(`/api/documents/templates?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch templates');
-      }
-      return response.json();
+      return await db.getDocumentTemplatesEnhanced(1); // School ID 1
     }
   });
 
   // Fetch filtered document templates for display
   const { data: templateData, isLoading: templatesLoading } = useQuery({
-    queryKey: ['/api/documents/templates', selectedCategory, searchQuery, language],
+    queryKey: ['document-templates-filtered', selectedCategory, searchQuery, 1, language], // School ID 1
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (selectedCategory !== 'all') params.append('category', selectedCategory);
-      if (searchQuery) params.append('search', searchQuery);
-      params.append('isActive', 'true');
-      params.append('lang', language);
-      
-      const response = await fetch(`/api/documents/templates?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch templates');
-      }
-      return response.json();
+      return await db.getDocumentTemplatesEnhanced(
+        1, // School ID 1
+        selectedCategory !== 'all' ? selectedCategory : undefined,
+        searchQuery || undefined
+      );
     }
   });
 
   // Fetch recent documents
   const { data: recentDocuments, isLoading: recentLoading } = useQuery({
-    queryKey: ['/api/documents/recent'],
+    queryKey: ['recent-documents', 1], // School ID 1
     queryFn: async () => {
-      const response = await fetch('/api/documents/recent');
-      if (!response.ok) {
-        throw new Error('Failed to fetch recent documents');
-      }
-      return response.json();
+      return await db.getRecentDocuments(1); // School ID 1
     }
   });
 
-  // Fetch user credit balance using working simple API
+  // Fetch user credit balance from Supabase
   const { data: creditBalance, isLoading: creditLoading } = useQuery({
-    queryKey: ['/api/simple-credit-stats', '7324a820-4c85-4a60-b791-57b9cfad6bf9'],
+    queryKey: ['credit-stats', '7324a820-4c85-4a60-b791-57b9cfad6bf9', 1], // User ID and School ID
     queryFn: async () => {
-      const response = await fetch('/api/simple-credit-stats/7324a820-4c85-4a60-b791-57b9cfad6bf9');
-      if (!response.ok) {
-        throw new Error('Failed to fetch credit balance');
-      }
-      return response.json();
+      return await db.getUserCreditStats('7324a820-4c85-4a60-b791-57b9cfad6bf9', 1);
     }
   });
 
-  // Fetch document costs
+  // Fetch document costs from Supabase
   const { data: documentCosts, isLoading: costsLoading } = useQuery({
-    queryKey: ['/api/document-costs'],
+    queryKey: ['document-costs'],
     queryFn: async () => {
-      const response = await fetch('/api/document-costs');
-      if (!response.ok) {
-        throw new Error('Failed to fetch document costs');
-      }
-      return response.json();
+      return await db.getDocumentCosts();
     }
   });
 
-  // Seed templates mutation
+  // Seed templates mutation with Supabase
   const seedTemplatesMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/documents/seed-templates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to seed templates');
-      }
-      return response.json();
+      return await db.seedDocumentTemplates(1); // School ID 1
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/documents/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['document-templates-all'] });
+      queryClient.invalidateQueries({ queryKey: ['document-templates-filtered'] });
       toast({
         title: "সফল",
         description: "ডকুমেন্ট টেমপ্লেট সফলভাবে যোগ করা হয়েছে",
@@ -173,29 +138,23 @@ export default function DocumentsDashboardUX() {
     }
   });
 
-  // Generate document with credit deduction
+  // Generate document with credit deduction using Supabase
   const generateDocumentMutation = useMutation({
     mutationFn: async (data: { templateId: number; documentType: string; studentIds: number[] }) => {
-      const response = await fetch('/api/document-generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+      return await db.generateDocument({
+        ...data,
+        schoolId: 1 // School ID 1
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Document generation failed');
-      }
-      return response.json();
     },
     onSuccess: (data) => {
       toast({
         title: "ডকুমেন্ট তৈরি সফল",
         description: data.message || "ডকুমেন্ট সফলভাবে তৈরি হয়েছে",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/credit-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/documents/user-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['document-user-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['document-templates-filtered'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-documents'] });
     },
     onError: (error: any) => {
       toast({
