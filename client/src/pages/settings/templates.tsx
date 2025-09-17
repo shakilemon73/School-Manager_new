@@ -28,7 +28,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import {
   FileText,
@@ -120,10 +120,24 @@ export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Fetch templates from Supabase
+  // Fetch templates from Supabase directly with RLS
   const { data: templates = [], isLoading, error } = useQuery({
-    queryKey: ['/api/document-templates'],
-    queryFn: () => fetch('/api/document-templates').then(res => res.json())
+    queryKey: ['document-templates'],
+    queryFn: async () => {
+      console.log('📄 Fetching document templates with direct Supabase calls');
+      const { data, error } = await supabase
+        .from('document_templates')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Document templates fetch error:', error);
+        throw error;
+      }
+      
+      console.log('Document templates fetched:', data?.length || 0);
+      return data || [];
+    }
   });
 
   // Fallback templates data for demo (only used if API fails)
@@ -332,20 +346,43 @@ export default function TemplatesPage() {
   // Enhanced mutations
   const createTemplateMutation = useMutation({
     mutationFn: async (templateData: any) => {
-      return apiRequest('/api/templates', {
-        method: 'POST',
-        body: JSON.stringify(templateData),
-      });
+      console.log('Creating template with data:', templateData);
+      
+      const { data, error } = await supabase
+        .from('document_templates')
+        .insert({
+          name: templateData.name,
+          name_bn: templateData.nameBn,
+          type: templateData.type,
+          description: templateData.description,
+          description_bn: templateData.descriptionBn,
+          category: templateData.category,
+          category_bn: templateData.categoryBn,
+          is_default: templateData.isDefault || false,
+          is_active: true,
+          settings: templateData.settings || {},
+          usage_count: 0
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Template creation error:', error);
+        throw error;
+      }
+      
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['document-templates'] });
       setIsCreateDialogOpen(false);
       toast({
         title: "টেমপ্লেট তৈরি হয়েছে",
         description: "নতুন টেমপ্লেট সফলভাবে তৈরি করা হয়েছে",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Template creation failed:', error);
       toast({
         title: "ত্রুটি",
         description: "টেমপ্লেট তৈরি করতে সমস্যা হয়েছে",
@@ -356,13 +393,36 @@ export default function TemplatesPage() {
 
   const toggleFavoriteMutation = useMutation({
     mutationFn: async ({ id, isFavorite }: { id: string; isFavorite: boolean }) => {
-      return apiRequest(`/api/templates/${id}/favorite`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isFavorite }),
-      });
+      console.log('Toggling template favorite:', id, isFavorite);
+      
+      const { data, error } = await supabase
+        .from('document_templates')
+        .update({ is_favorite: isFavorite })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Toggle favorite error:', error);
+        throw error;
+      }
+      
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['document-templates'] });
+      toast({
+        title: "আপডেট সম্পন্ন",
+        description: "টেমপ্লেট পছন্দের তালিকা আপডেট হয়েছে",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Toggle favorite failed:', error);
+      toast({
+        title: "ত্রুটি",
+        description: "টেমপ্লেট আপডেট করতে সমস্যা হয়েছে",
+        variant: "destructive",
+      });
     },
   });
 
