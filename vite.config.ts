@@ -10,8 +10,11 @@ export default defineConfig({
   plugins: [
     react(),
     runtimeErrorOverlay(),
+    // Temporarily disabled cartographer plugin due to traverse function error
+    // Will be re-enabled once the babel/traverse compatibility is fixed
     ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
+    process.env.REPL_ID !== undefined &&
+    false // Set to false to disable cartographer temporarily
       ? [
           await import("@replit/vite-plugin-cartographer").then((m) =>
             m.cartographer(),
@@ -36,31 +39,27 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5000,
     strictPort: true,
-    // Fix for blocked request error - allows Replit domains
+    // Fix for Replit host blocking issue
     allowedHosts: [
       "localhost",
       "127.0.0.1",
-      ".replit.dev",              // All Replit subdomains
-      ".replit.app",              // Published Replit apps
-      ".riker.replit.dev",        // Replit internal domains
-      ".id.replit.dev",           // Replit ID-based domains
-      // Add specific domain if needed
-      "34071b04-b6c8-46fb-850f-ff86046b4b89-00-3mpu0scgfalgf.riker.replit.dev"
+      ".replit.dev",
+      ".repl.co",
+      "34071b04-b6c8-46fb-850f-ff86046b4b89-00-3mpu0scgfalgf.riker.replit.dev",
+      // Add any other Replit domains as needed
     ],
   },
   preview: {
     host: "0.0.0.0",
     port: 5000,
     strictPort: true,
-    // Same allowedHosts for preview mode
+    // Fix for Replit host blocking issue in preview mode
     allowedHosts: [
       "localhost",
-      "127.0.0.1", 
+      "127.0.0.1",
       ".replit.dev",
-      ".replit.app",
-      ".riker.replit.dev",
-      ".id.replit.dev",
-      "34071b04-b6c8-46fb-850f-ff86046b4b89-00-3mpu0scgfalgf.riker.replit.dev"
+      ".repl.co",
+      "34071b04-b6c8-46fb-850f-ff86046b4b89-00-3mpu0scgfalgf.riker.replit.dev",
     ],
   },
 });
