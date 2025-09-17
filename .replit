@@ -35,7 +35,6 @@ waitForPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
-exposeLocalhost = true
 
 [[ports]]
 localPort = 34377
@@ -52,6 +51,10 @@ externalPort = 3003
 [[ports]]
 localPort = 37753
 externalPort = 5000
+
+[[ports]]
+localPort = 38101
+externalPort = 6000
 
 [[ports]]
 localPort = 40835
