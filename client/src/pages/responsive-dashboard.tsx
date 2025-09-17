@@ -4,8 +4,8 @@ import { AppShell } from '@/components/layout/app-shell';
 import { ResponsivePageLayout } from '@/components/layout/responsive-page-layout';
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useMobile } from '@/hooks/use-mobile';
-import { db } from '@/lib/supabase';
-import { dashboardAdapter, notificationsAdapter, calendarAdapter, documentTemplatesAdapter, logFeatureFlags } from '@/lib/data-adapter';
+import { supabase } from '@/lib/supabase';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { 
   Card, 
   CardContent, 
@@ -94,24 +94,42 @@ export default function ResponsiveDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Log feature flags on mount
-  useEffect(() => {
-    logFeatureFlags();
-  }, []);
+  // Get current school ID from authenticated user context
+  const getCurrentSchoolId = async (): Promise<number> => {
+    try {
+      const schoolId = await userProfile.getCurrentUserSchoolId();
+      if (!schoolId) {
+        throw new Error('User school ID not found - user may not be properly authenticated');
+      }
+      return schoolId;
+    } catch (error) {
+      console.error('❌ Failed to get user school ID:', error);
+      throw new Error('Authentication required: Cannot determine user school context');
+    }
+  };
 
-  // Fetch dashboard stats using data adapter
+  // Fetch dashboard stats using direct Supabase calls
   const { data: dashboardStats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStats>({
-    queryKey: ['dashboard-stats', { schoolId: 1 }],
+    queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const stats = await dashboardAdapter.getStats();
+      console.log('📊 Fetching dashboard stats with direct Supabase calls');
+      const schoolId = await getCurrentSchoolId();
+      
+      const [studentsCount, teachersCount, booksCount, inventoryCount] = await Promise.all([
+        supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), 
+        supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('inventory_items').select('id', { count: 'exact', head: true }).eq('school_id', schoolId)
+      ]);
+
       return {
-        students: stats.students,
-        teachers: stats.teachers, 
-        books: stats.books,
-        inventory: stats.inventory_items || 0,
-        monthlyIncome: stats.total_revenue || 0,
-        events: stats.upcoming_events || 0,
-        documents: stats.active_notifications || 0
+        students: studentsCount.count || 0,
+        teachers: teachersCount.count || 0, 
+        books: booksCount.count || 0,
+        inventory: inventoryCount.count || 0,
+        monthlyIncome: 0,
+        events: 0,
+        documents: 0
       };
     },
     enabled: !!user,
@@ -120,15 +138,26 @@ export default function ResponsiveDashboard() {
   });
 
   const { data: notifications, isLoading: notificationsLoading } = useQuery<NotificationItem[]>({
-    queryKey: ['notifications', { schoolId: 1 }],
+    queryKey: ['notifications'],
     queryFn: async () => {
-      const notifs = await notificationsAdapter.getNotifications();
-      return notifs?.map((n: any) => ({
-        id: n.id!,
-        title: n.title!,
-        message: n.message!,
+      console.log('🔔 Fetching notifications with direct Supabase calls');
+      const schoolId = await getCurrentSchoolId();
+      
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return data?.map((n: any) => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
         type: (n.type || 'info') as 'info' | 'success' | 'warning' | 'error',
-        created_at: n.created_at!,
+        created_at: n.created_at,
         read: n.is_read || false
       })) || [];
     },
@@ -139,14 +168,23 @@ export default function ResponsiveDashboard() {
   const { data: documentTemplates, isLoading: documentsLoading } = useQuery<DocumentTemplate[]>({
     queryKey: ['document-templates'],
     queryFn: async () => {
-      console.log('🔄 Fetching document templates directly from Supabase...');
-      const templates = await db.getDocumentTemplates(1);
-      console.log('✅ Document templates from Supabase:', templates?.length || 0);
-      return templates?.map(t => ({
-        id: t.id!,
-        name: t.name!,
-        nameBn: t.name_bn || t.name!,
-        category: t.category!,
+      console.log('📄 Fetching document templates with direct Supabase calls');
+      const schoolId = await getCurrentSchoolId();
+      
+      const { data, error } = await supabase
+        .from('document_templates')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('usage_count', { ascending: false });
+      
+      if (error) throw error;
+      
+      return data?.map(t => ({
+        id: t.id,
+        name: t.name,
+        nameBn: t.name_bn || t.name,
+        category: t.category,
         icon: t.icon || 'FileText',
         usageCount: t.usage_count || 0,
         isActive: t.is_active || false
@@ -157,17 +195,26 @@ export default function ResponsiveDashboard() {
   });
 
   const { data: calendarEvents, isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
-    queryKey: ['calendar-events', { schoolId: 1 }],
+    queryKey: ['calendar-events'],
     queryFn: async () => {
-      console.log('🔄 Fetching calendar events directly from Supabase...');
-      const events = await db.getCalendarEvents(1);
-      console.log('✅ Calendar events from Supabase:', events?.length || 0);
-      return events?.map(e => ({
-        id: e.id!,
-        title: e.title!,
-        titleBn: e.title_bn || e.title!,
-        date: e.start_date!,
-        type: e.event_type!,
+      console.log('📅 Fetching calendar events with direct Supabase calls');
+      const schoolId = await getCurrentSchoolId();
+      
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('start_date', { ascending: true });
+      
+      if (error) throw error;
+      
+      return data?.map(e => ({
+        id: e.id,
+        title: e.title,
+        titleBn: e.title_bn || e.title,
+        date: e.start_date,
+        type: e.event_type,
         description: e.description || undefined
       })) || [];
     },

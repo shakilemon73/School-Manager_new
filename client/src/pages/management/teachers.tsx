@@ -32,7 +32,8 @@ import {
 } from "@/components/ui/table";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -93,31 +94,80 @@ export default function TeachersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<any>(null);
 
-  // Fetch teachers via secure adapter
+  // Get current school ID from authenticated user context
+  const getCurrentSchoolId = async (): Promise<number> => {
+    try {
+      const schoolId = await userProfile.getCurrentUserSchoolId();
+      if (!schoolId) {
+        throw new Error('User school ID not found - user may not be properly authenticated');
+      }
+      return schoolId;
+    } catch (error) {
+      console.error('❌ Failed to get user school ID:', error);
+      throw new Error('Authentication required: Cannot determine user school context');
+    }
+  };
+
+  // Fetch teachers via direct Supabase calls
   const { data: teachersData = [], isLoading, error, refetch } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
-      const { teachersAdapter } = await import('@/lib/data-adapter');
-      return teachersAdapter.getTeachers();
+      console.log('👩‍🏫 Fetching teachers with direct Supabase calls');
+      const schoolId = await getCurrentSchoolId();
+      
+      const { data, error } = await supabase
+        .from('teachers')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Fetch teacher stats via secure adapter
+  // Fetch teacher stats via direct Supabase calls
   const { data: stats } = useQuery({
     queryKey: ['teacher-stats'],
     queryFn: async () => {
-      const { teachersAdapter } = await import('@/lib/data-adapter');
-      return teachersAdapter.getTeacherStats();
+      console.log('👩‍🏫 Fetching teacher stats with direct Supabase calls');
+      const schoolId = await getCurrentSchoolId();
+      
+      const [totalTeachers, activeTeachers, inactiveTeachers] = await Promise.all([
+        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
+        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'inactive')
+      ]);
+
+      return {
+        total: totalTeachers.count || 0,
+        active: activeTeachers.count || 0,
+        inactive: inactiveTeachers.count || 0
+      };
     },
   });
 
-  // Create teacher mutation via secure adapter
+  // Create teacher mutation via direct Supabase calls
   const createTeacher = useMutation({
     mutationFn: async (teacherData: any) => {
-      const { teachersAdapter } = await import('@/lib/data-adapter');
-      return teachersAdapter.createTeacher(teacherData);
+      console.log('👩‍🏫 Creating teacher with direct Supabase call');
+      const schoolId = await getCurrentSchoolId();
+      
+      const { data, error } = await supabase
+        .from('teachers')
+        .insert({
+          ...teacherData,
+          school_id: schoolId,
+          status: teacherData.status || 'active',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
@@ -138,11 +188,23 @@ export default function TeachersPage() {
     },
   });
 
-  // Update teacher mutation via secure adapter
+  // Update teacher mutation via direct Supabase calls
   const updateTeacher = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const { teachersAdapter } = await import('@/lib/data-adapter');
-      return teachersAdapter.updateTeacher(id, data);
+      console.log('👩‍🏫 Updating teacher with direct Supabase call');
+      
+      const { data: result, error } = await supabase
+        .from('teachers')
+        .update({
+          ...data,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
@@ -164,11 +226,18 @@ export default function TeachersPage() {
     },
   });
 
-  // Delete teacher mutation via secure adapter
+  // Delete teacher mutation via direct Supabase calls
   const deleteTeacher = useMutation({
     mutationFn: async (id: number) => {
-      const { teachersAdapter } = await import('@/lib/data-adapter');
-      return teachersAdapter.deleteTeacher(id);
+      console.log('👩‍🏫 Deleting teacher with direct Supabase call');
+      
+      const { error } = await supabase
+        .from('teachers')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });

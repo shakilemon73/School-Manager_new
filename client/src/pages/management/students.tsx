@@ -42,7 +42,8 @@ import {
 } from "@/components/ui/pagination";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { ProfileDetailsModal } from '@/components/profile-details-modal';
 import { Trash2, Edit, Plus, Users, CheckCircle, AlertCircle, Search, Download } from 'lucide-react';
 
@@ -73,12 +74,35 @@ export default function StudentsPage() {
     dateOfBirth: '',
   });
 
-  // Fetch students via secure adapter
+  // Get current school ID from authenticated user context
+  const getCurrentSchoolId = async (): Promise<number> => {
+    try {
+      const schoolId = await userProfile.getCurrentUserSchoolId();
+      if (!schoolId) {
+        throw new Error('User school ID not found - user may not be properly authenticated');
+      }
+      return schoolId;
+    } catch (error) {
+      console.error('❌ Failed to get user school ID:', error);
+      throw new Error('Authentication required: Cannot determine user school context');
+    }
+  };
+
+  // Fetch students via direct Supabase calls
   const { data: studentsData = [], isLoading, error, refetch } = useQuery({
     queryKey: ['students'],
     queryFn: async () => {
-      const { studentsAdapter } = await import('@/lib/data-adapter');
-      return studentsAdapter.getStudents();
+      console.log('🎓 Fetching students with direct Supabase calls');
+      const schoolId = await getCurrentSchoolId();
+      
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
@@ -87,8 +111,21 @@ export default function StudentsPage() {
   // Create student mutation with direct Supabase
   const createStudent = useMutation({
     mutationFn: async (studentData: any) => {
-      const { studentsAdapter } = await import('@/lib/data-adapter');
-      return studentsAdapter.createStudent(studentData);
+      console.log('🎓 Creating student with direct Supabase call');
+      const schoolId = await getCurrentSchoolId();
+      
+      const { data, error } = await supabase
+        .from('students')
+        .insert({
+          ...studentData,
+          school_id: schoolId,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -109,11 +146,23 @@ export default function StudentsPage() {
     },
   });
 
-  // Update student mutation via secure adapter
+  // Update student mutation via direct Supabase calls
   const updateStudent = useMutation({
     mutationFn: async ({ id, ...studentData }: any) => {
-      const { studentsAdapter } = await import('@/lib/data-adapter');
-      return studentsAdapter.updateStudent(id, studentData);
+      console.log('🎓 Updating student with direct Supabase call');
+      
+      const { data, error } = await supabase
+        .from('students')
+        .update({
+          ...studentData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -134,11 +183,18 @@ export default function StudentsPage() {
     },
   });
 
-  // Delete student mutation via secure adapter  
+  // Delete student mutation via direct Supabase calls  
   const deleteStudent = useMutation({
     mutationFn: async (id: number) => {
-      const { studentsAdapter } = await import('@/lib/data-adapter');
-      return studentsAdapter.deleteStudent(id);
+      console.log('🎓 Deleting student with direct Supabase call');
+      
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return true;
     },
     onSuccess: async (data, variables) => {
       console.log('Delete successful for student ID:', variables);

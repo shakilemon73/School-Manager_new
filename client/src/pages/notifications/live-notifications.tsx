@@ -35,7 +35,8 @@ import {
   Archive
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
+import { userProfile } from "@/hooks/use-supabase-direct-auth";
 import { useToast } from "@/hooks/use-toast";
 
 interface LiveNotification {
@@ -83,12 +84,36 @@ export default function LiveNotifications() {
     priorityFilter: "medium"
   });
 
+  // Get current school ID from authenticated user context
+  const getCurrentSchoolId = async (): Promise<number> => {
+    try {
+      const schoolId = await userProfile.getCurrentUserSchoolId();
+      if (!schoolId) {
+        throw new Error('User school ID not found - user may not be properly authenticated');
+      }
+      return schoolId;
+    } catch (error) {
+      console.error('❌ Failed to get user school ID:', error);
+      throw new Error('Authentication required: Cannot determine user school context');
+    }
+  };
+
   // Fetch live notifications
   const { data: notificationsResponse, isLoading, refetch } = useQuery({
     queryKey: ['notifications', 'live'],
     queryFn: async () => {
-      const { notificationsAdapter } = await import('@/lib/data-adapter');
-      return notificationsAdapter.getNotifications();
+      console.log('🔔 Fetching notifications with direct Supabase calls');
+      const schoolId = await getCurrentSchoolId();
+      
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
     },
     refetchInterval: 3000, // Refetch every 3 seconds for live updates
   });
@@ -109,8 +134,17 @@ export default function LiveNotifications() {
   // Mark notification as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
-      const { notificationsAdapter } = await import('@/lib/data-adapter');
-      return notificationsAdapter.markAsRead(notificationId);
+      console.log('🔔 Marking notification as read with direct Supabase call');
+      
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', 'live'] });
@@ -120,8 +154,23 @@ export default function LiveNotifications() {
   // Send new notification mutation
   const sendNotificationMutation = useMutation({
     mutationFn: async (notificationData: any) => {
-      const { notificationsAdapter } = await import('@/lib/data-adapter');
-      return notificationsAdapter.sendNotification(notificationData);
+      console.log('🔔 Sending notification with direct Supabase call');
+      const schoolId = await getCurrentSchoolId();
+      
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert({
+          ...notificationData,
+          school_id: schoolId,
+          created_at: new Date().toISOString(),
+          is_read: false,
+          is_active: true
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', 'live'] });
