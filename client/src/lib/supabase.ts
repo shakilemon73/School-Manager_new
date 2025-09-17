@@ -1824,6 +1824,179 @@ export const db = {
     };
   },
 
+  // File Storage Operations (replacing /api/upload and /api/files endpoints)
+  async uploadFile(file: File, folder: string = 'documents', studentId?: string) {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const timestamp = Date.now();
+      const fileName = studentId 
+        ? `${folder}/${studentId}/${timestamp}.${fileExt}`
+        : `${folder}/${timestamp}_${file.name}`;
+      
+      const { data, error } = await supabase.storage
+        .from('school-files')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('school-files')
+        .getPublicUrl(fileName);
+
+      return { 
+        path: fileName, 
+        url: urlData.publicUrl,
+        message: 'File uploaded successfully' 
+      };
+    } catch (error: any) {
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+  },
+
+  async getStudentFiles(studentId: string) {
+    try {
+      const { data, error } = await supabase.storage
+        .from('school-files')
+        .list(`documents/${studentId}`);
+
+      if (error) throw error;
+
+      // Add public URLs to each file
+      const filesWithUrls = (data || []).map(file => {
+        const { data: urlData } = supabase.storage
+          .from('school-files')
+          .getPublicUrl(`documents/${studentId}/${file.name}`);
+        
+        return {
+          ...file,
+          url: urlData.publicUrl
+        };
+      });
+
+      return filesWithUrls;
+    } catch (error: any) {
+      throw new Error(`Failed to get files: ${error.message}`);
+    }
+  },
+
+  async deleteFile(filePath: string) {
+    try {
+      const { error } = await supabase.storage
+        .from('school-files')
+        .remove([filePath]);
+
+      if (error) throw error;
+      return { message: 'File deleted successfully' };
+    } catch (error: any) {
+      throw new Error(`Delete failed: ${error.message}`);
+    }
+  },
+
+  // CSV/Excel Import Functions (replacing multer-based student import)
+  async importStudentsFromFile(file: File, schoolId: number) {
+    try {
+      // Upload file first
+      const { path } = await this.uploadFile(file, 'imports');
+      
+      // Parse file content based on type
+      let data;
+      if (file.type.includes('csv') || file.name.endsWith('.csv')) {
+        data = await this.parseCSVFile(file);
+      } else if (file.type.includes('excel') || file.name.match(/\.(xlsx|xls)$/)) {
+        data = await this.parseExcelFile(file);
+      } else {
+        throw new Error('Unsupported file type. Please use CSV or Excel files.');
+      }
+
+      // Validate and format student data
+      const students = data.map((row: any, index: number) => {
+        const student = this.validateStudentRow(row, index);
+        return {
+          ...student,
+          school_id: schoolId,
+          created_at: new Date().toISOString()
+        };
+      });
+
+      // Insert students in batches
+      const batchSize = 100;
+      const results = [];
+      for (let i = 0; i < students.length; i += batchSize) {
+        const batch = students.slice(i, i + batchSize);
+        const { data: insertedData, error } = await supabase
+          .from('students')
+          .insert(batch)
+          .select();
+        
+        if (error) throw error;
+        results.push(...(insertedData || []));
+      }
+
+      return {
+        imported: results.length,
+        total: students.length,
+        file_path: path,
+        students: results
+      };
+    } catch (error: any) {
+      throw new Error(`Import failed: ${error.message}`);
+    }
+  },
+
+  async parseCSVFile(file: File): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const csv = e.target?.result as string;
+        const lines = csv.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        const data = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i].trim()) {
+            const values = lines[i].split(',').map(v => v.trim());
+            const row: any = {};
+            headers.forEach((header, index) => {
+              row[header] = values[index] || '';
+            });
+            data.push(row);
+          }
+        }
+        resolve(data);
+      };
+      reader.onerror = () => reject(new Error('Failed to read CSV file'));
+      reader.readAsText(file);
+    });
+  },
+
+  async parseExcelFile(file: File): Promise<any[]> {
+    // Note: This would require xlsx library to be available on frontend
+    // For now, return basic parsing - full implementation would need xlsx import
+    throw new Error('Excel parsing requires xlsx library. Please use CSV files or implement xlsx support.');
+  },
+
+  validateStudentRow(row: any, index: number): any {
+    const errors: string[] = [];
+    
+    // Basic validation - adapt based on your student schema
+    if (!row.name && !row.Name) errors.push(`Row ${index + 1}: Name is required`);
+    if (!row.email && !row.Email) errors.push(`Row ${index + 1}: Email is required`);
+    
+    if (errors.length > 0) {
+      throw new Error(`Validation failed: ${errors.join(', ')}`);
+    }
+    
+    return {
+      name: row.name || row.Name || '',
+      email: row.email || row.Email || '',
+      phone: row.phone || row.Phone || '',
+      class: row.class || row.Class || '',
+      section: row.section || row.Section || '',
+      roll_number: row.roll_number || row.Roll || row['Roll Number'] || '',
+    };
+  },
+
   // Real-time subscriptions (replacing WebSocket functionality)
   subscribeToNotifications(schoolId: number, callback: (notification: any) => void) {
     return supabase
