@@ -93,38 +93,31 @@ export default function TeachersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<any>(null);
 
-  // Fetch teachers directly from Supabase
+  // Fetch teachers via secure adapter
   const { data: teachersData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['teachers', { schoolId: 1 }],
+    queryKey: ['teachers'],
     queryFn: async () => {
-      console.log('🔄 Fetching teachers directly from Supabase...');
-      const teachers = await db.getTeachers(1);
-      console.log('✅ Teachers from Supabase:', teachers?.length || 0);
-      return teachers || [];
+      const { teachersAdapter } = await import('@/lib/data-adapter');
+      return teachersAdapter.getTeachers();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Fetch teacher stats directly from Supabase
+  // Fetch teacher stats via secure adapter
   const { data: stats } = useQuery({
-    queryKey: ['teacher-stats', { schoolId: 1 }],
+    queryKey: ['teacher-stats'],
     queryFn: async () => {
-      console.log('🔄 Fetching teacher stats directly from Supabase...');
-      const stats = await db.getTeacherStats(1);
-      console.log('✅ Teacher stats from Supabase:', stats);
-      return stats || { total_teachers: 0, active_teachers: 0, inactive_teachers: 0 };
+      const { teachersAdapter } = await import('@/lib/data-adapter');
+      return teachersAdapter.getTeacherStats();
     },
   });
 
-  // Create teacher mutation with direct Supabase
+  // Create teacher mutation via secure adapter
   const createTeacher = useMutation({
     mutationFn: async (teacherData: any) => {
-      console.log('🔄 Creating teacher in Supabase...', teacherData);
-      const teacherWithSchool = { ...teacherData, school_id: 1 };
-      const newTeacher = await db.createTeacher(teacherWithSchool);
-      console.log('✅ Teacher created in Supabase:', newTeacher);
-      return newTeacher;
+      const { teachersAdapter } = await import('@/lib/data-adapter');
+      return teachersAdapter.createTeacher(teacherData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
@@ -145,13 +138,11 @@ export default function TeachersPage() {
     },
   });
 
-  // Update teacher mutation with direct Supabase
+  // Update teacher mutation via secure adapter
   const updateTeacher = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      console.log('🔄 Updating teacher in Supabase...', { id, data });
-      const updatedTeacher = await db.updateTeacher(id, data);
-      console.log('✅ Teacher updated in Supabase:', updatedTeacher);
-      return updatedTeacher;
+      const { teachersAdapter } = await import('@/lib/data-adapter');
+      return teachersAdapter.updateTeacher(id, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
@@ -173,13 +164,11 @@ export default function TeachersPage() {
     },
   });
 
-  // Delete teacher mutation with direct Supabase
+  // Delete teacher mutation via secure adapter
   const deleteTeacher = useMutation({
     mutationFn: async (id: number) => {
-      console.log('🔄 Deleting teacher from Supabase...', id);
-      const result = await db.deleteTeacher(id);
-      console.log('✅ Teacher deleted from Supabase:', result);
-      return result;
+      const { teachersAdapter } = await import('@/lib/data-adapter');
+      return teachersAdapter.deleteTeacher(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });

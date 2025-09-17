@@ -259,56 +259,6 @@ export const teachersAdapter = {
       console.log('🔄 Using Express API for teachers');
       return await legacyApiCall('/teachers');
     }
-  },
-
-  async getTeacherStats() {
-    if (FEATURE_FLAGS.SUPABASE_TEACHERS) {
-      console.log('🔄 Using Supabase for teacher stats');
-      const schoolId = await getCurrentSchoolId();
-      return await db.getTeacherStats(schoolId);
-    } else {
-      console.log('🔄 Using Express API for teacher stats');
-      return await legacyApiCall('/teachers/stats');
-    }
-  },
-
-  async createTeacher(teacherData: any) {
-    if (FEATURE_FLAGS.SUPABASE_TEACHERS) {
-      console.log('🔄 Using Supabase to create teacher');
-      const schoolId = await getCurrentSchoolId();
-      // Ensure school ID is set for tenant scoping
-      const teacherWithSchool = { ...teacherData, school_id: schoolId };
-      return await db.createTeacher(teacherWithSchool);
-    } else {
-      console.log('🔄 Using Express API to create teacher');
-      return await legacyApiCall('/teachers', {
-        method: 'POST',
-        body: JSON.stringify(teacherData),
-      });
-    }
-  },
-
-  async updateTeacher(id: number, updates: any) {
-    if (FEATURE_FLAGS.SUPABASE_TEACHERS) {
-      console.log('🔄 Using Supabase to update teacher');
-      return await db.updateTeacher(id, updates);
-    } else {
-      console.log('🔄 Using Express API to update teacher');
-      return await legacyApiCall(`/teachers/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(updates),
-      });
-    }
-  },
-
-  async deleteTeacher(id: number) {
-    if (FEATURE_FLAGS.SUPABASE_TEACHERS) {
-      console.log('🔄 Using Supabase to delete teacher');
-      return await db.deleteTeacher(id);
-    } else {
-      console.log('🔄 Using Express API to delete teacher');
-      return await legacyApiCall(`/teachers/${id}`, { method: 'DELETE' });
-    }
   }
 };
 
