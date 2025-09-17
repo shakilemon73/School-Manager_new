@@ -36,10 +36,31 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5000,
     strictPort: true,
+    // Fix for blocked request error - allows Replit domains
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      ".replit.dev",              // All Replit subdomains
+      ".replit.app",              // Published Replit apps
+      ".riker.replit.dev",        // Replit internal domains
+      ".id.replit.dev",           // Replit ID-based domains
+      // Add specific domain if needed
+      "34071b04-b6c8-46fb-850f-ff86046b4b89-00-3mpu0scgfalgf.riker.replit.dev"
+    ],
   },
   preview: {
     host: "0.0.0.0",
     port: 5000,
     strictPort: true,
+    // Same allowedHosts for preview mode
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1", 
+      ".replit.dev",
+      ".replit.app",
+      ".riker.replit.dev",
+      ".id.replit.dev",
+      "34071b04-b6c8-46fb-850f-ff86046b4b89-00-3mpu0scgfalgf.riker.replit.dev"
+    ],
   },
 });
