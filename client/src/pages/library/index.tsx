@@ -102,56 +102,86 @@ export default function LibraryPage() {
 
   // Real-time data queries with direct Supabase calls
   const { data: books = [], isLoading: booksLoading } = useQuery({
-    queryKey: ['library-books', { schoolId: 1 }],
+    queryKey: ['library-books'],
     queryFn: async () => {
-      console.log('🔄 Fetching library books directly from Supabase...');
-      const books = await db.getLibraryBooks(1);
-      console.log('✅ Library books from Supabase:', books?.length || 0);
-      return books || [];
+      console.log('🔍 Fetching library books for school ID:', 1);
+      try {
+        const data = await db.getLibraryBooks(1); // schoolId = 1, RLS will handle filtering
+        console.log('✅ Library books received:', data);
+        return data || [];
+      } catch (error) {
+        console.error('❌ Error fetching library books:', error);
+        throw error;
+      }
     },
-    refetchInterval: 30000, // Real-time updates every 30 seconds
+    staleTime: 0,
+    gcTime: 0,
   });
 
   const { data: borrowedBooks = [], isLoading: borrowedLoading } = useQuery({
-    queryKey: ['library-borrowed', { schoolId: 1 }],
+    queryKey: ['library-borrowed'],
     queryFn: async () => {
-      console.log('🔄 Fetching borrowed books directly from Supabase...');
-      const borrowed = await db.getBorrowedBooks(1);
-      console.log('✅ Borrowed books from Supabase:', borrowed?.length || 0);
-      return borrowed || [];
+      console.log('🔍 Fetching borrowed books for school ID:', 1);
+      try {
+        const data = await db.getBorrowedBooks(1);
+        console.log('✅ Borrowed books received:', data);
+        return data || [];
+      } catch (error) {
+        console.error('❌ Error fetching borrowed books:', error);
+        throw error;
+      }
     },
-    refetchInterval: 30000,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   const { data: libraryStats = {}, isLoading: statsLoading, error: statsError } = useQuery({
-    queryKey: ['library-stats', { schoolId: 1 }],
+    queryKey: ['library-stats'],
     queryFn: async () => {
-      console.log('🔄 Fetching library stats directly from Supabase...');
-      const stats = await db.getLibraryStats(1);
-      console.log('✅ Library stats from Supabase:', stats);
-      return stats || { total_books: 0, borrowed_books: 0, available_books: 0 };
+      console.log('🔍 Fetching library stats for school ID:', 1);
+      try {
+        const data = await db.getLibraryStats(1);
+        console.log('✅ Library stats received:', data);
+        return data || { totalBooks: 0, borrowedBooks: 0, availableBooks: 0 };
+      } catch (error) {
+        console.error('❌ Error fetching library stats:', error);
+        throw error;
+      }
     },
-    refetchInterval: 60000,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['students', { schoolId: 1 }],
+    queryKey: ['students'],
     queryFn: async () => {
-      console.log('🔄 Fetching students for library from Supabase...');
-      const students = await db.getStudents(1);
-      console.log('✅ Students from Supabase:', students?.length || 0);
-      return students || [];
+      console.log('🔍 Fetching students for school ID:', 1);
+      try {
+        const data = await db.getStudents(1);
+        console.log('✅ Students received:', data);
+        return data || [];
+      } catch (error) {
+        console.error('❌ Error fetching students:', error);
+        throw error;
+      }
     },
+    staleTime: 0,
+    gcTime: 0,
   });
 
   // Mutations for CRUD operations with direct Supabase
   const addBookMutation = useMutation({
     mutationFn: async (data: BookFormData) => {
-      console.log('🔄 Adding book to Supabase...', data);
-      const bookWithSchool = { ...data, school_id: 1 };
-      const newBook = await db.createLibraryBook(bookWithSchool);
-      console.log('✅ Book added to Supabase:', newBook);
-      return newBook;
+      const bookData = {
+        ...data,
+        title_bn: data.titleBn,
+        publish_year: data.publishYear,
+        total_copies: data.totalCopies,
+        available_copies: data.totalCopies,
+        school_id: 1
+      };
+      
+      return await db.createLibraryBook(bookData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['library-books'] });
@@ -163,7 +193,7 @@ export default function LibraryPage() {
         description: "নতুন বই সংযোজিত হয়েছে",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "ত্রুটি",
         description: "বই সংযোজনে সমস্যা হয়েছে",
@@ -249,11 +279,15 @@ export default function LibraryPage() {
   });
 
   const editBookMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      console.log('🔄 Updating book via Supabase...', { id, data });
-      const result = await db.updateLibraryBook(id, data);
-      console.log('✅ Book updated via Supabase:', result);
-      return result;
+    mutationFn: async ({ id, ...data }: any) => {
+      const bookData = {
+        ...data,
+        title_bn: data.titleBn,
+        publish_year: data.publishYear,
+        total_copies: data.totalCopies,
+      };
+      
+      return await db.updateLibraryBook(id, bookData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['library-books'] });
@@ -265,7 +299,7 @@ export default function LibraryPage() {
         description: "বই আপডেট করা হয়েছে",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "ত্রুটি",
         description: "বই আপডেটে সমস্যা হয়েছে",
@@ -279,7 +313,7 @@ export default function LibraryPage() {
     return books.filter(book => {
       const matchesSearch = searchQuery === '' || 
         book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        book.titleBn.includes(searchQuery) ||
+        book.title_bn.includes(searchQuery) ||
         book.author.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
@@ -323,10 +357,10 @@ export default function LibraryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-              {libraryStats?.totalBooks || 0}
+              {libraryStats?.total_books || 0}
             </div>
             <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-              {libraryStats?.availableBooks || 0} টি উপলব্ধ
+              {libraryStats?.available_books || 0} টি উপলব্ধ
             </p>
           </CardContent>
         </Card>
@@ -340,10 +374,10 @@ export default function LibraryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-              {libraryStats?.borrowedBooks || 0}
+              {libraryStats?.borrowed_books || 0}
             </div>
             <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              {libraryStats?.activeBorrowers || 0} জন শিক্ষার্থী
+              {libraryStats?.active_borrowers || 0} জন শিক্ষার্থী
             </p>
           </CardContent>
         </Card>
@@ -357,10 +391,10 @@ export default function LibraryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
-              {libraryStats.overdueBooks || 0}
+              {libraryStats.overdue_books || 0}
             </div>
             <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-              {libraryStats.overdueBorrowers || 0} জন শিক্ষার্থী
+              {libraryStats.overdue_borrowers || 0} জন শিক্ষার্থী
             </p>
           </CardContent>
         </Card>
@@ -374,7 +408,7 @@ export default function LibraryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-              {libraryStats.popularBooks || 0}
+              {libraryStats.popular_books || 0}
             </div>
             <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
               এই মাসে
@@ -604,7 +638,7 @@ export default function LibraryPage() {
                   <TableRow key={book.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{book.titleBn}</p>
+                        <p className="font-medium">{book.title_bn}</p>
                         <p className="text-sm text-gray-600">{book.title}</p>
                       </div>
                     </TableCell>
@@ -614,14 +648,14 @@ export default function LibraryPage() {
                     </TableCell>
                     <TableCell>
                       <span className={`font-medium ${
-                        book.availableCopies > 0 ? 'text-green-600' : 'text-red-600'
+                        book.available_copies > 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {book.availableCopies}/{book.totalCopies}
+                        {book.available_copies}/{book.total_copies}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={book.availableCopies > 0 ? "success" : "destructive"}>
-                        {book.availableCopies > 0 ? 'উপলব্ধ' : 'স্টক আউট'}
+                      <Badge variant={book.available_copies > 0 ? "default" : "destructive"}>
+                        {book.available_copies > 0 ? 'উপলব্ধ' : 'স্টক আউট'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

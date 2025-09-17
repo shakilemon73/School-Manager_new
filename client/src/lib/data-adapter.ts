@@ -47,9 +47,9 @@ const FEATURE_FLAGS = {
   SUPABASE_CALENDAR: import.meta.env.VITE_FEATURE_SUPABASE_CALENDAR === 'true',
   SUPABASE_STUDENTS: true, // Enable for direct Supabase students
   SUPABASE_TEACHERS: true, // Enable for direct Supabase teachers
-  SUPABASE_LIBRARY: import.meta.env.VITE_FEATURE_SUPABASE_LIBRARY === 'true',
-  SUPABASE_INVENTORY: import.meta.env.VITE_FEATURE_SUPABASE_INVENTORY === 'true',
-  SUPABASE_TRANSPORT: import.meta.env.VITE_FEATURE_SUPABASE_TRANSPORT === 'true',
+  SUPABASE_LIBRARY: true, // Enable for direct Supabase library
+  SUPABASE_INVENTORY: true, // Enable for direct Supabase inventory
+  SUPABASE_TRANSPORT: true, // Enable for direct Supabase transport
 };
 
 // Helper function for legacy API calls
