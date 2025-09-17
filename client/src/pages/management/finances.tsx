@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/supabase';
+import { db, supabase } from '@/lib/supabase';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -151,8 +151,8 @@ export default function FinancesPage() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "নতুন লেনদেন যোগ করা হয়েছে",
@@ -164,14 +164,26 @@ export default function FinancesPage() {
 
   // Update transaction mutation
   const updateTransaction = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: TransactionFormData }) => 
-      apiRequest(`/api/finance/transactions/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async ({ id, data }: { id: number; data: TransactionFormData }) => {
+      // First check if updateFinancialTransaction exists, if not use direct Supabase call
+      const updates = {
+        ...data,
+        amount: parseFloat(data.amount),
+      };
+      
+      const { data: result, error } = await supabase
+        .from('financial_transactions')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "লেনদেনের তথ্য আপডেট করা হয়েছে",
@@ -183,11 +195,18 @@ export default function FinancesPage() {
 
   // Delete transaction mutation
   const deleteTransaction = useMutation({
-    mutationFn: (id: number) => 
-      apiRequest(`/api/finance/transactions/${id}`, { method: 'DELETE' }),
+    mutationFn: async (id: number) => {
+      const { error } = await supabase
+        .from('financial_transactions')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return { success: true };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "লেনদেন মুছে ফেলা হয়েছে",

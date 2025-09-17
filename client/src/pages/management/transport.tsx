@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { db, supabase } from '@/lib/supabase';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -98,21 +98,37 @@ export default function TransportPage() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [dialogType, setDialogType] = useState<'vehicle' | 'route' | 'assignment'>('vehicle');
 
-  // Fetch transport data
+  // Fetch transport data from Supabase
   const { data: transportStats } = useQuery({
-    queryKey: ['/api/transport/stats'],
+    queryKey: ['transport-stats'],
+    queryFn: async () => {
+      const stats = await db.getTransportStats(1);
+      return stats;
+    },
   });
 
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery({
-    queryKey: ['/api/transport/vehicles'],
+    queryKey: ['transport-vehicles'],
+    queryFn: async () => {
+      const data = await db.getTransportVehicles(1);
+      return data;
+    },
   });
 
   const { data: routes = [], isLoading: routesLoading } = useQuery({
-    queryKey: ['/api/transport/routes'],
+    queryKey: ['transport-routes'],
+    queryFn: async () => {
+      const data = await db.getTransportRoutes(1);
+      return data;
+    },
   });
 
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
-    queryKey: ['/api/transport/assignments'],
+    queryKey: ['transport-assignments'],
+    queryFn: async () => {
+      const data = await db.getTransportAssignments(1);
+      return data;
+    },
   });
 
   // Vehicle form
@@ -155,13 +171,11 @@ export default function TransportPage() {
 
   // Create mutations
   const createVehicle = useMutation({
-    mutationFn: (data: VehicleFormData) => 
-      apiRequest('/api/transport/vehicles', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: VehicleFormData) => {
+      return await db.createTransportVehicle({ ...data, school_id: 1 });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
       toast({
         title: "সফল হয়েছে!",
@@ -173,14 +187,12 @@ export default function TransportPage() {
   });
 
   const createRoute = useMutation({
-    mutationFn: (data: RouteFormData) => 
-      apiRequest('/api/transport/routes', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: RouteFormData) => {
+      return await db.createTransportRoute({ ...data, school_id: 1 });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/routes'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-routes'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "নতুন রুট যোগ করা হয়েছে",
@@ -191,13 +203,11 @@ export default function TransportPage() {
   });
 
   const createAssignment = useMutation({
-    mutationFn: (data: AssignmentFormData) => 
-      apiRequest('/api/transport/assignments', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: AssignmentFormData) => {
+      return await db.createTransportAssignment({ ...data, school_id: 1 });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
       toast({
         title: "সফল হয়েছে!",
@@ -216,7 +226,7 @@ export default function TransportPage() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-vehicles'] });
       toast({
         title: "সফল হয়েছে!",
         description: "গাড়ির তথ্য আপডেট করা হয়েছে",
@@ -250,7 +260,7 @@ export default function TransportPage() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-assignments'] });
       toast({
         title: "সফল হয়েছে!",
         description: "অ্যাসাইনমেন্ট আপডেট করা হয়েছে",
@@ -265,7 +275,7 @@ export default function TransportPage() {
     mutationFn: (id: number) => 
       apiRequest(`/api/transport/vehicles/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
       toast({
         title: "সফল হয়েছে!",
@@ -278,8 +288,8 @@ export default function TransportPage() {
     mutationFn: (id: number) => 
       apiRequest(`/api/transport/routes/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/routes'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-routes'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "রুট মুছে ফেলা হয়েছে",
@@ -291,7 +301,7 @@ export default function TransportPage() {
     mutationFn: (id: number) => 
       apiRequest(`/api/transport/assignments/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
       toast({
         title: "সফল হয়েছে!",
