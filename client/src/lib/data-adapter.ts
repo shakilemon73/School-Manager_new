@@ -45,7 +45,7 @@ const FEATURE_FLAGS = {
   SUPABASE_DASHBOARD: true, // Force enable for dashboard stats
   SUPABASE_NOTIFICATIONS: true, // Enable for direct Supabase notifications
   SUPABASE_CALENDAR: import.meta.env.VITE_FEATURE_SUPABASE_CALENDAR === 'true',
-  SUPABASE_STUDENTS: import.meta.env.VITE_FEATURE_SUPABASE_STUDENTS === 'true',
+  SUPABASE_STUDENTS: true, // Enable for direct Supabase students
   SUPABASE_TEACHERS: import.meta.env.VITE_FEATURE_SUPABASE_TEACHERS === 'true',
   SUPABASE_LIBRARY: import.meta.env.VITE_FEATURE_SUPABASE_LIBRARY === 'true',
   SUPABASE_INVENTORY: import.meta.env.VITE_FEATURE_SUPABASE_INVENTORY === 'true',

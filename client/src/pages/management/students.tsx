@@ -73,14 +73,12 @@ export default function StudentsPage() {
     dateOfBirth: '',
   });
 
-  // Fetch students directly from Supabase
+  // Fetch students via secure adapter
   const { data: studentsData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['students', { schoolId: 1 }],
+    queryKey: ['students'],
     queryFn: async () => {
-      console.log('🔄 Fetching students directly from Supabase...');
-      const students = await db.getStudents(1);
-      console.log('✅ Students from Supabase:', students?.length || 0);
-      return students || [];
+      const { studentsAdapter } = await import('@/lib/data-adapter');
+      return studentsAdapter.getStudents();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
@@ -89,11 +87,8 @@ export default function StudentsPage() {
   // Create student mutation with direct Supabase
   const createStudent = useMutation({
     mutationFn: async (studentData: any) => {
-      console.log('🔄 Creating student in Supabase...', studentData);
-      const studentWithSchool = { ...studentData, schoolId: 1 };
-      const newStudent = await db.createStudent(studentWithSchool);
-      console.log('✅ Student created in Supabase:', newStudent);
-      return newStudent;
+      const { studentsAdapter } = await import('@/lib/data-adapter');
+      return studentsAdapter.createStudent(studentData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -114,13 +109,11 @@ export default function StudentsPage() {
     },
   });
 
-  // Update student mutation with direct Supabase
+  // Update student mutation via secure adapter
   const updateStudent = useMutation({
     mutationFn: async ({ id, ...studentData }: any) => {
-      console.log('🔄 Updating student in Supabase...', { id, studentData });
-      const updatedStudent = await db.updateStudent(id, studentData);
-      console.log('✅ Student updated in Supabase:', updatedStudent);
-      return updatedStudent;
+      const { studentsAdapter } = await import('@/lib/data-adapter');
+      return studentsAdapter.updateStudent(id, studentData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -141,13 +134,11 @@ export default function StudentsPage() {
     },
   });
 
-  // Delete student mutation with direct Supabase
+  // Delete student mutation via secure adapter  
   const deleteStudent = useMutation({
     mutationFn: async (id: number) => {
-      console.log('🔄 Deleting student from Supabase...', id);
-      const result = await db.deleteStudent(id);
-      console.log('✅ Student deleted from Supabase:', result);
-      return result;
+      const { studentsAdapter } = await import('@/lib/data-adapter');
+      return studentsAdapter.deleteStudent(id);
     },
     onSuccess: async (data, variables) => {
       console.log('Delete successful for student ID:', variables);
@@ -237,7 +228,7 @@ export default function StudentsPage() {
       ...newStudent,
       studentId: newStudent.studentId || `STU${Date.now()}`,
       dateOfBirth: newStudent.dateOfBirth || null,
-      schoolId: 1, // Default school ID
+      // schoolId handled by adapter securely
     };
 
     if (editingStudent) {
