@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
 import { ResponsivePageLayout } from '@/components/layout/responsive-page-layout';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { 
   Card, 
@@ -110,9 +111,24 @@ export default function NotificationsPage() {
     vibration: true
   });
 
-  // Real-time notifications from Supabase with enhanced error handling
+  // Real-time notifications from Supabase directly with RLS
   const { data: notificationsResponse, isLoading, error } = useQuery({
-    queryKey: ['/api/notifications'],
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      console.log('🔔 Fetching notifications with direct Supabase calls');
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Notifications fetch error:', error);
+        throw error;
+      }
+      
+      console.log('Notifications fetched:', data?.length || 0);
+      return data || [];
+    },
     refetchInterval: 3000, // Real-time updates every 3 seconds
     staleTime: 1000,
   });
@@ -280,26 +296,34 @@ export default function NotificationsPage() {
     return true;
   });
 
-  // Enhanced mutations following Aarron Walter's hierarchy of user needs
+  // Enhanced mutations using direct Supabase
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationIds: number[]) => {
-      const response = await fetch('/api/notifications/mark-read', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationIds }),
-      });
-      if (!response.ok) throw new Error('Failed to mark as read');
-      return response.json();
+      console.log('Marking notifications as read:', notificationIds);
+      
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .in('id', notificationIds)
+        .select();
+      
+      if (error) {
+        console.error('Mark as read error:', error);
+        throw error;
+      }
+      
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       setSelectedNotifications([]);
       toast({
         title: "নোটিফিকেশন আপডেট হয়েছে",
         description: "নির্বাচিত নোটিফিকেশন পঠিত হিসেবে চিহ্নিত করা হয়েছে",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Mark as read failed:', error);
       toast({
         title: "ত্রুটি",
         description: "নোটিফিকেশন আপডেট করতে সমস্যা হয়েছে",
@@ -310,20 +334,34 @@ export default function NotificationsPage() {
 
   const deleteNotificationsMutation = useMutation({
     mutationFn: async (notificationIds: number[]) => {
-      const response = await fetch('/api/notifications/delete', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationIds }),
-      });
-      if (!response.ok) throw new Error('Failed to delete notifications');
-      return response.json();
+      console.log('Deleting notifications:', notificationIds);
+      
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .in('id', notificationIds);
+      
+      if (error) {
+        console.error('Delete notifications error:', error);
+        throw error;
+      }
+      
+      return { success: true };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       setSelectedNotifications([]);
       toast({
         title: "নোটিফিকেশন মুছে ফেলা হয়েছে",
         description: "নির্বাচিত নোটিফিকেশন সফলভাবে মুছে ফেলা হয়েছে",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Delete notifications failed:', error);
+      toast({
+        title: "ত্রুটি",
+        description: "নোটিফিকেশন মুছতে সমস্যা হয়েছে",
+        variant: "destructive",
       });
     },
   });
