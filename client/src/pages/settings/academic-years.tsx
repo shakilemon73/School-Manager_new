@@ -38,7 +38,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { supabase } from '@/lib/supabase';
 import {
   Form,
   FormControl,
@@ -157,22 +157,70 @@ export default function AcademicYearsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Real database integration for academic years
+  // Real database integration for academic years with direct Supabase calls
   const { data: academicYears = [], isLoading: yearsLoading } = useQuery({
-    queryKey: ['/api/academic-years'],
-    enabled: true
+    queryKey: ['academic-years'],
+    queryFn: async () => {
+      console.log('📅 Fetching academic years with direct Supabase calls');
+      const { data, error } = await supabase
+        .from('academic_years')
+        .select('*')
+        .order('start_date', { ascending: false });
+      
+      if (error) {
+        console.error('Academic years fetch error:', error);
+        throw error;
+      }
+      
+      console.log('Academic years fetched:', data?.length || 0);
+      return data || [];
+    }
   });
 
-  // Real database integration for academic terms
+  // Real database integration for academic terms with direct Supabase calls
   const { data: academicTerms = [], isLoading: termsLoading } = useQuery({
-    queryKey: ['/api/enhanced-academic-terms'],
-    enabled: true
+    queryKey: ['academic-terms'],
+    queryFn: async () => {
+      console.log('📚 Fetching academic terms with direct Supabase calls');
+      const { data, error } = await supabase
+        .from('academic_terms')
+        .select('*')
+        .order('start_date', { ascending: false });
+      
+      if (error) {
+        console.error('Academic terms fetch error:', error);
+        throw error;
+      }
+      
+      console.log('Academic terms fetched:', data?.length || 0);
+      return data || [];
+    }
   });
 
-  // Real database integration for statistics
+  // Real database integration for statistics with direct calculation
   const { data: academicStats } = useQuery({
-    queryKey: ['/api/academic-years/stats'],
-    enabled: true
+    queryKey: ['academic-years-stats'],
+    queryFn: async () => {
+      console.log('📊 Calculating academic stats with direct Supabase calls');
+      
+      const [yearsData, termsData, studentsData] = await Promise.all([
+        supabase.from('academic_years').select('*'),
+        supabase.from('academic_terms').select('*'),
+        supabase.from('students').select('id', { count: 'exact', head: true })
+      ]);
+      
+      const stats = {
+        totalYears: yearsData.data?.length || 0,
+        activeYears: yearsData.data?.filter(year => year.is_active).length || 0,
+        completedYears: yearsData.data?.filter(year => year.status === 'completed').length || 0,
+        totalTerms: termsData.data?.length || 0,
+        currentTerms: termsData.data?.filter(term => term.status === 'ongoing').length || 0,
+        totalStudents: studentsData.count || 0
+      };
+      
+      console.log('Academic stats calculated:', stats);
+      return stats;
+    }
   });
 
 
@@ -220,13 +268,33 @@ export default function AcademicYearsPage() {
   // Enhanced mutations
   const createYearMutation = useMutation({
     mutationFn: async (data: z.infer<typeof academicYearSchema>) => {
-      return apiRequest('/api/academic-years', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      console.log('Creating academic year with data:', data);
+      
+      const { data: result, error } = await supabase
+        .from('academic_years')
+        .insert({
+          name: data.name,
+          name_bn: data.nameBn,
+          start_date: data.startDate,
+          end_date: data.endDate,
+          description: data.description,
+          description_bn: data.descriptionBn,
+          is_active: data.isActive,
+          status: 'draft'
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Academic year creation error:', error);
+        throw error;
+      }
+      
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years-stats'] });
       setIsYearDialogOpen(false);
       academicYearForm.reset();
       toast({
@@ -234,7 +302,8 @@ export default function AcademicYearsPage() {
         description: "নতুন শিক্ষাবর্ষ সফলভাবে তৈরি করা হয়েছে",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Academic year creation failed:', error);
       toast({
         title: "ত্রুটি",
         description: "শিক্ষাবর্ষ তৈরি করতে সমস্যা হয়েছে",
@@ -245,18 +314,47 @@ export default function AcademicYearsPage() {
 
   const createTermMutation = useMutation({
     mutationFn: async (data: z.infer<typeof academicTermSchema>) => {
-      return apiRequest('/api/enhanced-academic-terms', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      console.log('Creating academic term with data:', data);
+      
+      const { data: result, error } = await supabase
+        .from('academic_terms')
+        .insert({
+          name: data.name,
+          name_bn: data.nameBn,
+          academic_year_id: data.academicYearId,
+          start_date: data.startDate,
+          end_date: data.endDate,
+          description: data.description,
+          description_bn: data.descriptionBn,
+          is_active: true,
+          status: 'upcoming'
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Academic term creation error:', error);
+        throw error;
+      }
+      
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/enhanced-academic-terms'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-terms'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years-stats'] });
       setIsTermDialogOpen(false);
       academicTermForm.reset();
       toast({
         title: "টার্ম তৈরি হয়েছে",
         description: "নতুন একাডেমিক টার্ম সফলভাবে তৈরি করা হয়েছে",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Academic term creation failed:', error);
+      toast({
+        title: "ত্রুটি",
+        description: "টার্ম তৈরি করতে সমস্যা হয়েছে",
+        variant: "destructive",
       });
     },
   });
