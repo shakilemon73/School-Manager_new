@@ -43,7 +43,7 @@ interface RecentDocument {
 // Feature flags for module-by-module migration
 const FEATURE_FLAGS = {
   SUPABASE_DASHBOARD: true, // Force enable for dashboard stats
-  SUPABASE_NOTIFICATIONS: import.meta.env.VITE_FEATURE_SUPABASE_NOTIFICATIONS === 'true',
+  SUPABASE_NOTIFICATIONS: true, // Enable for direct Supabase notifications
   SUPABASE_CALENDAR: import.meta.env.VITE_FEATURE_SUPABASE_CALENDAR === 'true',
   SUPABASE_STUDENTS: import.meta.env.VITE_FEATURE_SUPABASE_STUDENTS === 'true',
   SUPABASE_TEACHERS: import.meta.env.VITE_FEATURE_SUPABASE_TEACHERS === 'true',
@@ -73,10 +73,13 @@ async function legacyApiCall(endpoint: string, options?: RequestInit) {
 async function getCurrentSchoolId(): Promise<number> {
   try {
     const schoolId = await userProfile.getCurrentUserSchoolId();
-    return schoolId || 1; // Default to school 1 for development
+    if (!schoolId) {
+      throw new Error('User school ID not found - user may not be properly authenticated');
+    }
+    return schoolId;
   } catch (error) {
-    console.warn('⚠️ Could not get user school ID, using default:', error);
-    return 1; // Default school ID for development
+    console.error('❌ Failed to get user school ID:', error);
+    throw new Error('Authentication required: Cannot determine user school context');
   }
 }
 
@@ -140,6 +143,24 @@ export const notificationsAdapter = {
     } else {
       console.log('🔄 Using Express API to mark notification as read');
       return await legacyApiCall(`/notifications/${id}/read`, { method: 'PATCH' });
+    }
+  },
+
+  async sendNotification(notificationData: any) {
+    if (FEATURE_FLAGS.SUPABASE_NOTIFICATIONS) {
+      console.log('🔄 Using Supabase to send notification');
+      const schoolId = await getCurrentSchoolId();
+      return await db.sendNotification({
+        ...notificationData,
+        school_id: schoolId,
+        created_at: new Date().toISOString()
+      });
+    } else {
+      console.log('🔄 Using Express API to send notification');
+      return await legacyApiCall('/notifications/send', { 
+        method: 'POST',
+        body: JSON.stringify(notificationData)
+      });
     }
   }
 };

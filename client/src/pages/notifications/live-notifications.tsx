@@ -85,8 +85,11 @@ export default function LiveNotifications() {
 
   // Fetch live notifications
   const { data: notificationsResponse, isLoading, refetch } = useQuery({
-    queryKey: ['/api/notifications/live'],
-    queryFn: () => apiRequest('/api/notifications/live'),
+    queryKey: ['notifications', 'live'],
+    queryFn: async () => {
+      const { notificationsAdapter } = await import('@/lib/data-adapter');
+      return notificationsAdapter.getNotifications();
+    },
     refetchInterval: 3000, // Refetch every 3 seconds for live updates
   });
 
@@ -106,25 +109,22 @@ export default function LiveNotifications() {
   // Mark notification as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
-      return apiRequest(`/api/notifications/${notificationId}/read`, {
-        method: 'PATCH',
-      });
+      const { notificationsAdapter } = await import('@/lib/data-adapter');
+      return notificationsAdapter.markAsRead(notificationId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/live'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'live'] });
     },
   });
 
   // Send new notification mutation
   const sendNotificationMutation = useMutation({
     mutationFn: async (notificationData: any) => {
-      return apiRequest('/api/notifications/send', {
-        method: 'POST',
-        body: JSON.stringify(notificationData),
-      });
+      const { notificationsAdapter } = await import('@/lib/data-adapter');
+      return notificationsAdapter.sendNotification(notificationData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/live'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'live'] });
       toast({
         title: "নোটিফিকেশন পাঠানো হয়েছে",
         description: "লাইভ নোটিফিকেশন সফলভাবে পাঠানো হয়েছে",
@@ -174,7 +174,7 @@ export default function LiveNotifications() {
 
   return (
     <AppShell>
-      <ResponsivePageLayout>
+      <ResponsivePageLayout title="Live Notifications">
         <div className="space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between">

@@ -753,6 +753,35 @@ export const db = {
     return data;
   },
 
+  async sendNotification(notification: Database['public']['Tables']['notifications']['Insert']) {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert(notification)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async getUnreadNotificationsCount(schoolId: number, userId?: number) {
+    let query = supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('school_id', schoolId)
+      .eq('is_active', true)
+      .eq('is_read', false);
+
+    if (userId) {
+      query = query.or(`recipient_id.eq.${userId},is_public.eq.true`);
+    }
+    
+    const { count, error } = await query;
+    
+    if (error) throw error;
+    return count || 0;
+  },
+
   // Document Templates (replacing /api/document-templates endpoints)
   async getDocumentTemplates(schoolId?: number, category?: string) {
     let query = supabase
