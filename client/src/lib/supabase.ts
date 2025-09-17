@@ -483,7 +483,7 @@ export const db = {
     }
     const { data, error } = await supabase
       .from('students')
-      .select('id, name, name_in_bangla, student_id, class, section, roll_number, date_of_birth, gender, blood_group, father_name, mother_name, guardian_name, guardian_phone, present_address, phone, email, school_id, status, created_at')
+      .select('*')
       .eq('school_id', schoolId)
       .order('created_at', { ascending: false });
     
@@ -496,7 +496,7 @@ export const db = {
   async getStudentById(id: number) {
     const { data, error } = await supabase
       .from('students')
-      .select('id, name, name_in_bangla, student_id, class, section, roll_number, date_of_birth, gender, blood_group, father_name, mother_name, guardian_name, guardian_phone, present_address, phone, email, school_id, status, created_at')
+      .select('*')
       .eq('id', id)
       .single();
     
