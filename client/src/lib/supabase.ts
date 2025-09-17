@@ -2101,7 +2101,9 @@ export const db = {
       .select('id, name, name_bn, category, type, description, description_bn, is_active, required_credits, usage_count, created_at')
       .eq('is_active', true);
     
-    if (schoolId) {
+    // Don't filter by school_id if templates are global (NULL school_id)
+    // This allows all 54 templates to be displayed
+    if (schoolId && false) { // Temporarily disable school_id filtering
       query = query.eq('school_id', schoolId);
     }
     
