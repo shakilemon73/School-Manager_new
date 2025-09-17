@@ -5,7 +5,7 @@ export function registerWorkingTransportRoutes(app: Express) {
   app.get("/api/public/transport/working-routes", async (req: Request, res: Response) => {
     try {
       const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseUrl = process.env.VITE_SUPABASE_URL;
       const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
       if (!supabaseUrl || !supabaseServiceKey) {
@@ -95,7 +95,7 @@ export function registerWorkingTransportRoutes(app: Express) {
       const { routeName, pickupPoints, timings, monthlyFee } = req.body;
       
       const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseUrl = process.env.VITE_SUPABASE_URL;
       const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
       if (!supabaseUrl || !supabaseServiceKey) {
