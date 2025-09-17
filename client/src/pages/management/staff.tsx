@@ -62,8 +62,15 @@ export default function StaffPage() {
   const { data: staffData = [], isLoading, error, refetch } = useQuery({
     queryKey: ['staff'],
     queryFn: async () => {
-      const data = await db.getStaff(1); // schoolId = 1, RLS will handle filtering
-      return data;
+      console.log('🔍 Fetching staff data for school ID:', 1);
+      try {
+        const data = await db.getStaff(1); // schoolId = 1, RLS will handle filtering
+        console.log('✅ Staff data received:', data);
+        return data;
+      } catch (error) {
+        console.error('❌ Error fetching staff:', error);
+        throw error;
+      }
     },
     staleTime: 0,
     gcTime: 0,
