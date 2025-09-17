@@ -1794,5 +1794,217 @@ export const db = {
         filter: `school_id=eq.${schoolId}`
       }, callback)
       .subscribe();
+  },
+
+  // User Management (replacing /api/auth/users endpoints)
+  async getUsers(schoolId?: number) {
+    let query = supabase
+      .from('users')
+      .select('id, email, role, status, school_id, created_at, last_sign_in_at, user_metadata');
+    
+    if (schoolId) {
+      query = query.eq('school_id', schoolId);
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async getUserById(userId: string) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, role, status, school_id, created_at, last_sign_in_at, user_metadata')
+      .eq('id', userId)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async updateUserStatus(userId: string, status: string) {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ status })
+      .eq('id', userId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async updateUserRole(userId: string, role: string) {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ role })
+      .eq('id', userId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteUser(userId: string) {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+    
+    if (error) throw error;
+    return true;
+  },
+
+  async getUserStats(schoolId?: number) {
+    let baseQuery = supabase.from('users').select('role, status');
+    
+    if (schoolId) {
+      baseQuery = baseQuery.eq('school_id', schoolId);
+    }
+    
+    const { data, error } = await baseQuery;
+    
+    if (error) throw error;
+    
+    const stats = {
+      total_users: data?.length || 0,
+      active_users: data?.filter(u => u.status === 'active').length || 0,
+      inactive_users: data?.filter(u => u.status === 'inactive').length || 0,
+      admins: data?.filter(u => u.role === 'admin').length || 0,
+      teachers: data?.filter(u => u.role === 'teacher').length || 0,
+      students: data?.filter(u => u.role === 'student').length || 0,
+      parents: data?.filter(u => u.role === 'parent').length || 0
+    };
+    
+    return stats;
+  },
+
+  // Document Templates (replacing /api/document-templates)
+  async getDocumentTemplates(schoolId?: number, category?: string) {
+    let query = supabase
+      .from('document_templates')
+      .select('*')
+      .eq('is_active', true);
+    
+    if (schoolId) {
+      query = query.eq('school_id', schoolId);
+    }
+    
+    if (category) {
+      query = query.eq('category', category);
+    }
+    
+    const { data, error } = await query.order('name');
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async createDocumentTemplate(template: Database['public']['Tables']['document_templates']['Insert']) {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .insert(template)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // ID Card Operations (replacing /api/id-cards endpoints)
+  async getIdCardStats(schoolId: number) {
+    if (!schoolId) {
+      throw new Error('School ID is required to get ID card stats');
+    }
+    
+    const [totalCards, pendingCards, completedCards] = await Promise.all([
+      supabase.from('id_cards').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+      supabase.from('id_cards').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'pending'),
+      supabase.from('id_cards').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'completed')
+    ]);
+    
+    return {
+      total_cards: totalCards.count || 0,
+      pending_cards: pendingCards.count || 0,
+      completed_cards: completedCards.count || 0
+    };
+  },
+
+  async getRecentIdCards(schoolId: number, limit: number = 10) {
+    if (!schoolId) {
+      throw new Error('School ID is required to get recent ID cards');
+    }
+    
+    const { data, error } = await supabase
+      .from('id_cards')
+      .select(`
+        *,
+        students!inner(name, class, section)
+      `)
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async getIdCardHistory(schoolId: number, limit: number = 50) {
+    if (!schoolId) {
+      throw new Error('School ID is required to get ID card history');
+    }
+    
+    const { data, error } = await supabase
+      .from('id_cards')
+      .select(`
+        *,
+        students!inner(name, student_id, class, section)
+      `)
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async createIdCard(cardData: Database['public']['Tables']['id_cards']['Insert']) {
+    if (!cardData.school_id) {
+      throw new Error('School ID is required to create ID card');
+    }
+    
+    const { data, error } = await supabase
+      .from('id_cards')
+      .insert(cardData)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Notifications (replacing /api/notifications endpoints)
+  async markNotificationAsRead(notificationId: number) {
+    const { data, error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteNotification(notificationId: number) {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+    
+    if (error) throw error;
+    return true;
   }
 };
