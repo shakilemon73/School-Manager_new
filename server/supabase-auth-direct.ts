@@ -7,14 +7,14 @@ import { createClient } from '@supabase/supabase-js';
 
 // Get Supabase configuration with fallback
 const getSupabaseConfig = () => {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
   // Use service role key for server-side operations, anon key as fallback
-  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const key = process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   
   console.log('Server-side Supabase config:', {
-    SUPABASE_URL: process.env.SUPABASE_URL ? 'Found' : 'Missing',
+    VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL ? 'Found' : 'Missing',
     SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? 'Found' : 'Missing',
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? 'Found' : 'Missing'
+    VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY ? 'Found' : 'Missing'
   });
   
   return { url, key };

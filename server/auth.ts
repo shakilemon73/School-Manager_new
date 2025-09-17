@@ -182,8 +182,8 @@ export function setupAuth(app: Express) {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const { createClient } = await import('@supabase/supabase-js');
         const supabase = createClient(
-          process.env.SUPABASE_URL!,
-          process.env.SUPABASE_ANON_KEY!
+          process.env.VITE_SUPABASE_URL!,
+          process.env.VITE_SUPABASE_ANON_KEY!
         );
         
         const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(
