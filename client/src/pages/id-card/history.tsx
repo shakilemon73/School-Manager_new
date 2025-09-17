@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Search, Download, Eye, MoreHorizontal } from 'lucide-react';
+import { db } from '@/lib/supabase';
 
 interface HistoryItem {
   id: string;
@@ -29,11 +30,21 @@ export default function IdCardHistory() {
 
   // Fetch history data
   const { data: history, isLoading } = useQuery({
-    queryKey: ['/api/id-cards/history'],
+    queryKey: ['id-cards', 'history'],
     queryFn: async () => {
-      const response = await fetch('/api/id-cards/history?limit=50');
-      if (!response.ok) throw new Error('Failed to fetch history');
-      return response.json() as Promise<HistoryItem[]>;
+      const schoolId = 1; // TODO: Get from user context/session in production
+      const data = await db.getIdCardHistory(schoolId, 50);
+      return data.map((card: any) => ({
+        id: card.id.toString(),
+        studentName: card.students?.name || 'Unknown',
+        studentId: card.students?.student_id || 'N/A',
+        className: card.students?.class || 'N/A',
+        section: card.students?.section || 'N/A',
+        template: card.template_id || 'portrait',
+        createdAt: card.created_at,
+        status: card.status || 'generated',
+        createdBy: 'Admin' // Default value, could be from user metadata
+      })) as HistoryItem[];
     }
   });
 

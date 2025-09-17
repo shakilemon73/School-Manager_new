@@ -753,13 +753,66 @@ export const db = {
     return data;
   },
 
-  // Document Templates
-  async getDocumentTemplates(schoolId?: number) {
-    const { data, error } = await supabase
+  // Document Templates (replacing /api/document-templates endpoints)
+  async getDocumentTemplates(schoolId?: number, category?: string) {
+    let query = supabase
       .from('document_templates')
       .select('id, name, name_bn, category, type, description, description_bn, is_active, credit_cost, popularity_score, usage_count, created_at, required_credits')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
+      .eq('is_active', true);
+    
+    if (schoolId) {
+      query = query.eq('school_id', schoolId);
+    }
+    
+    if (category) {
+      query = query.eq('category', category);
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async createDocumentTemplate(template: any) {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .insert(template)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async updateDocumentTemplate(id: number, updates: any) {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteDocumentTemplate(id: number) {
+    const { error } = await supabase
+      .from('document_templates')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  },
+
+  async getDocumentTemplateById(id: number) {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .select('*')
+      .eq('id', id)
+      .single();
     
     if (error) throw error;
     return data;
@@ -1557,7 +1610,7 @@ export const db = {
     return data;
   },
 
-  async updateUserStatus(id: number, status: string) {
+  async updateUserStatus(id: number | string, status: string) {
     const { data, error } = await supabase
       .from('users')
       .update({ status })
@@ -1796,123 +1849,6 @@ export const db = {
       .subscribe();
   },
 
-  // User Management (replacing /api/auth/users endpoints)
-  async getUsers(schoolId?: number) {
-    let query = supabase
-      .from('users')
-      .select('id, email, role, status, school_id, created_at, last_sign_in_at, user_metadata');
-    
-    if (schoolId) {
-      query = query.eq('school_id', schoolId);
-    }
-    
-    const { data, error } = await query.order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async getUserById(userId: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, email, role, status, school_id, created_at, last_sign_in_at, user_metadata')
-      .eq('id', userId)
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async updateUserStatus(userId: string, status: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .update({ status })
-      .eq('id', userId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async updateUserRole(userId: string, role: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .update({ role })
-      .eq('id', userId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async deleteUser(userId: string) {
-    const { error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', userId);
-    
-    if (error) throw error;
-    return true;
-  },
-
-  async getUserStats(schoolId?: number) {
-    let baseQuery = supabase.from('users').select('role, status');
-    
-    if (schoolId) {
-      baseQuery = baseQuery.eq('school_id', schoolId);
-    }
-    
-    const { data, error } = await baseQuery;
-    
-    if (error) throw error;
-    
-    const stats = {
-      total_users: data?.length || 0,
-      active_users: data?.filter(u => u.status === 'active').length || 0,
-      inactive_users: data?.filter(u => u.status === 'inactive').length || 0,
-      admins: data?.filter(u => u.role === 'admin').length || 0,
-      teachers: data?.filter(u => u.role === 'teacher').length || 0,
-      students: data?.filter(u => u.role === 'student').length || 0,
-      parents: data?.filter(u => u.role === 'parent').length || 0
-    };
-    
-    return stats;
-  },
-
-  // Document Templates (replacing /api/document-templates)
-  async getDocumentTemplates(schoolId?: number, category?: string) {
-    let query = supabase
-      .from('document_templates')
-      .select('*')
-      .eq('is_active', true);
-    
-    if (schoolId) {
-      query = query.eq('school_id', schoolId);
-    }
-    
-    if (category) {
-      query = query.eq('category', category);
-    }
-    
-    const { data, error } = await query.order('name');
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async createDocumentTemplate(template: Database['public']['Tables']['document_templates']['Insert']) {
-    const { data, error } = await supabase
-      .from('document_templates')
-      .insert(template)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
   // ID Card Operations (replacing /api/id-cards endpoints)
   async getIdCardStats(schoolId: number) {
     if (!schoolId) {
@@ -1948,7 +1884,7 @@ export const db = {
       .limit(limit);
     
     if (error) throw error;
-    return data;
+    return data || [];
   },
 
   async getIdCardHistory(schoolId: number, limit: number = 50) {
@@ -1967,10 +1903,10 @@ export const db = {
       .limit(limit);
     
     if (error) throw error;
-    return data;
+    return data || [];
   },
 
-  async createIdCard(cardData: Database['public']['Tables']['id_cards']['Insert']) {
+  async createIdCard(cardData: any) {
     if (!cardData.school_id) {
       throw new Error('School ID is required to create ID card');
     }
@@ -1983,28 +1919,5 @@ export const db = {
     
     if (error) throw error;
     return data;
-  },
-
-  // Notifications (replacing /api/notifications endpoints)
-  async markNotificationAsRead(notificationId: number) {
-    const { data, error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', notificationId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async deleteNotification(notificationId: number) {
-    const { error } = await supabase
-      .from('notifications')
-      .delete()
-      .eq('id', notificationId);
-    
-    if (error) throw error;
-    return true;
   }
 };

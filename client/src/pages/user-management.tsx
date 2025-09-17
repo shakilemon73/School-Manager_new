@@ -16,7 +16,7 @@ import {
   Download,
   RefreshCw
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, db } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 interface SupabaseUser {
@@ -29,6 +29,10 @@ interface SupabaseUser {
   createdAt: string;
   lastSignIn?: string | null;
   emailConfirmed: boolean;
+  user_metadata?: any;
+  created_at?: string;
+  last_sign_in_at?: string | null;
+  email_confirmed_at?: string | null;
 }
 
 export default function UserManagement() {
@@ -46,17 +50,23 @@ export default function UserManagement() {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/auth/users');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch users: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      setUsers(result.users || []);
+      // Use direct Supabase query instead of Express API
+      const users = await db.getUsers();
+      setUsers(users.map(user => ({
+        id: user.id,
+        email: user.email,
+        trackingId: user.id.slice(0, 8), // Use first 8 chars of UUID as tracking ID
+        registrationDate: user.created_at,
+        status: user.status || 'active',
+        language: 'en', // Default language
+        createdAt: user.created_at,
+        lastSignIn: user.last_sign_in_at,
+        emailConfirmed: true // Assume confirmed from Supabase auth
+      })));
       
       toast({
         title: "Users loaded successfully",
-        description: `Found ${result.users?.length || 0} registered users`,
+        description: `Found ${users?.length || 0} registered users`,
       });
     } catch (error: any) {
       console.error('Error fetching users:', error);
@@ -72,17 +82,8 @@ export default function UserManagement() {
 
   const updateUserStatus = async (userId: string, newStatus: string) => {
     try {
-      const response = await fetch(`/api/auth/users/${userId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update user status');
-      }
+      // Use direct Supabase update instead of Express API
+      await db.updateUserStatus(userId, newStatus);
 
       toast({
         title: "User updated",
@@ -210,7 +211,7 @@ export default function UserManagement() {
               <div>
                 <p className="text-sm text-slate-600 dark:text-slate-400">সক্রিয় ব্যবহারকারী</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                  {users.filter(u => u.user_metadata.status === 'active').length}
+                  {users.filter(u => u.status === 'active').length}
                 </p>
               </div>
             </div>
@@ -226,7 +227,7 @@ export default function UserManagement() {
               <div>
                 <p className="text-sm text-slate-600 dark:text-slate-400">যাচাই বাকি</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                  {users.filter(u => !u.email_confirmed_at).length}
+                  {users.filter(u => !u.emailConfirmed).length}
                 </p>
               </div>
             </div>
@@ -242,7 +243,7 @@ export default function UserManagement() {
               <div>
                 <p className="text-sm text-slate-600 dark:text-slate-400">ব্লক ব্যবহারকারী</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                  {users.filter(u => u.user_metadata.status === 'blocked').length}
+                  {users.filter(u => u.status === 'blocked').length}
                 </p>
               </div>
             </div>
@@ -311,7 +312,7 @@ export default function UserManagement() {
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
                       <div className="font-medium text-slate-900 dark:text-slate-100">
-                        {user.user_metadata.full_name || 'নাম নেই'}
+                        {user.email.split('@')[0] || 'নাম নেই'}
                       </div>
                       {getStatusBadge(user)}
                     </div>
@@ -322,16 +323,16 @@ export default function UserManagement() {
                         {user.email}
                       </div>
                       
-                      {user.user_metadata.user_tracking_id && (
+                      {user.trackingId && (
                         <div className="flex items-center gap-2">
                           <Eye className="h-3 w-3" />
-                          {user.user_metadata.user_tracking_id}
+                          {user.trackingId}
                         </div>
                       )}
                       
                       <div className="flex items-center gap-2">
                         <Calendar className="h-3 w-3" />
-                        {new Date(user.created_at).toLocaleDateString('bn-BD')}
+                        {user.created_at ? new Date(user.created_at).toLocaleDateString('bn-BD') : 'N/A'}
                       </div>
                       
                       <div className="flex items-center gap-2">
@@ -345,7 +346,7 @@ export default function UserManagement() {
                   </div>
 
                   <div className="flex items-center gap-2 ml-4">
-                    {user.user_metadata.status !== 'blocked' ? (
+                    {user.status !== 'blocked' ? (
                       <Button
                         size="sm"
                         variant="outline"
