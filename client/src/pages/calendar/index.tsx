@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
-import { apiRequest } from '@/lib/queryClient';
+import { supabase } from '@/lib/supabase';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { 
   Card, 
   CardContent, 
@@ -95,9 +96,24 @@ export default function CalendarPage() {
     }
   });
   
-  // Fetch real events from Supabase
+  // Fetch real events from Supabase directly with RLS
   const { data: rawEvents = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ['/api/calendar/events'],
+    queryKey: ['calendar-events'],
+    queryFn: async () => {
+      console.log('📅 Fetching calendar events with direct Supabase calls');
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .order('start_date', { ascending: false });
+      
+      if (error) {
+        console.error('Calendar events fetch error:', error);
+        throw error;
+      }
+      
+      console.log('Calendar events fetched:', data?.length || 0);
+      return data || [];
+    },
     refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
   });
 
@@ -119,31 +135,40 @@ export default function CalendarPage() {
     return transformedEvent;
   });
 
-  // Create event mutation
+  // Create event mutation using direct Supabase
   const createEventMutation = useMutation({
     mutationFn: async (eventData: any) => {
-      const response = await apiRequest('/api/calendar/events', {
-        method: 'POST',
-        body: JSON.stringify({
+      console.log('Creating event with data:', eventData);
+      
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .insert({
           title: eventData.title,
-          titleBn: eventData.title,
+          title_bn: eventData.title,
           description: eventData.description,
-          descriptionBn: eventData.description,
-          startDate: eventData.date.toISOString().split('T')[0],
-          endDate: eventData.date.toISOString().split('T')[0],
-          startTime: eventData.startTime,
-          endTime: eventData.endTime,
+          description_bn: eventData.description,
+          start_date: eventData.date.toISOString().split('T')[0],
+          end_date: eventData.date.toISOString().split('T')[0],
+          start_time: eventData.startTime,
+          end_time: eventData.endTime,
           type: eventData.eventType,
           location: eventData.location,
           organizer: 'Admin',
-          isPublic: true,
-          schoolId: 1
-        }),
-      });
-      return response;
+          is_public: true,
+          is_active: true
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Calendar event creation error:', error);
+        throw error;
+      }
+      
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       toast({
         title: "ইভেন্ট তৈরি হয়েছে",
         description: "নতুন ইভেন্ট সফলভাবে যোগ করা হয়েছে",
@@ -152,7 +177,8 @@ export default function CalendarPage() {
       setIsAddingEvent(false);
       setActiveTab("calendar");
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Calendar event creation failed:', error);
       toast({
         title: "ত্রুটি",
         description: "ইভেন্ট তৈরি করতে সমস্যা হয়েছে",
@@ -161,28 +187,38 @@ export default function CalendarPage() {
     }
   });
 
-  // Update event mutation
+  // Update event mutation using direct Supabase
   const updateEventMutation = useMutation({
     mutationFn: async ({ id, eventData }: { id: number, eventData: any }) => {
-      const response = await apiRequest(`/api/calendar/events/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
+      console.log('Updating event with ID:', id, 'and data:', eventData);
+      
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .update({
           title: eventData.title,
-          titleBn: eventData.title,
+          title_bn: eventData.title,
           description: eventData.description,
-          descriptionBn: eventData.description,
-          startDate: eventData.date.toISOString().split('T')[0],
-          endDate: eventData.date.toISOString().split('T')[0],
-          startTime: eventData.startTime,
-          endTime: eventData.endTime,
+          description_bn: eventData.description,
+          start_date: eventData.date.toISOString().split('T')[0],
+          end_date: eventData.date.toISOString().split('T')[0],
+          start_time: eventData.startTime,
+          end_time: eventData.endTime,
           type: eventData.eventType,
           location: eventData.location,
-        }),
-      });
-      return response;
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Calendar event update error:', error);
+        throw error;
+      }
+      
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       toast({
         title: "ইভেন্ট আপডেট হয়েছে",
         description: "ইভেন্ট সফলভাবে আপডেট করা হয়েছে",
@@ -191,7 +227,8 @@ export default function CalendarPage() {
       eventForm.reset();
       setActiveTab("calendar");
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Calendar event update failed:', error);
       toast({
         title: "ত্রুটি",
         description: "ইভেন্ট আপডেট করতে সমস্যা হয়েছে",
@@ -200,22 +237,32 @@ export default function CalendarPage() {
     }
   });
 
-  // Delete event mutation
+  // Delete event mutation using direct Supabase
   const deleteEventMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest(`/api/calendar/events/${id}`, {
-        method: 'DELETE',
-      });
-      return response;
+      console.log('Deleting event with ID:', id);
+      
+      const { error } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Calendar event deletion error:', error);
+        throw error;
+      }
+      
+      return { success: true };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       toast({
         title: "ইভেন্ট মুছে ফেলা হয়েছে",
         description: "ইভেন্ট সফলভাবে মুছে ফেলা হয়েছে",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Calendar event deletion failed:', error);
       toast({
         title: "ত্রুটি",
         description: "ইভেন্ট মুছতে সমস্যা হয়েছে",
