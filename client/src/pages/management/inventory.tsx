@@ -32,7 +32,8 @@ import {
 } from "@/components/ui/table";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { db } from '@/lib/supabase';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -107,6 +108,7 @@ const statusLabels = {
 export default function InventoryPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { schoolId, getUserSchoolId } = useSupabaseDirectAuth();
   const [activeTab, setActiveTab] = useState('items');
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -123,33 +125,75 @@ export default function InventoryPage() {
     outOfStock: number;
     totalValue: number;
   }>({
-    queryKey: ['/api/inventory/stats'],
+    queryKey: ['inventory/stats', schoolId],
+    queryFn: async () => {
+      const currentSchoolId = schoolId || getUserSchoolId();
+      if (!currentSchoolId) throw new Error('School ID is required');
+      
+      const stats = await db.getInventoryStats(currentSchoolId);
+      const items = await db.getInventoryItems(currentSchoolId);
+      
+      const totalValue = items?.reduce((sum, item) => sum + ((item.unit_price || 0) * (item.current_quantity || 0)), 0) || 0;
+      const outOfStock = items?.filter(item => (item.current_quantity || 0) === 0).length || 0;
+      
+      return {
+        totalItems: stats.total_items,
+        lowStock: stats.low_stock_items,
+        outOfStock,
+        totalValue
+      };
+    },
+    enabled: !!schoolId
   });
 
   const { data: items = [], isLoading: itemsLoading, refetch: refetchItems } = useQuery<any[]>({
-    queryKey: ['/api/inventory', { search: searchText, category: selectedCategory, status: selectedStatus }],
+    queryKey: ['inventory/items', schoolId, searchText, selectedCategory, selectedStatus],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchText) params.append('search', searchText);
-      if (selectedCategory !== 'all') params.append('category', selectedCategory);
-      if (selectedStatus !== 'all') params.append('status', selectedStatus);
+      const currentSchoolId = schoolId || getUserSchoolId();
+      if (!currentSchoolId) throw new Error('School ID is required');
       
-      const response = await fetch(`/api/inventory?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch items');
-      return response.json();
+      const allItems = await db.getInventoryItems(currentSchoolId);
+      
+      // Apply client-side filtering
+      return allItems?.filter(item => {
+        const matchesSearch = !searchText || 
+          item.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+          item.name_bn?.includes(searchText) ||
+          item.brand?.toLowerCase().includes(searchText.toLowerCase());
+        
+        const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+        
+        // Determine status based on quantity vs minimum threshold
+        const currentQty = item.current_quantity || 0;
+        const minThreshold = item.minimum_threshold || 0;
+        let itemStatus = 'available';
+        if (currentQty === 0) itemStatus = 'out_of_stock';
+        else if (currentQty <= minThreshold) itemStatus = 'low_stock';
+        
+        const matchesStatus = selectedStatus === 'all' || itemStatus === selectedStatus;
+        
+        return matchesSearch && matchesCategory && matchesStatus;
+      }) || [];
     },
+    enabled: !!schoolId
   });
 
   const { data: movements = [], isLoading: movementsLoading } = useQuery<any[]>({
-    queryKey: ['/api/inventory/movements', { search: searchText }],
+    queryKey: ['inventory/movements', schoolId, searchText],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchText) params.append('search', searchText);
+      const currentSchoolId = schoolId || getUserSchoolId();
+      if (!currentSchoolId) throw new Error('School ID is required');
       
-      const response = await fetch(`/api/inventory/movements?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch movements');
-      return response.json();
+      const allMovements = await db.getInventoryMovements(currentSchoolId);
+      
+      // Apply client-side filtering
+      return allMovements?.filter(movement => {
+        if (!searchText) return true;
+        return movement.inventory_items?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+               movement.reason?.toLowerCase().includes(searchText.toLowerCase());
+      }) || [];
     },
+    enabled: !!schoolId
   });
 
   // Item form
@@ -190,19 +234,32 @@ export default function InventoryPage() {
   // Create mutations
   const createItem = useMutation({
     mutationFn: async (data: ItemFormData) => {
-      const response = await fetch('/api/inventory', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to create item');
-      return response.json();
+      const currentSchoolId = schoolId || getUserSchoolId();
+      if (!currentSchoolId) throw new Error('School ID is required');
+      
+      // Map form data to database format
+      const dbItem = {
+        school_id: currentSchoolId,
+        name: data.name,
+        name_bn: data.nameInBangla,
+        category: data.category,
+        brand: data.brand || null,
+        model: data.model || null,
+        description: data.description || null,
+        unit: data.unit,
+        unit_price: parseFloat(data.unitPrice),
+        current_quantity: parseInt(data.quantity),
+        minimum_threshold: parseInt(data.minimumStock),
+        location: data.location || null,
+        supplier: data.supplier || null,
+        condition: 'good' // Default condition
+      };
+      
+      return await db.createInventoryItem(dbItem);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory/items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory/stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "নতুন আইটেম যোগ করা হয়েছে",
@@ -214,20 +271,28 @@ export default function InventoryPage() {
 
   const createMovement = useMutation({
     mutationFn: async (data: MovementFormData) => {
-      const response = await fetch('/api/inventory/movements', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to create movement');
-      return response.json();
+      const currentSchoolId = schoolId || getUserSchoolId();
+      if (!currentSchoolId) throw new Error('School ID is required');
+      
+      // Map form data to database format
+      const dbMovement = {
+        school_id: currentSchoolId,
+        item_id: parseInt(data.itemId),
+        movement_type: data.type,
+        quantity: parseInt(data.quantity),
+        reason: data.reason,
+        reference: data.reference || null,
+        notes: data.notes || null,
+        movement_date: new Date().toISOString().split('T')[0], // Today's date
+        created_by: 'Admin' // TODO: Get from current user
+      };
+      
+      return await db.createInventoryMovement(dbMovement);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/movements'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory/items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory/movements'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory/stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "স্টক চলাচল রেকর্ড করা হয়েছে",
@@ -240,19 +305,27 @@ export default function InventoryPage() {
   // Update mutations
   const updateItem = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: ItemFormData }) => {
-      const response = await fetch(`/api/inventory/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to update item');
-      return response.json();
+      // Map form data to database format
+      const dbUpdates = {
+        name: data.name,
+        name_bn: data.nameInBangla,
+        category: data.category,
+        brand: data.brand || null,
+        model: data.model || null,
+        description: data.description || null,
+        unit: data.unit,
+        unit_price: parseFloat(data.unitPrice),
+        current_quantity: parseInt(data.quantity),
+        minimum_threshold: parseInt(data.minimumStock),
+        location: data.location || null,
+        supplier: data.supplier || null
+      };
+      
+      return await db.updateInventoryItem(id, dbUpdates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory/items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory/stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "আইটেমের তথ্য আপডেট করা হয়েছে",
@@ -265,15 +338,11 @@ export default function InventoryPage() {
   // Delete mutations
   const deleteItem = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/inventory/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete item');
-      return response.json();
+      return await db.deleteInventoryItem(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inventory/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory/items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory/stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "আইটেম মুছে ফেলা হয়েছে",
@@ -310,9 +379,9 @@ export default function InventoryPage() {
       minimumStock: item.minimum_threshold?.toString() || '',
       location: item.location || '',
       supplier: item.supplier || '',
-      purchaseDate: item.purchaseDate || '',
-      warrantyExpiry: item.warrantyExpiry || '',
-      status: item.status || 'available',
+      purchaseDate: '',
+      warrantyExpiry: '',
+      status: 'available', // Calculate dynamically
     });
     setIsAddDialogOpen(true);
   };
@@ -325,15 +394,33 @@ export default function InventoryPage() {
 
   const handleExport = async () => {
     try {
-      const params = new URLSearchParams();
-      params.append('format', 'csv');
-      if (selectedCategory !== 'all') params.append('category', selectedCategory);
-      if (selectedStatus !== 'all') params.append('status', selectedStatus);
+      // Generate CSV from current filtered data
+      const csvHeaders = ['Name,Bangla Name,Category,Brand,Model,Unit,Unit Price,Current Quantity,Minimum Stock,Location,Supplier,Status'];
+      const csvRows = filteredItems.map(item => {
+        const currentQty = item.current_quantity || 0;
+        const minThreshold = item.minimum_threshold || 0;
+        let status = 'available';
+        if (currentQty === 0) status = 'out_of_stock';
+        else if (currentQty <= minThreshold) status = 'low_stock';
+        
+        return [
+          item.name || '',
+          item.name_bn || '',
+          item.category || '',
+          item.brand || '',
+          item.model || '',
+          item.unit || '',
+          item.unit_price || 0,
+          currentQty,
+          minThreshold,
+          item.location || '',
+          item.supplier || '',
+          status
+        ].join(',');
+      });
       
-      const response = await fetch(`/api/inventory/export?${params.toString()}`);
-      if (!response.ok) throw new Error('Export failed');
-      
-      const blob = await response.blob();
+      const csvContent = [csvHeaders, ...csvRows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -369,21 +456,14 @@ export default function InventoryPage() {
   };
 
   // Filter items
-  const filteredItems = Array.isArray(items) ? items.filter((item: any) => {
-    const matchesSearch = item.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-                         item.name_bn?.includes(searchText) ||
-                         item.brand?.toLowerCase().includes(searchText.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
-    
-    return matchesSearch && matchesCategory && matchesStatus;
-  }) : [];
+  const filteredItems = Array.isArray(items) ? items : [];
 
-  // Filter movements
-  const filteredMovements = Array.isArray(movements) ? movements.filter((movement: any) =>
-    movement.item?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-    movement.reason?.toLowerCase().includes(searchText.toLowerCase())
-  ) : [];
+  // Filter movements  
+  const filteredMovements = Array.isArray(movements) ? movements.filter((movement: any) => {
+    if (!searchText) return true;
+    return movement.inventory_items?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+           movement.reason?.toLowerCase().includes(searchText.toLowerCase());
+  }) : [];
 
   if (itemsLoading || movementsLoading) {
     return (
