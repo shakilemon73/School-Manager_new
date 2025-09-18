@@ -48,9 +48,9 @@ const itemSchema = z.object({
   brand: z.string().optional(),
   model: z.string().optional(),
   serial_number: z.string().optional(),
-  unit_price: z.string().min(0, 'মূল্য প্রয়োজন'),
-  current_quantity: z.string().min(0, 'পরিমাণ প্রয়োজন'),
-  minimum_threshold: z.string().min(0, 'ন্যূনতম সীমা প্রয়োজন'),
+  unit_price: z.number().min(0, 'মূল্য প্রয়োজন'),
+  current_quantity: z.number().min(0, 'পরিমাণ প্রয়োজন'),
+  minimum_threshold: z.number().min(0, 'ন্যূনতম সীমা প্রয়োজন'),
   unit: z.string().min(1, 'একক নির্বাচন করুন'),
   supplier: z.string().optional(),
   location: z.string().min(1, 'অবস্থান প্রয়োজন'),
@@ -94,9 +94,9 @@ export default function InventoryPage() {
       brand: '',
       model: '',
       serial_number: '',
-      unit_price: '0',
-      current_quantity: '0',
-      minimum_threshold: '10',
+      unit_price: 0,
+      current_quantity: 0,
+      minimum_threshold: 10,
       unit: '',
       supplier: '',
       location: '',
@@ -195,7 +195,14 @@ export default function InventoryPage() {
   const stockMovementMutation = useMutation({
     mutationFn: async (data: StockMovementFormData) => {
       console.log('🔄 Creating inventory movement via Supabase...', data);
-      const movementWithSchool = { ...data, school_id: 1 };
+      const movementWithSchool = { 
+        item_id: parseInt(data.itemId), 
+        type: data.type, 
+        quantity: data.quantity, 
+        reason: data.reason, 
+        reference_number: data.reference, 
+        school_id: 1 
+      };
       const result = await db.createInventoryMovement(movementWithSchool);
       console.log('✅ Inventory movement created via Supabase:', result);
       return result;
@@ -475,18 +482,6 @@ export default function InventoryPage() {
       <ResponsivePageLayout
         title="ইনভেন্টরি ব্যবস্থাপনা"
         description="পণ্য স্টক ও সাপ্লাই চেইন ব্যবস্থাপনা"
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              রিপোর্ট
-            </Button>
-            <Button variant="outline" size="sm">
-              <Scan className="h-4 w-4 mr-2" />
-              স্ক্যান
-            </Button>
-          </div>
-        }
       >
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
@@ -573,7 +568,7 @@ export default function InventoryPage() {
                         
                         <FormField
                           control={itemForm.control}
-                          name="nameBn"
+                          name="name_bn"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>পণ্যের নাম (বাংলা)</FormLabel>
@@ -630,7 +625,7 @@ export default function InventoryPage() {
                       <div className="grid grid-cols-3 gap-4">
                         <FormField
                           control={itemForm.control}
-                          name="currentQuantity"
+                          name="current_quantity"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>বর্তমান পরিমাণ</FormLabel>
@@ -649,7 +644,7 @@ export default function InventoryPage() {
 
                         <FormField
                           control={itemForm.control}
-                          name="minimumThreshold"
+                          name="minimum_threshold"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>সর্বনিম্ন সীমা</FormLabel>
@@ -684,7 +679,7 @@ export default function InventoryPage() {
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={itemForm.control}
-                          name="unitPrice"
+                          name="unit_price"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>একক মূল্য (টাকা)</FormLabel>
