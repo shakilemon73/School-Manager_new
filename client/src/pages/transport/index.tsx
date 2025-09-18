@@ -87,8 +87,8 @@ export default function TransportPage() {
   const [isAssignStudentOpen, setIsAssignStudentOpen] = useState(false);
   const [isEditVehicleOpen, setIsEditVehicleOpen] = useState(false);
   const [isEditRouteOpen, setIsEditRouteOpen] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState(null);
-  const [editingRoute, setEditingRoute] = useState(null);
+  const [editingVehicle, setEditingVehicle] = useState<any>(null);
+  const [editingRoute, setEditingRoute] = useState<any>(null);
 
   // Enhanced form handling following Luke Wroblewski's principles
   const vehicleForm = useForm<VehicleFormData>({
@@ -190,7 +190,7 @@ export default function TransportPage() {
       distance: route.distance || 0,
       estimatedTime: route.estimatedTime || 0,
       fare: route.monthlyFee || route.fare || 0,
-      stops: route.pickupPoints ? route.pickupPoints.split(', ') : [],
+      stops: (typeof route.pickupPoints === 'string' && route.pickupPoints) ? route.pickupPoints.split(', ') : [],
     });
     setIsEditRouteOpen(true);
   };
@@ -342,10 +342,10 @@ export default function TransportPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-              {transportStats.totalVehicles || 0}
+              {vehicles.length || 0}
             </div>
             <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-              {transportStats.activeVehicles || 0} টি সক্রিয়
+              {transportStats.active_vehicles || 0} টি সক্রিয়
             </p>
           </CardContent>
         </Card>
@@ -359,10 +359,10 @@ export default function TransportPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-              {transportStats.totalRoutes || 0}
+              {routes.length || 0}
             </div>
             <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              {transportStats.activeRoutes || 0} টি সক্রিয়
+              {transportStats.total_routes || 0} টি সক্রিয়
             </p>
           </CardContent>
         </Card>
@@ -376,10 +376,10 @@ export default function TransportPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-              {transportStats.transportStudents || 0}
+              {transportStats.student_assignments || 0}
             </div>
             <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-              {transportStats.totalCapacity || 0} ধারণক্ষমতা
+              শিক্ষার্থী পরিবহন
             </p>
           </CardContent>
         </Card>
@@ -393,7 +393,7 @@ export default function TransportPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
-              ৳ {(transportStats.monthlyRevenue || 0).toLocaleString()}
+              ৳ {(0).toLocaleString()}
             </div>
             <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
               এই মাসে
@@ -449,7 +449,7 @@ export default function TransportPage() {
                       <p className="text-sm text-gray-600 dark:text-gray-400">{vehicle.driverName}</p>
                     </div>
                   </div>
-                  <Badge variant={vehicle.isActive ? "success" : "destructive"}>
+                  <Badge variant={vehicle.isActive ? "default" : "destructive"}>
                     {vehicle.isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
                   </Badge>
                 </div>
@@ -667,7 +667,7 @@ export default function TransportPage() {
                     </TableCell>
                     <TableCell>{vehicle.route?.name || 'বরাদ্দ নেই'}</TableCell>
                     <TableCell>
-                      <Badge variant={vehicle.isActive ? "success" : "destructive"}>
+                      <Badge variant={vehicle.isActive ? "default" : "destructive"}>
                         {vehicle.isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
                       </Badge>
                     </TableCell>
@@ -758,7 +758,7 @@ export default function TransportPage() {
                             {(() => {
                               // Clean up PostgreSQL array format: {Wari,Paltan,Shantinagar} -> ["Wari", "Paltan", "Shantinagar"]
                               let stops = [];
-                              if (route.pickupPoints.startsWith('{') && route.pickupPoints.endsWith('}')) {
+                              if (typeof route.pickupPoints === 'string' && route.pickupPoints.startsWith('{') && route.pickupPoints.endsWith('}')) {
                                 // PostgreSQL array format
                                 stops = route.pickupPoints.slice(1, -1).split(',').map((s: string) => s.trim());
                               } else {
@@ -909,18 +909,6 @@ export default function TransportPage() {
       <ResponsivePageLayout
         title="পরিবহন ব্যবস্থাপনা"
         description="স্কুল বাস ও পরিবহন সেবা পরিচালনা"
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              রিপোর্ট
-            </Button>
-            <Button variant="outline" size="sm">
-              <Navigation className="h-4 w-4 mr-2" />
-              ট্র্যাকিং
-            </Button>
-          </div>
-        }
       >
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
