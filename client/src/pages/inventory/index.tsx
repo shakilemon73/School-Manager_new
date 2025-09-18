@@ -183,10 +183,11 @@ export default function InventoryPage() {
         description: "নতুন পণ্য সংযোজিত হয়েছে",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('❌ Error adding inventory item:', error);
       toast({
         title: "ত্রুটি",
-        description: "পণ্য সংযোজনে সমস্যা হয়েছে",
+        description: `পণ্য সংযোজনে সমস্যা হয়েছে: ${error.message || error}`,
         variant: "destructive",
       });
     },
@@ -218,10 +219,11 @@ export default function InventoryPage() {
         description: "স্টক আপডেট করা হয়েছে",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('❌ Error creating stock movement:', error);
       toast({
-        title: "ত্রুটি",
-        description: "স্টক আপডেটে সমস্যা হয়েছে",
+        title: "ত্রুটি", 
+        description: `স্টক আপডেটে সমস্যা হয়েছে: ${error.message || error}`,
         variant: "destructive",
       });
     },
@@ -243,9 +245,10 @@ export default function InventoryPage() {
       });
     },
     onError: (error) => {
+      console.error('❌ Error deleting inventory item:', error);
       toast({
         title: "ত্রুটি",
-        description: "পণ্য মুছতে সমস্যা হয়েছে",
+        description: `পণ্য মুছতে সমস্যা হয়েছে: ${error.message || error}`,
         variant: "destructive",
       });
     },
@@ -269,9 +272,10 @@ export default function InventoryPage() {
       });
     },
     onError: (error) => {
+      console.error('❌ Error updating inventory item:', error);
       toast({
         title: "ত্রুটি",
-        description: "পণ্য আপডেটে সমস্যা হয়েছে",
+        description: `পণ্য আপডেটে সমস্যা হয়েছে: ${error.message || error}`,
         variant: "destructive",
       });
     },
