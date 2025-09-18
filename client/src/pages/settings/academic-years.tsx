@@ -362,9 +362,18 @@ export default function AcademicYearsPage() {
   // Delete academic year mutation
   const deleteYearMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/academic-years/${id}`, {
-        method: 'DELETE',
-      });
+      console.log('Deleting academic year:', id);
+      const { error } = await supabase
+        .from('academic_years')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Academic year deletion error:', error);
+        throw error;
+      }
+      
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/academic-years'] });
@@ -386,10 +395,28 @@ export default function AcademicYearsPage() {
   // Update academic year mutation
   const updateYearMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return apiRequest(`/api/academic-years/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      });
+      console.log('Updating academic year:', id, data);
+      const { data: result, error } = await supabase
+        .from('academic_years')
+        .update({
+          name: data.name,
+          name_bn: data.nameBn,
+          start_date: data.startDate,
+          end_date: data.endDate,
+          description: data.description,
+          description_bn: data.descriptionBn,
+          is_active: data.isActive
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Academic year update error:', error);
+        throw error;
+      }
+      
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/academic-years'] });
@@ -411,10 +438,20 @@ export default function AcademicYearsPage() {
   // Toggle academic year status mutation
   const toggleYearStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return apiRequest(`/api/academic-years/${id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status }),
-      });
+      console.log('Toggling academic year status:', id, status);
+      const { data, error } = await supabase
+        .from('academic_years')
+        .update({ status })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Academic year status toggle error:', error);
+        throw error;
+      }
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/academic-years'] });
@@ -429,9 +466,26 @@ export default function AcademicYearsPage() {
   // Set current academic year mutation
   const setCurrentYearMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/academic-years/${id}/set-current`, {
-        method: 'PATCH',
-      });
+      console.log('Setting current academic year:', id);
+      // First, set all years to not current
+      await supabase
+        .from('academic_years')
+        .update({ is_current: false });
+      
+      // Then set the selected year as current
+      const { data, error } = await supabase
+        .from('academic_years')
+        .update({ is_current: true })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Set current year error:', error);
+        throw error;
+      }
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/academic-years'] });
@@ -446,9 +500,18 @@ export default function AcademicYearsPage() {
   // Academic Terms CRUD operations
   const deleteTermMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/enhanced-academic-terms/${id}`, {
-        method: 'DELETE',
-      });
+      console.log('Deleting academic term:', id);
+      const { error } = await supabase
+        .from('academic_terms')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Academic term deletion error:', error);
+        throw error;
+      }
+      
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/enhanced-academic-terms'] });
@@ -469,10 +532,29 @@ export default function AcademicYearsPage() {
 
   const updateTermMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return apiRequest(`/api/enhanced-academic-terms/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      });
+      console.log('Updating academic term:', id, data);
+      const { data: result, error } = await supabase
+        .from('academic_terms')
+        .update({
+          name: data.name,
+          name_bn: data.nameBn,
+          academic_year_id: data.academicYearId,
+          start_date: data.startDate,
+          end_date: data.endDate,
+          description: data.description,
+          description_bn: data.descriptionBn,
+          is_active: data.isActive
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Academic term update error:', error);
+        throw error;
+      }
+      
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/enhanced-academic-terms'] });
@@ -493,10 +575,20 @@ export default function AcademicYearsPage() {
 
   const toggleTermStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return apiRequest(`/api/enhanced-academic-terms/${id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status }),
-      });
+      console.log('Toggling academic term status:', id, status);
+      const { data, error } = await supabase
+        .from('academic_terms')
+        .update({ status })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Academic term status toggle error:', error);
+        throw error;
+      }
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/enhanced-academic-terms'] });

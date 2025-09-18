@@ -314,7 +314,7 @@ export default function SchoolSupabaseSettingsPage() {
   if (settingsLoading) {
     return (
       <AppShell>
-        <ResponsivePageLayout>
+        <ResponsivePageLayout title="স্কুল সেটিংস" description="সুপাবেস ডেটাবেস ব্যবহার করে আপনার স্কুলের তথ্য এবং সেটিংস পরিচালনা করুন">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
@@ -328,7 +328,7 @@ export default function SchoolSupabaseSettingsPage() {
 
   return (
     <AppShell>
-      <ResponsivePageLayout>
+      <ResponsivePageLayout title="স্কুল সেটিংস" description="সুপাবেস ডেটাবেস ব্যবহার করে আপনার স্কুলের তথ্য এবং সেটিংস পরিচালনা করুন">
         <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">স্কুল সেটিংস</h1>

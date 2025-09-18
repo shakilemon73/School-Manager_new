@@ -2774,8 +2774,14 @@ export const db = {
 
       const creditsRequired = template.required_credits || 1;
 
-      // Check user's available credits
-      const creditStats: any = await this.getUserStats('current_user', schoolId);
+      // Check user's available credits - using direct credit balance check
+      const { data: creditBalance } = await supabase
+        .from('credit_balances')
+        .select('current_balance')
+        .eq('school_instance_id', schoolId)
+        .single();
+      
+      const creditStats = { currentBalance: creditBalance?.current_balance || 0 };
       
       if (creditStats.currentBalance < creditsRequired) {
         throw new Error(`Insufficient credits. Required: ${creditsRequired}, Available: ${creditStats.currentBalance}`);
