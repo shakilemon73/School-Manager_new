@@ -2,56 +2,69 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, School, Lock, User } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [_, setLocation] = useLocation();
+  const { toast } = useToast();
+  const { user, loading, signIn } = useSupabaseDirectAuth();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
 
-  const loginMutation = useMutation({
-    mutationFn: async (data: LoginFormData) => {
-      const response = await apiRequest("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      return response;
-    },
-    onSuccess: (data) => {
-      // Redirect to the appropriate portal based on user role
-      window.location.href = data.redirectUrl || "/dashboard";
-    },
-    onError: (error: any) => {
-      setLoginError(error.message || "Login failed. Please try again.");
-    },
-  });
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user) {
+      setLocation('/dashboard');
+    }
+  }, [user, setLocation]);
 
-  const onSubmit = (data: LoginFormData) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const onSubmit = async (data: LoginFormData) => {
     setLoginError(null);
-    loginMutation.mutate(data);
+    setIsSubmitting(true);
+    
+    try {
+      const result = await signIn(data.email, data.password);
+      
+      if (!result.success) {
+        setLoginError(result.error || "Login failed. Please try again.");
+      } else {
+        toast({
+          title: "Login Successful",
+          description: "Welcome to your school management system!",
+        });
+        setLocation('/dashboard');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -90,23 +103,23 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-3">
-              <Label htmlFor="username" className="text-slate-700 dark:text-slate-300 font-medium">
-                ব্যবহারকারীর নাম
+              <Label htmlFor="email" className="text-slate-700 dark:text-slate-300 font-medium">
+                ইমেইল ঠিকানা
               </Label>
               <div className="relative group">
                 <User className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors duration-300" />
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="আপনার ব্যবহারকারীর নাম লিখুন"
+                  id="email"
+                  type="email"
+                  placeholder="আপনার ইমেইল ঠিকানা লিখুন"
                   className="pl-12 h-12 border-slate-200 dark:border-slate-700 focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-emerald-500/20 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm transition-all duration-300"
-                  {...form.register("username")}
+                  {...form.register("email")}
                 />
               </div>
-              {form.formState.errors.username && (
+              {form.formState.errors.email && (
                 <p className="text-sm text-red-600 dark:text-red-400 flex items-center">
                   <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
-                  {form.formState.errors.username.message}
+                  {form.formState.errors.email.message}
                 </p>
               )}
             </div>
@@ -136,9 +149,9 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full h-12 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loginMutation.isPending}
+              disabled={isSubmitting || loading}
             >
-              {loginMutation.isPending ? (
+              {isSubmitting || loading ? (
                 <>
                   <Loader2 className="mr-3 h-5 w-5 animate-spin" />
                   প্রবেশ করছি...
