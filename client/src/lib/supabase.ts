@@ -2756,7 +2756,7 @@ export const db = {
     return { success: true, message: 'Templates seeded successfully', count: data?.length || 0 };
   },
 
-  async generateDocument(documentData: { templateId: number; documentType: string; studentIds: number[]; schoolId?: number }) {
+  async generateDocument(documentData: { templateId: number; documentType: string; studentIds: number[]; schoolId?: number }): Promise<any> {
     const schoolId = documentData.schoolId || 1;
     
     try {
@@ -2775,7 +2775,7 @@ export const db = {
       const creditsRequired = template.required_credits || 1;
 
       // Check user's available credits
-      const creditStats = await this.getUserCreditStats('current_user', schoolId);
+      const creditStats: any = await this.getUserStats('current_user', schoolId);
       
       if (creditStats.currentBalance < creditsRequired) {
         throw new Error(`Insufficient credits. Required: ${creditsRequired}, Available: ${creditStats.currentBalance}`);
