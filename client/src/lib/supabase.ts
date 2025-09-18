@@ -177,9 +177,17 @@ const staffFieldMapping = {
 // Parents field mapping: UI camelCase -> DB snake_case
 const parentFieldMapping = {
   parentId: 'parent_id',
+  fatherName: 'father_name',
+  motherName: 'mother_name',
   fatherNameInBangla: 'father_name_in_bangla',
   motherNameInBangla: 'mother_name_in_bangla',
+  occupation: 'occupation',
+  phone: 'phone',
+  email: 'email',
+  address: 'address',
+  nid: 'nid',
   emergencyContact: 'emergency_contact',
+  status: 'status',
   schoolId: 'school_id',
   createdAt: 'created_at',
 };
