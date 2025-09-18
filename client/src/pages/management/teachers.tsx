@@ -149,18 +149,42 @@ export default function TeachersPage() {
     },
   });
 
+  // Convert camelCase to snake_case for database
+  const convertToDbFormat = (teacherData: any) => {
+    return {
+      teacher_id: teacherData.teacherId,
+      name: teacherData.name,
+      name_in_bangla: teacherData.nameInBangla,
+      designation: teacherData.designation,
+      department: teacherData.department,
+      subject: teacherData.subject,
+      phone: teacherData.phone,
+      email: teacherData.email,
+      address: teacherData.address,
+      date_of_birth: teacherData.dateOfBirth || null,
+      joining_date: teacherData.joiningDate || null,
+      salary: teacherData.salary,
+      qualification: teacherData.qualification,
+      experience: teacherData.experience,
+      is_active: teacherData.isActive,
+      status: 'active'
+    };
+  };
+
   // Create teacher mutation via direct Supabase calls
   const createTeacher = useMutation({
     mutationFn: async (teacherData: any) => {
       console.log('👩‍🏫 Creating teacher with direct Supabase call');
       const schoolId = await getCurrentSchoolId();
       
+      // Convert camelCase to snake_case for database
+      const dbTeacherData = convertToDbFormat(teacherData);
+      
       const { data, error } = await supabase
         .from('teachers')
         .insert({
-          ...teacherData,
+          ...dbTeacherData,
           school_id: schoolId,
-          status: teacherData.status || 'active',
           created_at: new Date().toISOString()
         })
         .select()
@@ -193,10 +217,13 @@ export default function TeachersPage() {
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
       console.log('👩‍🏫 Updating teacher with direct Supabase call');
       
+      // Convert camelCase to snake_case for database
+      const dbTeacherData = convertToDbFormat(data);
+      
       const { data: result, error } = await supabase
         .from('teachers')
         .update({
-          ...data,
+          ...dbTeacherData,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
@@ -285,25 +312,32 @@ export default function TeachersPage() {
     }
   };
 
+  // Convert snake_case from database to camelCase for form
+  const convertFromDbFormat = (dbTeacher: any) => {
+    return {
+      name: dbTeacher.name || '',
+      nameInBangla: dbTeacher.name_in_bangla || '',
+      teacherId: dbTeacher.teacher_id || '',
+      designation: dbTeacher.designation || '',
+      department: dbTeacher.department || '',
+      subject: dbTeacher.subject || '',
+      phone: dbTeacher.phone || '',
+      email: dbTeacher.email || '',
+      address: dbTeacher.address || '',
+      dateOfBirth: dbTeacher.date_of_birth || '',
+      joiningDate: dbTeacher.joining_date || '',
+      salary: dbTeacher.salary || '',
+      qualification: dbTeacher.qualification || '',
+      experience: dbTeacher.experience || '',
+      isActive: dbTeacher.is_active ?? true,
+    };
+  };
+
   const handleEdit = (teacher: any) => {
     setEditingTeacher(teacher);
-    form.reset({
-      name: teacher.name || '',
-      nameInBangla: teacher.nameInBangla || '',
-      teacherId: teacher.teacherId || '',
-      designation: teacher.designation || '',
-      department: teacher.department || '',
-      subject: teacher.subject || '',
-      phone: teacher.phone || '',
-      email: teacher.email || '',
-      address: teacher.address || '',
-      dateOfBirth: teacher.dateOfBirth || '',
-      joiningDate: teacher.joiningDate || '',
-      salary: teacher.salary || '',
-      qualification: teacher.qualification || '',
-      experience: teacher.experience || '',
-      isActive: teacher.isActive ?? true,
-    });
+    // Convert database format to form format
+    const formData = convertFromDbFormat(teacher);
+    form.reset(formData);
     setIsAddDialogOpen(true);
   };
 
@@ -320,13 +354,15 @@ export default function TeachersPage() {
 
   // Filter teachers based on search and filters
   const filteredTeachers = Array.isArray(teachersData) ? teachersData.filter((teacher: any) => {
-    const matchesSearch = teacher.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-                         teacher.nameInBangla?.includes(searchText) ||
-                         teacher.teacherId?.toLowerCase().includes(searchText.toLowerCase());
+    const searchLower = searchText.toLowerCase();
+    const matchesSearch = !searchText ||
+                         (teacher.name && teacher.name.toLowerCase().includes(searchLower)) ||
+                         (teacher.name_in_bangla && teacher.name_in_bangla.includes(searchText)) ||
+                         (teacher.teacher_id && teacher.teacher_id.toLowerCase().includes(searchLower));
     const matchesDepartment = selectedDepartment === 'all' || teacher.department === selectedDepartment;
     const matchesTab = activeTab === 'all' || 
-                      (activeTab === 'active' && teacher.isActive) ||
-                      (activeTab === 'inactive' && !teacher.isActive);
+                      (activeTab === 'active' && teacher.is_active) ||
+                      (activeTab === 'inactive' && !teacher.is_active);
     
     return matchesSearch && matchesDepartment && matchesTab;
   }) : [];

@@ -108,16 +108,42 @@ export default function StudentsPage() {
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
+  // Convert camelCase to snake_case for database
+  const convertToDbFormat = (studentData: any) => {
+    return {
+      student_id: studentData.studentId,
+      name: studentData.name,
+      name_in_bangla: studentData.nameInBangla,
+      father_name: studentData.fatherName,
+      mother_name: studentData.motherName,
+      class: studentData.class,
+      section: studentData.section,
+      roll_number: studentData.rollNumber,
+      phone: studentData.phone,
+      email: studentData.email,
+      guardian_name: studentData.guardianName,
+      guardian_phone: studentData.guardianPhone,
+      present_address: studentData.presentAddress,
+      blood_group: studentData.bloodGroup,
+      gender: studentData.gender,
+      date_of_birth: studentData.dateOfBirth || null,
+      status: 'active'
+    };
+  };
+
   // Create student mutation with direct Supabase
   const createStudent = useMutation({
     mutationFn: async (studentData: any) => {
       console.log('🎓 Creating student with direct Supabase call');
       const schoolId = await getCurrentSchoolId();
       
+      // Convert camelCase to snake_case for database
+      const dbStudentData = convertToDbFormat(studentData);
+      
       const { data, error } = await supabase
         .from('students')
         .insert({
-          ...studentData,
+          ...dbStudentData,
           school_id: schoolId,
           created_at: new Date().toISOString()
         })
@@ -151,10 +177,13 @@ export default function StudentsPage() {
     mutationFn: async ({ id, ...studentData }: any) => {
       console.log('🎓 Updating student with direct Supabase call');
       
+      // Convert camelCase to snake_case for database
+      const dbStudentData = convertToDbFormat(studentData);
+      
       const { data, error } = await supabase
         .from('students')
         .update({
-          ...studentData,
+          ...dbStudentData,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
@@ -250,9 +279,9 @@ export default function StudentsPage() {
     const searchLower = searchText.toLowerCase();
     const matchesSearch = !searchText || 
                           (student.name && student.name.toLowerCase().includes(searchLower)) ||
-                          (student.nameInBangla && student.nameInBangla.includes(searchText)) ||
-                          (student.studentId && student.studentId.includes(searchText)) ||
-                          (student.rollNumber && student.rollNumber.includes(searchText));
+                          (student.name_in_bangla && student.name_in_bangla.includes(searchText)) ||
+                          (student.student_id && student.student_id.includes(searchText)) ||
+                          (student.roll_number && student.roll_number.includes(searchText));
     
     const matchesClass = selectedClass === 'all' || student.class === selectedClass;
     
@@ -294,27 +323,34 @@ export default function StudentsPage() {
     }
   };
 
+  // Convert snake_case from database to camelCase for form
+  const convertFromDbFormat = (dbStudent: any) => {
+    return {
+      studentId: dbStudent.student_id || '',
+      name: dbStudent.name || '',
+      nameInBangla: dbStudent.name_in_bangla || '',
+      fatherName: dbStudent.father_name || '',
+      motherName: dbStudent.mother_name || '',
+      class: dbStudent.class || '',
+      section: dbStudent.section || '',
+      rollNumber: dbStudent.roll_number || '',
+      phone: dbStudent.phone || '',
+      email: dbStudent.email || '',
+      guardianName: dbStudent.guardian_name || '',
+      guardianPhone: dbStudent.guardian_phone || '',
+      presentAddress: dbStudent.present_address || '',
+      bloodGroup: dbStudent.blood_group || '',
+      gender: dbStudent.gender || '',
+      dateOfBirth: dbStudent.date_of_birth || '',
+    };
+  };
+
   // Handle editing a student
   const handleEditStudent = (student: any) => {
     setEditingStudent(student);
-    setNewStudent({
-      studentId: student.studentId || '',
-      name: student.name || '',
-      nameInBangla: student.nameInBangla || '',
-      fatherName: student.fatherName || '',
-      motherName: student.motherName || '',
-      class: student.class || '',
-      section: student.section || '',
-      rollNumber: student.rollNumber || '',
-      phone: student.phone || '',
-      email: student.email || '',
-      guardianName: student.guardianName || '',
-      guardianPhone: student.guardianPhone || '',
-      presentAddress: student.presentAddress || '',
-      bloodGroup: student.bloodGroup || '',
-      gender: student.gender || '',
-      dateOfBirth: student.dateOfBirth || '',
-    });
+    // Convert database format to form format
+    const formData = convertFromDbFormat(student);
+    setNewStudent(formData);
     setIsAddDialogOpen(true);
   };
 
