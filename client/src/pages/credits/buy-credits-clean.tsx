@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, CreditCard, Zap, Shield, ArrowRight, Star, TrendingUp, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { db } from "@/lib/supabase";
 
 interface CreditPackage {
   id: number;
@@ -27,35 +29,40 @@ export default function BuyCreditsClean() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const { user, schoolId } = useSupabaseDirectAuth();
 
-  // Fetch credit packages
+  // Fetch credit packages using direct Supabase
   const { data: packages = [], isLoading } = useQuery<CreditPackage[]>({
-    queryKey: ["/api/credit-packages"],
+    queryKey: ["credit-packages", schoolId],
+    queryFn: () => db.getCreditPackages(schoolId || 1),
+    enabled: !!schoolId
   });
 
-  // Free package claim mutation
+  // Credit purchase mutation using direct Supabase
   const purchaseMutation = useMutation({
     mutationFn: async (purchaseData: PaymentForm) => {
-      const response = await fetch("/api/credit-purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(purchaseData),
+      if (!user?.id || !schoolId) throw new Error('Authentication required');
+      
+      const selectedPackage = packages.find(p => p.id === purchaseData.packageId);
+      if (!selectedPackage) throw new Error('Invalid package selected');
+
+      return await db.purchaseCredits({
+        packageId: purchaseData.packageId,
+        paymentMethod: purchaseData.paymentMethod,
+        amount: selectedPackage.credits,
+        userId: user.id,
+        schoolId: schoolId
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "ক্রেডিট ক্রয় ব্যর্থ হয়েছে");
-      }
-      return response.json();
     },
     onSuccess: (data) => {
       toast({
         title: "ক্রেডিট সফলভাবে ক্রয় হয়েছে!",
-        description: data.message,
+        description: "আপনার অ্যাকাউন্টে ক্রেডিট যোগ করা হয়েছে",
         variant: "default",
       });
       
-      queryClient.invalidateQueries({ queryKey: ["/api/credit-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/credit-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["credit-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["credit-transactions"] });
     },
     onError: (error: any) => {
       toast({

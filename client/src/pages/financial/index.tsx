@@ -20,6 +20,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
+import { db } from '@/lib/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -101,6 +103,7 @@ interface FinancialStats {
 export default function FinancialPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, schoolId } = useSupabaseDirectAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [paymentAmount, setPaymentAmount] = useState('');

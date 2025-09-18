@@ -654,6 +654,41 @@ export const db = {
     return data;
   },
 
+  // Borrowed Books functions
+  async getBorrowedBooks(schoolId?: number) {
+    const { data, error } = await supabase
+      .from('library_borrowed_books')
+      .select(`
+        *,
+        students!inner(name, student_id, class, section),
+        library_books!inner(title, author, isbn)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async getLibraryStats(schoolId?: number) {
+    const [totalBooks, borrowedBooks] = await Promise.all([
+      supabase.from('library_books').select('total_copies', { count: 'exact', head: true }),
+      supabase.from('library_borrowed_books').select('id', { count: 'exact', head: true }).eq('status', 'borrowed')
+    ]);
+
+    const totalCopies = await supabase.from('library_books').select('total_copies');
+    const availableCopies = await supabase.from('library_books').select('available_copies');
+
+    const totalBooksCount = totalCopies.data?.reduce((sum, book) => sum + (book.total_copies || 0), 0) || 0;
+    const availableBooksCount = availableCopies.data?.reduce((sum, book) => sum + (book.available_copies || 0), 0) || 0;
+
+    return {
+      total_books: totalBooks.count || 0,
+      borrowed_books: borrowedBooks.count || 0,
+      available_books: availableBooksCount,
+      total_copies: totalBooksCount
+    };
+  },
+
   // Inventory Items (RLS automatically filters by user's school access)
   async getInventoryItems(schoolId?: number) {
     // schoolId parameter kept for backward compatibility but RLS handles filtering
@@ -675,6 +710,62 @@ export const db = {
     
     if (error) throw error;
     return data;
+  },
+
+  async updateInventoryItem(id: number, updates: Database['public']['Tables']['inventory_items']['Update']) {
+    const { data, error } = await supabase
+      .from('inventory_items')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Staff functions
+  async getStaff(schoolId?: number) {
+    const { data, error } = await supabase
+      .from('staff')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async createStaff(staff: Database['public']['Tables']['staff']['Insert']) {
+    const { data, error } = await supabase
+      .from('staff')
+      .insert(staff)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async updateStaff(id: number, updates: Database['public']['Tables']['staff']['Update']) {
+    const { data, error } = await supabase
+      .from('staff')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteStaff(id: number) {
+    const { error } = await supabase
+      .from('staff')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
   },
 
   // Calendar Events (RLS automatically filters by user's school access)
@@ -889,56 +980,6 @@ export const db = {
     return data;
   },
 
-  // Staff Management (replacing 4 Express routes)
-  async getStaff(schoolId: number) {
-    if (!schoolId) {
-      throw new Error('School ID is required to fetch staff');
-    }
-    const { data, error } = await supabase
-      .from('staff')
-      .select('*')
-      .eq('school_id', schoolId)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async createStaff(staff: Database['public']['Tables']['staff']['Insert']) {
-    if (!staff.school_id) {
-      throw new Error('School ID is required to create staff member');
-    }
-    const { data, error } = await supabase
-      .from('staff')
-      .insert(staff)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async updateStaff(id: number, updates: Database['public']['Tables']['staff']['Update']) {
-    const { data, error } = await supabase
-      .from('staff')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async deleteStaff(id: number) {
-    const { error } = await supabase
-      .from('staff')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    return true;
-  },
 
   // Parent Management (replacing 4 Express routes)
   async getParents(schoolId: number) {
@@ -1016,41 +1057,6 @@ export const db = {
     return data;
   },
 
-  async getBorrowedBooks(schoolId: number) {
-    if (!schoolId) {
-      throw new Error('School ID is required to fetch borrowed books');
-    }
-    const { data, error } = await supabase
-      .from('library_borrowed_books')
-      .select(`
-        *,
-        library_books!inner(title, author),
-        students!inner(name, student_id)
-      `)
-      .eq('school_id', schoolId)
-      .eq('status', 'borrowed')
-      .order('borrowed_at', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async getLibraryStats(schoolId: number) {
-    if (!schoolId) {
-      throw new Error('School ID is required to get library stats');
-    }
-    const [totalBooks, borrowedBooks, availableBooks] = await Promise.all([
-      supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
-      supabase.from('library_borrowed_books').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'borrowed'),
-      supabase.from('library_books').select('available_copies').eq('school_id', schoolId)
-    ]);
-    
-    return {
-      total_books: totalBooks.count || 0,
-      borrowed_books: borrowedBooks.count || 0,
-      available_books: availableBooks.data?.reduce((sum, book) => sum + (book.available_copies || 0), 0) || 0
-    };
-  },
 
   async deleteLibraryBook(id: number) {
     const { error } = await supabase
@@ -1063,17 +1069,6 @@ export const db = {
   },
 
   // Inventory Management Extensions (completing 6 Express routes)
-  async updateInventoryItem(id: number, updates: Database['public']['Tables']['inventory_items']['Update']) {
-    const { data, error } = await supabase
-      .from('inventory_items')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
 
   async deleteInventoryItem(id: number) {
     const { error } = await supabase
@@ -2235,48 +2230,111 @@ export const db = {
     }
   },
 
-  async getUserCreditStats(userId: string, schoolId: number = 1) {
+  // Credit System Functions (replacing Express API endpoints)
+  async getCreditBalance(userId: string, schoolId: number = 1) {
     try {
-      const { data: transactions, error } = await supabase
-        .from('credit_transactions')
-        .select('amount, type, created_at')
-        .eq('school_instance_id', schoolId);
+      const { data, error } = await supabase
+        .from('credit_balances')
+        .select('*')
+        .eq('school_id', schoolId)
+        .single();
 
       if (error) {
-        console.warn('Error fetching credit transactions:', error);
+        console.warn('Error fetching credit balance:', error);
         return { currentBalance: 500, totalEarned: 500, totalSpent: 0 };
       }
 
-      const totalEarned = transactions?.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0) || 500;
-      const totalSpent = Math.abs(transactions?.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0) || 0);
-      const currentBalance = totalEarned - totalSpent;
-
       return {
-        currentBalance: Math.max(0, currentBalance),
-        totalEarned,
-        totalSpent
+        currentBalance: data?.available_credits || 500,
+        totalEarned: data?.total_credits || 500,
+        totalSpent: data?.used_credits || 0
       };
     } catch (error) {
-      console.error('Error getting credit stats:', error);
+      console.error('Error getting credit balance:', error);
       return { currentBalance: 500, totalEarned: 500, totalSpent: 0 };
     }
   },
 
-  async getDocumentCosts() {
+  async getCreditPackages(schoolId: number = 1) {
+    try {
+      const { data, error } = await supabase
+        .from('credit_packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('credits', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching credit packages:', error);
+      return [];
+    }
+  },
+
+  async getCreditTransactions(userId: string, schoolId: number = 1) {
+    try {
+      const { data, error } = await supabase
+        .from('credit_transactions')
+        .select('*')
+        .eq('school_instance_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching credit transactions:', error);
+      return [];
+    }
+  },
+
+  async purchaseCredits(purchaseData: {
+    packageId: number;
+    paymentMethod: string;
+    amount: number;
+    userId: string;
+    schoolId: number;
+  }) {
+    try {
+      const { data, error } = await supabase
+        .from('credit_transactions')
+        .insert({
+          user_id: parseInt(purchaseData.userId),
+          package_id: purchaseData.packageId,
+          amount: purchaseData.amount,
+          payment_method: purchaseData.paymentMethod,
+          type: 'purchase',
+          status: 'completed',
+          school_instance_id: purchaseData.schoolId,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update credit balance
+      await supabase.rpc('update_credit_balance', {
+        p_school_id: purchaseData.schoolId,
+        p_credits_to_add: purchaseData.amount
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Error purchasing credits:', error);
+      throw error;
+    }
+  },
+
+  async getDocumentCosts(schoolId: number = 1) {
     // Return static document costs - this could be stored in database if needed
-    return {
-      'student-id-cards': 1,
-      'teacher-id-cards': 1,
-      'admit-cards': 1,
-      'fee-receipts': 1,
-      'marksheets': 2,
-      'class-routines': 2,
-      'teacher-routines': 2,
-      'testimonials': 3,
-      'transfer-certificates': 3,
-      'result-sheets': 2,
-      'default': 1
-    };
+    return [
+      { id: 1, name: "Admit Card", nameBn: "প্রবেশপত্র", requiredCredits: 5, category: "academic" },
+      { id: 2, name: "ID Card", nameBn: "পরিচয়পত্র", requiredCredits: 10, category: "identity" },
+      { id: 3, name: "Certificate", nameBn: "সার্টিফিকেট", requiredCredits: 15, category: "official" },
+      { id: 4, name: "Marksheet", nameBn: "নম্বরপত্র", requiredCredits: 8, category: "academic" },
+      { id: 5, name: "Transfer Certificate", nameBn: "স্থানান্তর সার্টিফিকেট", requiredCredits: 20, category: "official" }
+    ];
   },
 
   async seedDocumentTemplates(schoolId: number = 1) {

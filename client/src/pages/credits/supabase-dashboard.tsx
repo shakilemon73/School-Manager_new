@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useMobile } from "@/hooks/use-mobile";
 import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
-import { apiRequest } from "@/lib/queryClient";
+import { db } from "@/lib/supabase";
 import { 
   Wallet, 
   CreditCard, 
@@ -71,27 +71,29 @@ export default function SupabaseDashboard() {
   const user = supabaseUser;
   const queryClient = useQueryClient();
   
-  // Fetch real-time data from Supabase
+  // Fetch real-time data using direct Supabase calls
   const { data: packages, isLoading: packagesLoading } = useQuery({
-    queryKey: ["/api/credit-packages"],
+    queryKey: ["credit-packages", supabaseUser?.school_id],
+    queryFn: () => db.getCreditPackages(supabaseUser?.school_id || 1),
+    enabled: !!supabaseUser
   });
 
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
-    queryKey: ["/api/credit-transactions"],
+    queryKey: ["credit-transactions", user?.id],
+    queryFn: () => db.getCreditTransactions(user?.id || '', supabaseUser?.school_id || 1),
+    enabled: !!user?.id
   });
 
   const { data: usageLogs, isLoading: usageLoading } = useQuery({
-    queryKey: ["/api/credit-usage"],
+    queryKey: ["credit-usage"],
+    queryFn: () => [],
+    enabled: false
   });
 
-  // Fetch credit balance directly from working endpoint
+  // Fetch credit balance using direct Supabase
   const { data: userCreditBalance, isLoading: balanceLoading } = useQuery({
-    queryKey: ["/api/simple-credit-balance", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const response = await fetch(`/api/simple-credit-balance/${user.id}`);
-      return response.json();
-    },
+    queryKey: ["credit-balance", user?.id],
+    queryFn: () => db.getCreditBalance(user?.id || '', supabaseUser?.school_id || 1),
     enabled: !!user?.id
   });
 
@@ -105,24 +107,31 @@ export default function SupabaseDashboard() {
   const statsLoading = balanceLoading;
 
   const { data: documentCosts, isLoading: costsLoading } = useQuery<DocumentCost[]>({
-    queryKey: ["/api/document-costs"],
+    queryKey: ["document-costs", supabaseUser?.school_id],
+    queryFn: () => db.getDocumentCosts(supabaseUser?.school_id || 1),
+    enabled: !!supabaseUser
   });
 
-  // Credit purchase mutation
+  // Credit purchase mutation using direct Supabase
   const purchaseMutation = useMutation({
     mutationFn: async (purchaseData: { packageId: number; paymentMethod: string; amount: number }) => {
-      return apiRequest("/api/credit-purchase", {
-        method: "POST",
-        body: JSON.stringify(purchaseData),
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      return await db.purchaseCredits({
+        packageId: purchaseData.packageId,
+        paymentMethod: purchaseData.paymentMethod,
+        amount: purchaseData.amount,
+        userId: user.id,
+        schoolId: supabaseUser?.school_id || 1
       });
     },
     onSuccess: (data) => {
       toast({
         title: "ক্রেডিট ক্রয় সফল",
-        description: data.message,
+        description: "আপনার অ্যাকাউন্টে ক্রেডিট যোগ করা হয়েছে",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/credit-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/credit-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["credit-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["credit-transactions"] });
     },
     onError: (error: any) => {
       toast({
