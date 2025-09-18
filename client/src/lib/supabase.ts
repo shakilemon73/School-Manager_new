@@ -251,25 +251,63 @@ function toDbParent(camelCaseParent: any): Database['public']['Tables']['parents
 }
 
 // Convert snake_case student object from database to camelCase for UI
-function fromDbStudent(dbStudent: Database['public']['Tables']['students']['Row']): any {
-  if (!dbStudent) return null;
+function fromDbStudent(dbStudent: any): any {
+  if (!dbStudent) return {};
   
-  const camelStudent: any = {};
+  const uiStudent: any = {};
   
-  // Create reverse mapping
-  const reverseMapping: { [key: string]: string } = {};
-  Object.entries(studentFieldMapping).forEach(([camelKey, dbKey]) => {
-    reverseMapping[dbKey] = camelKey;
+  // Reverse mapping: snake_case -> camelCase
+  const reverseStudentMapping: Record<string, string> = {};
+  Object.entries(studentFieldMapping).forEach(([camel, snake]) => {
+    reverseStudentMapping[snake] = camel;
   });
   
-  // Map snake_case fields to camelCase, preserving all fields from database
-  Object.entries(dbStudent).forEach(([dbKey, value]) => {
-    const camelKey = reverseMapping[dbKey] || dbKey;
-    // Preserve all fields including id and created_at for UI display
-    camelStudent[camelKey] = value;
+  Object.entries(dbStudent).forEach(([snakeKey, value]) => {
+    const camelKey = reverseStudentMapping[snakeKey] || snakeKey;
+    uiStudent[camelKey] = value;
   });
   
-  return camelStudent;
+  return uiStudent;
+}
+
+// Convert snake_case staff object from database to camelCase for UI
+function fromDbStaff(dbStaff: any): any {
+  if (!dbStaff) return {};
+  
+  const uiStaff: any = {};
+  
+  // Reverse mapping: snake_case -> camelCase
+  const reverseStaffMapping: Record<string, string> = {};
+  Object.entries(staffFieldMapping).forEach(([camel, snake]) => {
+    reverseStaffMapping[snake] = camel;
+  });
+  
+  Object.entries(dbStaff).forEach(([snakeKey, value]) => {
+    const camelKey = reverseStaffMapping[snakeKey] || snakeKey;
+    uiStaff[camelKey] = value;
+  });
+  
+  return uiStaff;
+}
+
+// Convert snake_case parent object from database to camelCase for UI
+function fromDbParent(dbParent: any): any {
+  if (!dbParent) return {};
+  
+  const uiParent: any = {};
+  
+  // Reverse mapping: snake_case -> camelCase
+  const reverseParentMapping: Record<string, string> = {};
+  Object.entries(parentFieldMapping).forEach(([camel, snake]) => {
+    reverseParentMapping[snake] = camel;
+  });
+  
+  Object.entries(dbParent).forEach(([snakeKey, value]) => {
+    const camelKey = reverseParentMapping[snakeKey] || snakeKey;
+    uiParent[camelKey] = value;
+  });
+  
+  return uiParent;
 }
 
 // Direct Database Query Functions (replacing Express API calls)
@@ -796,7 +834,8 @@ export const db = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+    // Convert snake_case fields to camelCase for UI
+    return data ? data.map(staff => fromDbStaff(staff)) : [];
   },
 
   async createStaff(camelCaseStaff: any) {
@@ -813,7 +852,8 @@ export const db = {
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbStaff(data) : null;
   },
 
   async updateStaff(id: number, camelCaseUpdates: any) {
@@ -828,7 +868,8 @@ export const db = {
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbStaff(data) : null;
   },
 
   async deleteStaff(id: number) {
@@ -1066,7 +1107,8 @@ export const db = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+    // Convert snake_case fields to camelCase for UI
+    return data ? data.map(parent => fromDbParent(parent)) : [];
   },
 
   async createParent(camelCaseParent: any) {
@@ -1083,7 +1125,8 @@ export const db = {
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbParent(data) : null;
   },
 
   async updateParent(id: number, camelCaseUpdates: any) {
@@ -1098,7 +1141,8 @@ export const db = {
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbParent(data) : null;
   },
 
   async deleteParent(id: number) {
