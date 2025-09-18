@@ -33,11 +33,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { db } from '@/lib/supabase';
+import type { Database } from '@/lib/supabase-types';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
+
+// Use proper database types and extend for UI
+type CalendarEventRow = Database['public']['Tables']['calendar_events']['Row'];
+interface CalendarEvent extends CalendarEventRow {
+  // Computed fields for UI
+  date?: Date;
+  startTime?: string;
+  endTime?: string;
+  eventType?: string;
+  isAllDay?: boolean;
+}
+
+interface NewEventData {
+  title: string;
+  description: string;
+  date: Date;
+  startTime: string;
+  endTime: string;
+  location: string;
+  eventType: string;
+}
 
 export default function CalendarPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useMobile();
+  const { user, getUserSchoolId } = useSupabaseDirectAuth();
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [newEvent, setNewEvent] = useState({
@@ -50,25 +75,39 @@ export default function CalendarPage() {
     eventType: 'academic'
   });
 
-  // Real-time events from Supabase
-  const { data: events = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ['/api/calendar/events'],
+  // Real-time events from Supabase using direct database calls
+  const { data: events = [], isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
+    queryKey: ['calendar', 'events'],
+    queryFn: () => db.getCalendarEvents(),
     refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
   });
 
-  // Create event mutation
+  // Create event mutation using direct Supabase calls with proper authentication
   const createEventMutation = useMutation({
-    mutationFn: async (eventData: any) => {
-      const response = await fetch('/api/calendar/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(eventData),
-      });
-      if (!response.ok) throw new Error('Failed to create event');
-      return response.json();
+    mutationFn: async (eventData: NewEventData) => {
+      const currentSchoolId = getUserSchoolId();
+      if (!currentSchoolId || !user) {
+        throw new Error('User must be authenticated and have a valid school association');
+      }
+
+      const calendarEvent = {
+        title: eventData.title,
+        description: eventData.description || '',
+        start_date: eventData.date.toISOString().split('T')[0], // Convert to date string
+        start_time: eventData.startTime || undefined,
+        end_time: eventData.endTime || undefined,
+        type: eventData.eventType || 'academic',
+        location: eventData.location || undefined,
+        organizer: user.user_metadata?.name || user.email || 'Admin', // Use authenticated user's name
+        is_active: true,
+        is_public: false,
+        school_id: currentSchoolId // Use authenticated user's school ID
+      };
+      
+      return await db.createCalendarEvent(calendarEvent);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/calendar/events'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar', 'events'] });
       toast({
         title: "ইভেন্ট তৈরি হয়েছে",
         description: "নতুন ইভেন্ট সফলভাবে যোগ করা হয়েছে",
@@ -92,14 +131,14 @@ export default function CalendarPage() {
     }
   });
 
-  // Transform API data for consistent format
-  const transformedEvents = events.map(event => ({
+  // Transform database data for consistent UI format
+  const transformedEvents: CalendarEvent[] = events.map((event: CalendarEvent) => ({
     ...event,
-    date: new Date(event.startDate || event.date),
-    startTime: event.startTime || event.start_time,
-    endTime: event.endTime || event.end_time,
-    eventType: event.eventType || event.event_type,
-    isAllDay: event.isAllDay || event.is_all_day
+    date: new Date(event.start_date),
+    startTime: event.start_time || undefined,
+    endTime: event.end_time || undefined,
+    eventType: event.type,
+    isAllDay: !event.start_time || !event.end_time
   }));
   
   // Get events for a day using transformed data
@@ -186,7 +225,7 @@ export default function CalendarPage() {
           label: "নতুন ইভেন্ট তৈরি",
           onClick: () => setActiveTab("add-event"),
         }}
-        breadcrumb={[
+        breadcrumbs={[
           { label: "ড্যাশবোর্ড", href: "/" },
           { label: "ক্যালেন্ডার", href: "/calendar" }
         ]}
