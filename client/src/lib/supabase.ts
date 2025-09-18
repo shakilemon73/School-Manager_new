@@ -184,6 +184,48 @@ const parentFieldMapping = {
   createdAt: 'created_at',
 };
 
+// Library books field mapping: UI camelCase -> DB snake_case
+const libraryFieldMapping = {
+  titleBn: 'title_bn',
+  publishYear: 'publish_year',
+  totalCopies: 'total_copies',
+  availableCopies: 'available_copies',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Inventory items field mapping: UI camelCase -> DB snake_case
+const inventoryFieldMapping = {
+  nameBn: 'name_bn',
+  serialNumber: 'serial_number',
+  unitPrice: 'unit_price',
+  currentQuantity: 'current_quantity',
+  minimumThreshold: 'minimum_threshold',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Transport field mapping: UI camelCase -> DB snake_case
+const transportFieldMapping = {
+  routeName: 'route_name',
+  pickupPoints: 'pickup_points',
+  monthlyFee: 'monthly_fee',
+  vehicleNumber: 'vehicle_number',
+  driverName: 'driver_name',
+  driverPhone: 'driver_phone',
+  helperName: 'helper_name',
+  helperPhone: 'helper_phone',
+  routeId: 'route_id',
+  studentId: 'student_id',
+  pickupPoint: 'pickup_point',
+  dropPoint: 'drop_point',
+  isActive: 'is_active',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
 // Convert camelCase student object to snake_case for database
 function toDbStudent(camelCaseStudent: any): Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update'] {
   if (!camelCaseStudent) return {} as any;
@@ -308,6 +350,108 @@ function fromDbParent(dbParent: any): any {
   });
   
   return uiParent;
+}
+
+// Library Books conversion functions
+function toDbLibrary(camelCaseLibrary: any): any {
+  if (!camelCaseLibrary) return {} as any;
+  
+  const dbLibrary: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  
+  Object.entries(camelCaseLibrary).forEach(([camelKey, value]) => {
+    const dbKey = libraryFieldMapping[camelKey as keyof typeof libraryFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbLibrary[dbKey] = value;
+    }
+  });
+  
+  return dbLibrary;
+}
+
+function fromDbLibrary(dbLibrary: any): any {
+  if (!dbLibrary) return {};
+  
+  const uiLibrary: any = {};
+  const reverseLibraryMapping: Record<string, string> = {};
+  Object.entries(libraryFieldMapping).forEach(([camel, snake]) => {
+    reverseLibraryMapping[snake] = camel;
+  });
+  
+  Object.entries(dbLibrary).forEach(([snakeKey, value]) => {
+    const camelKey = reverseLibraryMapping[snakeKey] || snakeKey;
+    uiLibrary[camelKey] = value;
+  });
+  
+  return uiLibrary;
+}
+
+// Inventory Items conversion functions
+function toDbInventory(camelCaseInventory: any): any {
+  if (!camelCaseInventory) return {} as any;
+  
+  const dbInventory: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  
+  Object.entries(camelCaseInventory).forEach(([camelKey, value]) => {
+    const dbKey = inventoryFieldMapping[camelKey as keyof typeof inventoryFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbInventory[dbKey] = value;
+    }
+  });
+  
+  return dbInventory;
+}
+
+function fromDbInventory(dbInventory: any): any {
+  if (!dbInventory) return {};
+  
+  const uiInventory: any = {};
+  const reverseInventoryMapping: Record<string, string> = {};
+  Object.entries(inventoryFieldMapping).forEach(([camel, snake]) => {
+    reverseInventoryMapping[snake] = camel;
+  });
+  
+  Object.entries(dbInventory).forEach(([snakeKey, value]) => {
+    const camelKey = reverseInventoryMapping[snakeKey] || snakeKey;
+    uiInventory[camelKey] = value;
+  });
+  
+  return uiInventory;
+}
+
+// Transport conversion functions
+function toDbTransport(camelCaseTransport: any): any {
+  if (!camelCaseTransport) return {} as any;
+  
+  const dbTransport: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  
+  Object.entries(camelCaseTransport).forEach(([camelKey, value]) => {
+    const dbKey = transportFieldMapping[camelKey as keyof typeof transportFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbTransport[dbKey] = value;
+    }
+  });
+  
+  return dbTransport;
+}
+
+function fromDbTransport(dbTransport: any): any {
+  if (!dbTransport) return {};
+  
+  const uiTransport: any = {};
+  const reverseTransportMapping: Record<string, string> = {};
+  Object.entries(transportFieldMapping).forEach(([camel, snake]) => {
+    reverseTransportMapping[snake] = camel;
+  });
+  
+  Object.entries(dbTransport).forEach(([snakeKey, value]) => {
+    const camelKey = reverseTransportMapping[snakeKey] || snakeKey;
+    uiTransport[camelKey] = value;
+  });
+  
+  return uiTransport;
 }
 
 // Direct Database Query Functions (replacing Express API calls)
@@ -730,30 +874,42 @@ export const db = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+    // Convert snake_case fields to camelCase for UI
+    return data ? data.map(book => fromDbLibrary(book)) : [];
   },
 
-  async createLibraryBook(book: Database['public']['Tables']['library_books']['Insert']) {
+  async createLibraryBook(camelCaseBook: any) {
+    if (!camelCaseBook.school_id && !camelCaseBook.schoolId) {
+      throw new Error('School ID is required to create library book');
+    }
+    // Convert camelCase fields to snake_case for database
+    const dbBook = toDbLibrary(camelCaseBook) as Database['public']['Tables']['library_books']['Insert'];
+    
     const { data, error } = await supabase
       .from('library_books')
-      .insert(book)
+      .insert(dbBook)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbLibrary(data) : null;
   },
 
-  async updateLibraryBook(id: number, updates: Database['public']['Tables']['library_books']['Update']) {
+  async updateLibraryBook(id: number, camelCaseUpdates: any) {
+    // Convert camelCase fields to snake_case for database
+    const dbUpdates = toDbLibrary(camelCaseUpdates) as Database['public']['Tables']['library_books']['Update'];
+    
     const { data, error } = await supabase
       .from('library_books')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbLibrary(data) : null;
   },
 
   // Borrowed Books functions
@@ -800,30 +956,42 @@ export const db = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+    // Convert snake_case fields to camelCase for UI
+    return data ? data.map(item => fromDbInventory(item)) : [];
   },
 
-  async createInventoryItem(item: Database['public']['Tables']['inventory_items']['Insert']) {
+  async createInventoryItem(camelCaseItem: any) {
+    if (!camelCaseItem.school_id && !camelCaseItem.schoolId) {
+      throw new Error('School ID is required to create inventory item');
+    }
+    // Convert camelCase fields to snake_case for database
+    const dbItem = toDbInventory(camelCaseItem) as Database['public']['Tables']['inventory_items']['Insert'];
+    
     const { data, error } = await supabase
       .from('inventory_items')
-      .insert(item)
+      .insert(dbItem)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbInventory(data) : null;
   },
 
-  async updateInventoryItem(id: number, updates: Database['public']['Tables']['inventory_items']['Update']) {
+  async updateInventoryItem(id: number, camelCaseUpdates: any) {
+    // Convert camelCase fields to snake_case for database
+    const dbUpdates = toDbInventory(camelCaseUpdates) as Database['public']['Tables']['inventory_items']['Update'];
+    
     const { data, error } = await supabase
       .from('inventory_items')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbInventory(data) : null;
   },
 
   // Staff functions
@@ -1046,7 +1214,8 @@ export const db = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+    // Convert snake_case fields to camelCase for UI
+    return data ? data.map(route => fromDbTransport(route)) : [];
   },
 
   async getTransportVehicles(schoolId: number) {
@@ -1061,7 +1230,8 @@ export const db = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+    // Convert snake_case fields to camelCase for UI
+    return data ? data.map(vehicle => fromDbTransport(vehicle)) : [];
   },
 
   // Academic Years
@@ -1404,27 +1574,38 @@ export const db = {
     };
   },
 
-  async createTransportRoute(route: any) {
+  async createTransportRoute(camelCaseRoute: any) {
+    if (!camelCaseRoute.school_id && !camelCaseRoute.schoolId) {
+      throw new Error('School ID is required to create transport route');
+    }
+    // Convert camelCase fields to snake_case for database
+    const dbRoute = toDbTransport(camelCaseRoute);
+    
     const { data, error } = await supabase
       .from('transport_routes')
-      .insert(route)
+      .insert(dbRoute)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbTransport(data) : null;
   },
 
-  async updateTransportRoute(id: number, updates: any) {
+  async updateTransportRoute(id: number, camelCaseUpdates: any) {
+    // Convert camelCase fields to snake_case for database
+    const dbUpdates = toDbTransport(camelCaseUpdates);
+    
     const { data, error } = await supabase
       .from('transport_routes')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbTransport(data) : null;
   },
 
   async deleteTransportRoute(id: number) {
@@ -1437,15 +1618,22 @@ export const db = {
     return true;
   },
 
-  async createTransportVehicle(vehicle: any) {
+  async createTransportVehicle(camelCaseVehicle: any) {
+    if (!camelCaseVehicle.school_id && !camelCaseVehicle.schoolId) {
+      throw new Error('School ID is required to create transport vehicle');
+    }
+    // Convert camelCase fields to snake_case for database
+    const dbVehicle = toDbTransport(camelCaseVehicle);
+    
     const { data, error } = await supabase
       .from('transport_vehicles')
-      .insert(vehicle)
+      .insert(dbVehicle)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbTransport(data) : null;
   },
 
   async getTransportAssignments(schoolId: number) {
@@ -1463,30 +1651,42 @@ export const db = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+    // Convert snake_case fields to camelCase for UI (keeping joined tables as-is)
+    return data ? data.map(assignment => fromDbTransport(assignment)) : [];
   },
 
-  async createTransportAssignment(assignment: any) {
+  async createTransportAssignment(camelCaseAssignment: any) {
+    if (!camelCaseAssignment.school_id && !camelCaseAssignment.schoolId) {
+      throw new Error('School ID is required to create transport assignment');
+    }
+    // Convert camelCase fields to snake_case for database
+    const dbAssignment = toDbTransport(camelCaseAssignment);
+    
     const { data, error } = await supabase
       .from('transport_student_assignments')
-      .insert(assignment)
+      .insert(dbAssignment)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbTransport(data) : null;
   },
 
-  async updateTransportVehicle(id: number, updates: any) {
+  async updateTransportVehicle(id: number, camelCaseUpdates: any) {
+    // Convert camelCase fields to snake_case for database
+    const dbUpdates = toDbTransport(camelCaseUpdates);
+    
     const { data, error } = await supabase
       .from('transport_vehicles')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbTransport(data) : null;
   },
 
   async deleteTransportVehicle(id: number) {
@@ -1499,16 +1699,20 @@ export const db = {
     return true;
   },
 
-  async updateTransportAssignment(id: number, updates: any) {
+  async updateTransportAssignment(id: number, camelCaseUpdates: any) {
+    // Convert camelCase fields to snake_case for database
+    const dbUpdates = toDbTransport(camelCaseUpdates);
+    
     const { data, error } = await supabase
       .from('transport_student_assignments')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    // Convert result back to camelCase for UI
+    return data ? fromDbTransport(data) : null;
   },
 
   async deleteTransportAssignment(id: number) {
