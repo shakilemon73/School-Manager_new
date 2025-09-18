@@ -1,7 +1,9 @@
-[x] 1. Install the required packages and dependencies - COMPLETED: All npm packages installed successfully
-[x] 2. Fix missing tsx dependency and restart the workflow - COMPLETED: Workflow restarted and running successfully
-[x] 3. Verify the project builds and starts without errors - COMPLETED: Vite server running on port 5000
-[x] 4. Test the application functionality using the feedback tool
-[x] 5. Research and provide solution for Vite blocked request host error
-[x] 6. Fix critical security issue with school_id filtering using proper RLS policies
-[x] 7. Inform user the import is completed and mark as completed
+[x] 1. Set up Supabase database integration and verify connection - COMPLETED: Database integration set up
+[x] 2. Create missing database tables (credit_balances, credit_transactions, library_borrowed_books with proper foreign keys, transport, academic_years, etc) - COMPLETED: All 14 essential tables created
+[ ] 3. Apply comprehensive RLS policies for school-based tenant isolation
+[ ] 4. Replace Express API endpoints with direct Supabase calls in Credits & Billing pages
+[ ] 5. Replace Express API endpoints with direct Supabase calls in Digital Tools & Documents pages
+[ ] 6. Replace Express API endpoints with direct Supabase calls in Library, Inventory & Transport pages
+[ ] 7. Create typed frontend data access layer functions for all domains
+[ ] 8. Test and verify all functionality works with direct Supabase calls
+[ ] 9. Disable Express API endpoints and clean up server code
