@@ -176,7 +176,7 @@ export default function TransportPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "নতুন গাড়ি যোগ করা হয়েছে",
@@ -208,7 +208,7 @@ export default function TransportPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "নতুন অ্যাসাইনমেন্ট যোগ করা হয়েছে",
@@ -221,12 +221,10 @@ export default function TransportPage() {
   // Update mutations
   const updateVehicle = useMutation({
     mutationFn: ({ id, data }: { id: number; data: VehicleFormData }) => 
-      apiRequest(`/api/transport/vehicles/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
+      db.updateTransportVehicle(id, { ...data, school_id: 1 }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "গাড়ির তথ্য আপডেট করা হয়েছে",
@@ -238,12 +236,10 @@ export default function TransportPage() {
 
   const updateRoute = useMutation({
     mutationFn: ({ id, data }: { id: number; data: RouteFormData }) => 
-      apiRequest(`/api/transport/routes/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
+      db.updateTransportRoute(id, { ...data, school_id: 1 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/routes'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-routes'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "রুটের তথ্য আপডেট করা হয়েছে",
@@ -255,12 +251,10 @@ export default function TransportPage() {
 
   const updateAssignment = useMutation({
     mutationFn: ({ id, data }: { id: number; data: AssignmentFormData }) => 
-      apiRequest(`/api/transport/assignments/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
+      db.updateTransportAssignment(id, { ...data, school_id: 1 }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "অ্যাসাইনমেন্ট আপডেট করা হয়েছে",
@@ -273,10 +267,10 @@ export default function TransportPage() {
   // Delete mutations
   const deleteVehicle = useMutation({
     mutationFn: (id: number) => 
-      apiRequest(`/api/transport/vehicles/${id}`, { method: 'DELETE' }),
+      db.deleteTransportVehicle(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "গাড়ি মুছে ফেলা হয়েছে",
@@ -286,7 +280,7 @@ export default function TransportPage() {
 
   const deleteRoute = useMutation({
     mutationFn: (id: number) => 
-      apiRequest(`/api/transport/routes/${id}`, { method: 'DELETE' }),
+      db.deleteTransportRoute(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-routes'] });
       queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
@@ -299,10 +293,10 @@ export default function TransportPage() {
 
   const deleteAssignment = useMutation({
     mutationFn: (id: number) => 
-      apiRequest(`/api/transport/assignments/${id}`, { method: 'DELETE' }),
+      db.deleteTransportAssignment(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "অ্যাসাইনমেন্ট মুছে ফেলা হয়েছে",

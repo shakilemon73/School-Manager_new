@@ -1,6 +1,9 @@
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ModulePageLayout } from '@/components/layout/module-page-layout';
 import { BookOpen } from 'lucide-react';
+import { db } from '@/lib/supabase';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { 
   Table,
   TableBody,
@@ -47,62 +50,112 @@ import { useToast } from '@/hooks/use-toast';
 
 const bookSchema = z.object({
   title: z.string().min(2, { message: 'বইয়ের নাম অন্তত ২ অক্ষরের হতে হবে' }),
+  titleBn: z.string().min(2, { message: 'বাংলা নাম অন্তত ২ অক্ষরের হতে হবে' }),
   author: z.string().min(2, { message: 'লেখকের নাম অন্তত ২ অক্ষরের হতে হবে' }),
   isbn: z.string().optional(),
   category: z.string().min(1, { message: 'ক্যাটাগরি নির্বাচন করুন' }),
   publisher: z.string().optional(),
-  publicationYear: z.string().optional(),
-  copies: z.string().min(1, { message: 'কপি সংখ্যা দিন' }),
-  shelf: z.string().min(1, { message: 'শেলফ নম্বর দিন' })
+  publishYear: z.string().optional(),
+  totalCopies: z.string().min(1, { message: 'কপি সংখ্যা দিন' }),
+  location: z.string().min(1, { message: 'শেলফ নম্বর দিন' }),
+  description: z.string().optional()
 });
 
 type BookFormValues = z.infer<typeof bookSchema>;
-
-// Mock data
-const mockBooks = [
-  { id: 1, title: 'বাংলাদেশের ইতিহাস', author: 'সিরাজুল ইসলাম', category: 'ইতিহাস', copies: '৫', available: '৩', shelf: 'A-12' },
-  { id: 2, title: 'বাংলা ব্যাকরণ', author: 'সুনীল গঙ্গোপাধ্যায়', category: 'ভাষা', copies: '১০', available: '৭', shelf: 'B-05' },
-  { id: 3, title: 'গণিতের মজা', author: 'মুহম্মদ জাফর ইকবাল', category: 'বিজ্ঞান', copies: '৮', available: '৪', shelf: 'C-23' },
-  { id: 4, title: 'কম্পিউটার প্রোগ্রামিং', author: 'তামিম শাহরিয়ার সুবিন', category: 'প্রযুক্তি', copies: '৬', available: '২', shelf: 'D-17' },
-];
-
-// Active book issues
-const mockIssues = [
-  { id: 1, book: 'বাংলাদেশের ইতিহাস', student: 'করিম আহমেদ', class: 'নবম', issueDate: '১০/০৫/২০২৫', dueDate: '২৫/০৫/২০২৫' },
-  { id: 2, title: 'বাংলা ব্যাকরণ', student: 'ফাতেমা খাতুন', class: 'অষ্টম', issueDate: '০৫/০৫/২০২৫', dueDate: '২০/০৫/২০২৫' },
-  { id: 3, title: 'গণিতের মজা', student: 'রাকিব হাসান', class: 'সপ্তম', issueDate: '১২/০৫/২০২৫', dueDate: '২৭/০৫/২০২৫' },
-];
 
 export default function LibraryPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { schoolId } = useSupabaseDirectAuth();
+  const currentSchoolId = schoolId || 1;
 
   const form = useForm<BookFormValues>({
     resolver: zodResolver(bookSchema),
     defaultValues: {
       title: '',
+      titleBn: '',
       author: '',
       isbn: '',
       category: '',
       publisher: '',
-      publicationYear: '',
-      copies: '1',
-      shelf: ''
+      publishYear: '',
+      totalCopies: '1',
+      location: '',
+      description: ''
+    },
+  });
+
+  // Fetch library data from Supabase
+  const { data: booksData = [], isLoading: booksLoading, error: booksError } = useQuery({
+    queryKey: ['library-books', currentSchoolId],
+    queryFn: async () => {
+      console.log('📚 Fetching library books for school ID:', currentSchoolId);
+      const data = await db.getLibraryBooks(currentSchoolId);
+      console.log('✅ Library books received:', data);
+      return data;
+    },
+  });
+
+  const { data: borrowedBooksData = [], isLoading: borrowedLoading } = useQuery({
+    queryKey: ['borrowed-books', currentSchoolId],
+    queryFn: async () => {
+      const data = await db.getBorrowedBooks(currentSchoolId);
+      return data;
+    },
+  });
+
+  const { data: libraryStats } = useQuery({
+    queryKey: ['library-stats', currentSchoolId],
+    queryFn: async () => {
+      const stats = await db.getLibraryStats(currentSchoolId);
+      return stats;
+    },
+  });
+
+  // Create book mutation
+  const createBookMutation = useMutation({
+    mutationFn: async (book: BookFormValues) => {
+      const bookData = {
+        title: book.title,
+        title_bn: book.titleBn,
+        author: book.author,
+        isbn: book.isbn,
+        category: book.category,
+        publisher: book.publisher,
+        publish_year: book.publishYear ? parseInt(book.publishYear) : null,
+        total_copies: parseInt(book.totalCopies),
+        available_copies: parseInt(book.totalCopies),
+        location: book.location,
+        description: book.description,
+        school_id: currentSchoolId,
+      };
+      
+      return await db.createLibraryBook(bookData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['library-books', currentSchoolId] });
+      queryClient.invalidateQueries({ queryKey: ['library-stats', currentSchoolId] });
+      toast({
+        title: "বই যোগ করা হয়েছে",
+        description: "নতুন বই সফলভাবে লাইব্রেরিতে যোগ করা হয়েছে।",
+      });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      console.error('Error creating book:', error);
+      toast({
+        title: "ত্রুটি",
+        description: "বই যোগ করতে সমস্যা হয়েছে।",
+        variant: "destructive",
+      });
     },
   });
 
   function onSubmit(data: BookFormValues) {
-    // In a real app, you would send this data to your API
-    console.log(data);
-    
-    toast({
-      title: "বই যোগ করা হয়েছে",
-      description: `"${data.title}" লাইব্রেরিতে যোগ করা হয়েছে।`,
-    });
-    
-    setIsDialogOpen(false);
-    form.reset();
+    createBookMutation.mutate(data);
   }
 
   return (

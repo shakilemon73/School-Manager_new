@@ -1359,6 +1359,50 @@ export const db = {
     return data;
   },
 
+  async updateTransportVehicle(id: number, updates: any) {
+    const { data, error } = await supabase
+      .from('transport_vehicles')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteTransportVehicle(id: number) {
+    const { error } = await supabase
+      .from('transport_vehicles')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  },
+
+  async updateTransportAssignment(id: number, updates: any) {
+    const { data, error } = await supabase
+      .from('transport_student_assignments')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteTransportAssignment(id: number) {
+    const { error } = await supabase
+      .from('transport_student_assignments')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  },
+
   // Admit Card System (replacing 7 Express routes)
   async getAdmitCardTemplates(schoolId: number) {
     if (!schoolId) {
