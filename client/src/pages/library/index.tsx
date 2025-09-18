@@ -377,7 +377,7 @@ export default function LibraryPage() {
               {libraryStats?.borrowed_books || 0}
             </div>
             <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              {libraryStats?.active_borrowers || 0} জন শিক্ষার্থী
+              সক্রিয় ইস্যু
             </p>
           </CardContent>
         </Card>
@@ -683,18 +683,6 @@ export default function LibraryPage() {
       <ResponsivePageLayout
         title="লাইব্রেরি ব্যবস্থাপনা"
         description="বই ইস্যু, ফেরত এবং ইনভেন্টরি ব্যবস্থাপনা"
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              রিপোর্ট
-            </Button>
-            <Button variant="outline" size="sm">
-              <QrCode className="h-4 w-4 mr-2" />
-              QR স্ক্যান
-            </Button>
-          </div>
-        }
       >
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
