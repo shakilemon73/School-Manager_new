@@ -204,11 +204,22 @@ const libraryFieldMapping = {
 
 // Inventory items field mapping: UI camelCase -> DB snake_case
 const inventoryFieldMapping = {
+  name: 'name',
   nameBn: 'name_bn',
+  category: 'category',
+  subcategory: 'subcategory',
+  brand: 'brand',
+  model: 'model',
   serialNumber: 'serial_number',
   unitPrice: 'unit_price',
   currentQuantity: 'current_quantity',
   minimumThreshold: 'minimum_threshold',
+  unit: 'unit',
+  supplier: 'supplier',
+  location: 'location',
+  condition: 'condition',
+  description: 'description',
+  status: 'status',
   schoolId: 'school_id',
   createdAt: 'created_at',
   updatedAt: 'updated_at',
@@ -964,16 +975,16 @@ export const db = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    // Convert snake_case fields to camelCase for UI
-    return data ? data.map(item => fromDbInventory(item)) : [];
+    // Return raw snake_case data as inventory UI expects snake_case
+    return data || [];
   },
 
-  async createInventoryItem(camelCaseItem: any) {
-    if (!camelCaseItem.school_id && !camelCaseItem.schoolId) {
+  async createInventoryItem(snakeCaseItem: any) {
+    if (!snakeCaseItem.school_id) {
       throw new Error('School ID is required to create inventory item');
     }
-    // Convert camelCase fields to snake_case for database
-    const dbItem = toDbInventory(camelCaseItem) as Database['public']['Tables']['inventory_items']['Insert'];
+    // Use snake_case data directly as it matches database schema
+    const dbItem = snakeCaseItem as Database['public']['Tables']['inventory_items']['Insert'];
     
     const { data, error } = await supabase
       .from('inventory_items')
@@ -982,13 +993,13 @@ export const db = {
       .single();
     
     if (error) throw error;
-    // Convert result back to camelCase for UI
-    return data ? fromDbInventory(data) : null;
+    // Return raw snake_case data as inventory UI expects snake_case
+    return data;
   },
 
-  async updateInventoryItem(id: number, camelCaseUpdates: any) {
-    // Convert camelCase fields to snake_case for database
-    const dbUpdates = toDbInventory(camelCaseUpdates) as Database['public']['Tables']['inventory_items']['Update'];
+  async updateInventoryItem(id: number, snakeCaseUpdates: any) {
+    // Use snake_case data directly as it matches database schema
+    const dbUpdates = snakeCaseUpdates as Database['public']['Tables']['inventory_items']['Update'];
     
     const { data, error } = await supabase
       .from('inventory_items')
@@ -998,8 +1009,8 @@ export const db = {
       .single();
     
     if (error) throw error;
-    // Convert result back to camelCase for UI
-    return data ? fromDbInventory(data) : null;
+    // Return raw snake_case data as inventory UI expects snake_case
+    return data;
   },
 
   // Staff functions
