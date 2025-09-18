@@ -604,6 +604,155 @@ export default function LibraryPage() {
             </Form>
           </DialogContent>
         </Dialog>
+        
+        {/* Edit Book Dialog */}
+        <Dialog open={isEditBookOpen} onOpenChange={setIsEditBookOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>বই সম্পাদনা</DialogTitle>
+              <DialogDescription>
+                বইয়ের তথ্য আপডেট করুন
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...bookForm}>
+              <form onSubmit={bookForm.handleSubmit((data) => {
+                if (selectedBook) {
+                  editBookMutation.mutate({ id: selectedBook.id, ...data });
+                }
+              })} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={bookForm.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>বইয়ের নাম (ইংরেজি)</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="যেমন: Mathematics" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={bookForm.control}
+                    name="titleBn"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>বইয়ের নাম (বাংলা)</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="যেমন: গণিত" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={bookForm.control}
+                    name="author"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>লেখক</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="যেমন: ড. করিম" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={bookForm.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>বিভাগ</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="textbook">পাঠ্যবই</SelectItem>
+                            <SelectItem value="reference">রেফারেন্স</SelectItem>
+                            <SelectItem value="literature">সাহিত্য</SelectItem>
+                            <SelectItem value="science">বিজ্ঞান</SelectItem>
+                            <SelectItem value="history">ইতিহাস</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={bookForm.control}
+                    name="totalCopies"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>মোট কপি</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            onChange={e => field.onChange(Number(e.target.value))}
+                            placeholder="যেমন: ৫" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={bookForm.control}
+                    name="publishYear"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>প্রকাশের বছর</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field}
+                            onChange={e => field.onChange(Number(e.target.value))}
+                            placeholder="যেমন: ২০২৪" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={bookForm.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>অবস্থান</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="যেমন: Shelf A-1" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsEditBookOpen(false)}>
+                    বাতিল
+                  </Button>
+                  <Button type="submit" disabled={editBookMutation.isPending}>
+                    {editBookMutation.isPending ? 'সংরক্ষণ করা হচ্ছে...' : 'পরিবর্তন সংরক্ষণ করুন'}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Books Table */}
@@ -660,11 +809,51 @@ export default function LibraryPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedBook(book);
+                            toast({
+                              title: book.title,
+                              description: `লেখক: ${book.author}\nবিভাগ: ${book.category}\nঅবস্থান: ${book.location}`,
+                            });
+                          }}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedBook(book);
+                            bookForm.reset({
+                              title: book.title,
+                              titleBn: book.titleBn,
+                              author: book.author,
+                              isbn: book.isbn || '',
+                              category: book.category,
+                              publisher: book.publisher || '',
+                              publishYear: book.publishYear || new Date().getFullYear(),
+                              totalCopies: book.totalCopies,
+                              location: book.location,
+                              description: book.description || ''
+                            });
+                            setIsEditBookOpen(true);
+                          }}
+                        >
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            if (confirm('আপনি কি এই বইটি মুছে ফেলতে চান?')) {
+                              deleteBookMutation.mutate(book.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -701,18 +890,123 @@ export default function LibraryPage() {
           </TabsContent>
 
           <TabsContent value="borrowed" className="space-y-6">
-            <div className="text-center py-12">
-              <BookOpen className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium mb-2">ইস্যুকৃত বই</h3>
-              <p className="text-gray-600">ইস্যুকৃত বই ব্যবস্থাপনা শীঘ্রই আসছে</p>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>ইস্যুকৃত বই তালিকা</CardTitle>
+                <CardDescription>
+                  মোট {borrowedBooks.length} টি বই ইস্যু করা হয়েছে
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>বইয়ের নাম</TableHead>
+                      <TableHead>শিক্ষার্থী</TableHead>
+                      <TableHead>ইস্যুর তারিখ</TableHead>
+                      <TableHead>ফেরতের তারিখ</TableHead>
+                      <TableHead>অবস্থা</TableHead>
+                      <TableHead className="text-right">কার্যক্রম</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {borrowedBooks.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          কোনো ইস্যুকৃত বই নেই
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      borrowedBooks.map((borrowed: any) => (
+                        <TableRow key={borrowed.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{borrowed.library_books?.title}</p>
+                              <p className="text-sm text-gray-600">{borrowed.library_books?.author}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{borrowed.students?.name}</p>
+                              <p className="text-sm text-gray-600">{borrowed.students?.class}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{format(new Date(borrowed.borrow_date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>{format(new Date(borrowed.due_date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>
+                            <Badge variant={borrowed.status === 'active' ? "default" : "secondary"}>
+                              {borrowed.status === 'active' ? 'ইস্যুকৃত' : 'ফেরত'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {borrowed.status === 'active' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => returnBookMutation.mutate(borrowed.id)}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                ফেরত
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <div className="text-center py-12">
-              <TrendingUp className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium mb-2">লাইব্রেরি রিপোর্ট</h3>
-              <p className="text-gray-600">বিস্তারিত রিপোর্ট শীঘ্রই আসছে</p>
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>মাসিক রিপোর্ট</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between">
+                    <span>মোট বই:</span>
+                    <span className="font-semibold">{libraryStats?.total_books || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>ইস্যুকৃত:</span>
+                    <span className="font-semibold">{borrowedBooks.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>উপলব্ধ:</span>
+                    <span className="font-semibold">{libraryStats?.available_books || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>ব্যবহারের হার:</span>
+                    <span className="font-semibold">
+                      {libraryStats?.total_books ? Math.round((borrowedBooks.length / libraryStats.total_books) * 100) : 0}%
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>জনপ্রিয় বিভাগসমূহ</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Object.entries(
+                      books.reduce((acc: any, book: any) => {
+                        acc[book.category] = (acc[book.category] || 0) + 1;
+                        return acc;
+                      }, {})
+                    ).map(([category, count]: [string, any]) => (
+                      <div key={category} className="flex justify-between items-center">
+                        <Badge variant="outline">{category}</Badge>
+                        <span className="text-sm font-medium">{count} টি বই</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
