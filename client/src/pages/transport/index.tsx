@@ -753,7 +753,7 @@ export default function TransportPage() {
                     <TableCell>৳{route.monthlyFee || route.fare || 0}</TableCell>
                     <TableCell>
                       <div className="max-w-xs">
-                        {route.pickupPoints ? (
+                        {(typeof route.pickupPoints === 'string' && route.pickupPoints) ? (
                           <div className="flex flex-wrap gap-1">
                             {(() => {
                               // Clean up PostgreSQL array format: {Wari,Paltan,Shantinagar} -> ["Wari", "Paltan", "Shantinagar"]
@@ -761,7 +761,7 @@ export default function TransportPage() {
                               if (typeof route.pickupPoints === 'string' && route.pickupPoints.startsWith('{') && route.pickupPoints.endsWith('}')) {
                                 // PostgreSQL array format
                                 stops = route.pickupPoints.slice(1, -1).split(',').map((s: string) => s.trim());
-                              } else {
+                              } else if (typeof route.pickupPoints === 'string') {
                                 // Regular comma-separated format
                                 stops = route.pickupPoints.split(',').map((s: string) => s.trim());
                               }
