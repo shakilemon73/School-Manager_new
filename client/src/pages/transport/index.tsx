@@ -16,7 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { db } from '@/lib/supabase';
 import { 
   Search, 
   Bus, 
@@ -134,26 +134,31 @@ export default function TransportPage() {
 
   // Real-time data queries
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery({
-    queryKey: ['/api/transport/vehicles'],
+    queryKey: ['transport-vehicles'],
+    queryFn: async () => await db.getTransportVehicles(1),
     refetchInterval: 30000,
   });
 
   const { data: routes = [], isLoading: routesLoading } = useQuery({
-    queryKey: ['/api/transport/routes'],
+    queryKey: ['transport-routes'],
+    queryFn: async () => await db.getTransportRoutes(1),
     refetchInterval: 30000,
   });
 
   const { data: transportStats = {} } = useQuery({
-    queryKey: ['/api/transport/stats'],
+    queryKey: ['transport-stats'],
+    queryFn: async () => await db.getTransportStats(1),
     refetchInterval: 60000,
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['/api/students'],
+    queryKey: ['students'],
+    queryFn: async () => await db.getStudents(1),
   });
 
   const { data: studentTransport = [] } = useQuery({
-    queryKey: ['/api/transport/students'],
+    queryKey: ['transport-students'],
+    queryFn: async () => await db.getTransportAssignments(1),
     refetchInterval: 30000,
   });
 
@@ -192,10 +197,10 @@ export default function TransportPage() {
 
   // Mutations for CRUD operations
   const addVehicleMutation = useMutation({
-    mutationFn: (data: VehicleFormData) => apiRequest('/api/transport/vehicles', 'POST', data),
+    mutationFn: (data: VehicleFormData) => db.createTransportVehicle({ ...data, school_id: 1 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       setIsAddVehicleOpen(false);
       vehicleForm.reset();
       toast({
@@ -213,9 +218,9 @@ export default function TransportPage() {
   });
 
   const addRouteMutation = useMutation({
-    mutationFn: (data: RouteFormData) => apiRequest('/api/transport/routes', 'POST', data),
+    mutationFn: (data: RouteFormData) => db.createTransportRoute({ ...data, school_id: 1 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/routes'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-routes'] });
       setIsAddRouteOpen(false);
       routeForm.reset();
       toast({
@@ -233,10 +238,10 @@ export default function TransportPage() {
   });
 
   const assignStudentMutation = useMutation({
-    mutationFn: (data: StudentTransportFormData) => apiRequest('/api/transport/assignments', 'POST', data),
+    mutationFn: (data: StudentTransportFormData) => db.createTransportAssignment({ ...data, school_id: 1 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/students'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-students'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       setIsAssignStudentOpen(false);
       studentTransportForm.reset();
       toast({
@@ -256,10 +261,10 @@ export default function TransportPage() {
   // Edit vehicle mutation
   const editVehicleMutation = useMutation({
     mutationFn: (data: VehicleFormData) => 
-      apiRequest(`/api/transport/vehicles/${editingVehicle?.id}`, 'PUT', data),
+      db.updateTransportVehicle(editingVehicle?.id, { ...data, school_id: 1 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       setIsEditVehicleOpen(false);
       setEditingVehicle(null);
       vehicleForm.reset();
@@ -280,10 +285,10 @@ export default function TransportPage() {
   // Edit route mutation
   const editRouteMutation = useMutation({
     mutationFn: (data: RouteFormData) => 
-      apiRequest(`/api/transport/routes/${editingRoute?.id}`, 'PUT', data),
+      db.updateTransportRoute(editingRoute?.id, { ...data, school_id: 1 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/routes'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transport/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-routes'] });
+      queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
       setIsEditRouteOpen(false);
       setEditingRoute(null);
       routeForm.reset();
