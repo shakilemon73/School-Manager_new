@@ -698,8 +698,8 @@ export default function SchoolSupabaseSettingsPage() {
                     <div>
                       <p className="font-medium">সর্বশেষ ব্যাকআপ</p>
                       <p className="text-sm text-gray-600">
-                        {systemStats?.school?.lastUpdate ? 
-                          new Date(systemStats.school.lastUpdate).toLocaleString('bn-BD') : 
+                        {systemStats?.database?.lastBackup ? 
+                          new Date(systemStats.database.lastBackup).toLocaleString('bn-BD') : 
                           'কোনো ব্যাকআপ নেই'
                         }
                       </p>
@@ -768,13 +768,13 @@ export default function SchoolSupabaseSettingsPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">টেবিল সংখ্যা</span>
-                      <span className="font-medium">{systemStats?.database?.tableCount || '0'}</span>
+                      <span className="font-medium">{systemStats?.database?.tables || '0'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">সর্বশেষ সিংক</span>
                       <span className="font-medium">
-                        {systemStats?.database?.lastSync ? 
-                          new Date(systemStats.database.lastSync).toLocaleString('bn-BD') : 
+                        {systemStats?.database?.lastBackup ? 
+                          new Date(systemStats.database.lastBackup).toLocaleString('bn-BD') : 
                           'সিংক হচ্ছে...'
                         }
                       </span>
@@ -785,12 +785,12 @@ export default function SchoolSupabaseSettingsPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">স্কুল রেকর্ড</span>
-                      <span className="font-medium">{systemStats?.school?.recordCount || '0'} টি</span>
+                      <span className="font-medium">{systemStats?.database?.records || '0'} টি</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">সংযোগ স্থিতি</span>
                       <Badge className="bg-green-100 text-green-800">
-                        {systemStats?.database?.connectionStatus || 'সংযুক্ত'}
+                        {systemStats?.database?.status || 'সংযুক্ত'}
                       </Badge>
                     </div>
                     <div className="flex justify-between">
