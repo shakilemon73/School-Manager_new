@@ -164,6 +164,26 @@ const studentFieldMapping = {
   createdAt: 'created_at',
 };
 
+// Staff field mapping: UI camelCase -> DB snake_case
+const staffFieldMapping = {
+  staffId: 'staff_id',
+  nameInBangla: 'name_in_bangla',
+  dateOfBirth: 'date_of_birth',
+  joinDate: 'join_date',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Parents field mapping: UI camelCase -> DB snake_case
+const parentFieldMapping = {
+  parentId: 'parent_id',
+  fatherNameInBangla: 'father_name_in_bangla',
+  motherNameInBangla: 'mother_name_in_bangla',
+  emergencyContact: 'emergency_contact',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
 // Convert camelCase student object to snake_case for database
 function toDbStudent(camelCaseStudent: any): Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update'] {
   if (!camelCaseStudent) return {} as any;
@@ -184,6 +204,50 @@ function toDbStudent(camelCaseStudent: any): Database['public']['Tables']['stude
   });
   
   return dbStudent;
+}
+
+// Convert camelCase staff object to snake_case for database
+function toDbStaff(camelCaseStaff: any): Database['public']['Tables']['staff']['Insert'] | Database['public']['Tables']['staff']['Update'] {
+  if (!camelCaseStaff) return {} as any;
+  
+  const dbStaff: any = {};
+  
+  // List of fields that should be excluded from Insert operations
+  const readOnlyFields = ['id', 'created_at'];
+  
+  // Map camelCase fields to snake_case, excluding read-only fields for safety
+  Object.entries(camelCaseStaff).forEach(([camelKey, value]) => {
+    const dbKey = staffFieldMapping[camelKey as keyof typeof staffFieldMapping] || camelKey;
+    
+    // Skip read-only fields and undefined/empty values
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbStaff[dbKey] = value;
+    }
+  });
+  
+  return dbStaff;
+}
+
+// Convert camelCase parent object to snake_case for database
+function toDbParent(camelCaseParent: any): Database['public']['Tables']['parents']['Insert'] | Database['public']['Tables']['parents']['Update'] {
+  if (!camelCaseParent) return {} as any;
+  
+  const dbParent: any = {};
+  
+  // List of fields that should be excluded from Insert operations
+  const readOnlyFields = ['id', 'created_at'];
+  
+  // Map camelCase fields to snake_case, excluding read-only fields for safety
+  Object.entries(camelCaseParent).forEach(([camelKey, value]) => {
+    const dbKey = parentFieldMapping[camelKey as keyof typeof parentFieldMapping] || camelKey;
+    
+    // Skip read-only fields and undefined/empty values
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbParent[dbKey] = value;
+    }
+  });
+  
+  return dbParent;
 }
 
 // Convert snake_case student object from database to camelCase for UI
@@ -735,10 +799,16 @@ export const db = {
     return data;
   },
 
-  async createStaff(staff: Database['public']['Tables']['staff']['Insert']) {
+  async createStaff(camelCaseStaff: any) {
+    if (!camelCaseStaff.school_id && !camelCaseStaff.schoolId) {
+      throw new Error('School ID is required to create staff');
+    }
+    // Convert camelCase fields to snake_case for database
+    const dbStaff = toDbStaff(camelCaseStaff) as Database['public']['Tables']['staff']['Insert'];
+    
     const { data, error } = await supabase
       .from('staff')
-      .insert(staff)
+      .insert(dbStaff)
       .select()
       .single();
     
@@ -746,10 +816,13 @@ export const db = {
     return data;
   },
 
-  async updateStaff(id: number, updates: Database['public']['Tables']['staff']['Update']) {
+  async updateStaff(id: number, camelCaseUpdates: any) {
+    // Convert camelCase fields to snake_case for database
+    const dbUpdates = toDbStaff(camelCaseUpdates) as Database['public']['Tables']['staff']['Update'];
+    
     const { data, error } = await supabase
       .from('staff')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
@@ -996,13 +1069,16 @@ export const db = {
     return data;
   },
 
-  async createParent(parent: Database['public']['Tables']['parents']['Insert']) {
-    if (!parent.school_id) {
+  async createParent(camelCaseParent: any) {
+    if (!camelCaseParent.school_id && !camelCaseParent.schoolId) {
       throw new Error('School ID is required to create parent');
     }
+    // Convert camelCase fields to snake_case for database
+    const dbParent = toDbParent(camelCaseParent) as Database['public']['Tables']['parents']['Insert'];
+    
     const { data, error } = await supabase
       .from('parents')
-      .insert(parent)
+      .insert(dbParent)
       .select()
       .single();
     
@@ -1010,10 +1086,13 @@ export const db = {
     return data;
   },
 
-  async updateParent(id: number, updates: Database['public']['Tables']['parents']['Update']) {
+  async updateParent(id: number, camelCaseUpdates: any) {
+    // Convert camelCase fields to snake_case for database
+    const dbUpdates = toDbParent(camelCaseUpdates) as Database['public']['Tables']['parents']['Update'];
+    
     const { data, error } = await supabase
       .from('parents')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
