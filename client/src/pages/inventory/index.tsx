@@ -805,19 +805,19 @@ export default function InventoryPage() {
                                   setEditingItem(item);
                                   itemForm.reset({
                                     name: item.name || '',
-                                    nameBn: item.name_bn || '',
+                                    name_bn: item.name_bn || '',
                                     category: item.category || '',
                                     subcategory: item.subcategory || '',
                                     brand: item.brand || '',
                                     model: item.model || '',
-                                    serialNumber: item.serial_number || '',
-                                    unitPrice: item.unit_price?.toString() || '0',
-                                    currentQuantity: item.current_quantity?.toString() || '0',
-                                    minimumThreshold: item.minimum_threshold?.toString() || '0',
+                                    serial_number: item.serial_number || '',
+                                    unit_price: Number(item.unit_price) || 0,
+                                    current_quantity: Number(item.current_quantity) || 0,
+                                    minimum_threshold: Number(item.minimum_threshold) || 0,
                                     unit: item.unit || '',
                                     supplier: item.supplier || '',
                                     location: item.location || '',
-                                    condition: item.condition || 'New',
+                                    condition: item.condition || 'good',
                                     description: item.description || ''
                                   });
                                   setIsItemOpen(true);
