@@ -182,6 +182,7 @@ export default function SchoolSupabaseSettingsPage() {
     }
   };
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   // Form handlers with Supabase data only
   const schoolInfoForm = useForm<z.infer<typeof schoolInfoSchema>>({
     resolver: zodResolver(schoolInfoSchema),
