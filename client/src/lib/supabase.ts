@@ -2583,11 +2583,37 @@ export const db = {
         .from('credit_balances')
         .select('*')
         .eq('school_id', schoolId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.warn('Error fetching credit balance:', error);
         return { currentBalance: 500, totalEarned: 500, totalSpent: 0 };
+      }
+
+      // If no credit balance record exists for this school, create a default one
+      if (!data) {
+        console.log('No credit balance record found, creating default for school:', schoolId);
+        const { data: newBalance, error: insertError } = await supabase
+          .from('credit_balances')
+          .insert({
+            school_id: schoolId,
+            available_credits: 500,
+            total_credits: 500,
+            used_credits: 0
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.warn('Error creating default credit balance:', insertError);
+          return { currentBalance: 500, totalEarned: 500, totalSpent: 0 };
+        }
+
+        return {
+          currentBalance: newBalance?.available_credits || 500,
+          totalEarned: newBalance?.total_credits || 500,
+          totalSpent: newBalance?.used_credits || 0
+        };
       }
 
       return {

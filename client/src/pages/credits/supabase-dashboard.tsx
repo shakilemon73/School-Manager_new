@@ -46,6 +46,7 @@ import {
   Info
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface CreditStats {
   currentBalance: number;
@@ -67,20 +68,20 @@ interface DocumentCost {
 export default function SupabaseDashboard() {
   const [_, setLocation] = useLocation();
   const isMobile = useMobile();
-  const { user: supabaseUser, loading: authLoading } = useSupabaseDirectAuth();
+  const { user: supabaseUser, loading: authLoading, schoolId } = useSupabaseDirectAuth();
   const user = supabaseUser;
   const queryClient = useQueryClient();
   
   // Fetch real-time data using direct Supabase calls
   const { data: packages, isLoading: packagesLoading } = useQuery({
-    queryKey: ["credit-packages", supabaseUser?.school_id],
-    queryFn: () => db.getCreditPackages(supabaseUser?.school_id || 1),
+    queryKey: ["credit-packages", schoolId],
+    queryFn: () => db.getCreditPackages(schoolId || 1),
     enabled: !!supabaseUser
   });
 
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
     queryKey: ["credit-transactions", user?.id],
-    queryFn: () => db.getCreditTransactions(user?.id || '', supabaseUser?.school_id || 1),
+    queryFn: () => db.getCreditTransactions(user?.id || '', schoolId || 1),
     enabled: !!user?.id
   });
 
@@ -93,22 +94,22 @@ export default function SupabaseDashboard() {
   // Fetch credit balance using direct Supabase
   const { data: userCreditBalance, isLoading: balanceLoading } = useQuery({
     queryKey: ["credit-balance", user?.id],
-    queryFn: () => db.getCreditBalance(user?.id || '', supabaseUser?.school_id || 1),
+    queryFn: () => db.getCreditBalance(user?.id || '', schoolId || 1),
     enabled: !!user?.id
   });
 
   const creditStats: CreditStats = {
-    currentBalance: userCreditBalance?.currentCredits || 0,
-    totalPurchased: userCreditBalance?.bonusCredits || 0,
-    totalUsed: userCreditBalance?.usedCredits || 0,
+    currentBalance: userCreditBalance?.currentBalance || 0,
+    totalPurchased: userCreditBalance?.totalEarned || 0,
+    totalUsed: userCreditBalance?.totalSpent || 0,
     thisMonthUsage: 0,
     efficiency: 100
   };
   const statsLoading = balanceLoading;
 
   const { data: documentCosts, isLoading: costsLoading } = useQuery<DocumentCost[]>({
-    queryKey: ["document-costs", supabaseUser?.school_id],
-    queryFn: () => db.getDocumentCosts(supabaseUser?.school_id || 1),
+    queryKey: ["document-costs", schoolId],
+    queryFn: () => db.getDocumentCosts(schoolId || 1),
     enabled: !!supabaseUser
   });
 
@@ -122,7 +123,7 @@ export default function SupabaseDashboard() {
         paymentMethod: purchaseData.paymentMethod,
         amount: purchaseData.amount,
         userId: user.id,
-        schoolId: supabaseUser?.school_id || 1
+        schoolId: schoolId || 1
       });
     },
     onSuccess: (data) => {
@@ -158,10 +159,10 @@ export default function SupabaseDashboard() {
     onSuccess: (data) => {
       toast({
         title: "ডকুমেন্ট তৈরি সফল",
-        description: data.message,
+        description: "ডকুমেন্ট সফলভাবে তৈরি হয়েছে এবং ক্রেডিট কাটা হয়েছে",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/credit-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/credit-usage"] });
+      queryClient.invalidateQueries({ queryKey: ["credit-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["credit-transactions"] });
     },
     onError: (error: any) => {
       toast({
