@@ -1,4 +1,5 @@
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
+import { useSchoolBranding, useCurrentAcademicYear } from '@/hooks/use-school-context';
 import { LanguageSelector } from './language-selector';
 import Logo from '@/components/ui/logo';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,8 @@ import {
 
 export function Header() {
   const { user, signOut, loading } = useSupabaseDirectAuth();
+  const { schoolName, schoolNameBn, schoolLogo, schoolColors } = useSchoolBranding();
+  const { currentAcademicYear } = useCurrentAcademicYear();
   const isMobile = useMobile();
 
   const handleLogout = async () => {
@@ -34,27 +37,57 @@ export function Header() {
         {/* Enhanced logo section with breadcrumb-style navigation */}
         {isMobile ? (
           <div className="flex items-center gap-3 flex-1">
-            <Logo size="sm" />
+            {schoolLogo ? (
+              <img src={schoolLogo} alt="School Logo" className="w-10 h-10 rounded-lg object-cover shadow-sm" />
+            ) : (
+              <Logo size="sm" />
+            )}
             <div className="min-w-0 flex-1">
               <h1 className="text-slate-800 text-lg font-semibold truncate">
-                <LanguageText
-                  en="EduBD Pro"
-                  bn="এডুবিডি প্রো"
-                  ar="إدارة المدرسة"
-                />
+                {schoolNameBn || schoolName || (
+                  <LanguageText
+                    en="EduBD Pro"
+                    bn="এডুবিডি প্রো"
+                    ar="إدارة المدرسة"
+                  />
+                )}
               </h1>
               <p className="text-xs text-slate-500 font-medium">
-                <LanguageText
-                  en="Educational Management"
-                  bn="শিক্ষা ব্যবস্থাপনা"
-                  ar="إدارة التعليم"
-                />
+                {currentAcademicYear ? (
+                  <LanguageText
+                    en={currentAcademicYear.name}
+                    bn={currentAcademicYear.nameBn || currentAcademicYear.name}
+                    ar={currentAcademicYear.name}
+                  />
+                ) : (
+                  <LanguageText
+                    en="Educational Management"
+                    bn="শিক্ষা ব্যবস্থাপনা"
+                    ar="إدارة التعليم"
+                  />
+                )}
               </p>
             </div>
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            <Logo size="lg" />
+            <div className="flex items-center gap-3">
+              {schoolLogo ? (
+                <img src={schoolLogo} alt="School Logo" className="w-12 h-12 rounded-lg object-cover shadow-sm ring-2 ring-white/50" />
+              ) : (
+                <Logo size="lg" />
+              )}
+              <div className="flex flex-col">
+                <h1 className="text-slate-800 text-xl font-bold">
+                  {schoolName || 'EduBD Pro'}
+                </h1>
+                {currentAcademicYear && (
+                  <p className="text-sm text-slate-500 font-medium">
+                    {currentAcademicYear.nameBn || currentAcademicYear.name}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         )}
         
@@ -293,8 +326,8 @@ export function Header() {
                 </div>
                 {!isMobile && (
                   <div className="flex flex-col items-start min-w-0">
-                    <span className="text-sm font-semibold text-slate-800 truncate max-w-[120px]" title={user?.username || 'Admin'}>
-                      {user?.username || 'Admin'}
+                    <span className="text-sm font-semibold text-slate-800 truncate max-w-[120px]" title={user?.user_metadata?.full_name || user?.email || 'Admin'}>
+                      {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Admin'}
                     </span>
                     <span className="text-xs text-slate-500 font-medium">
                       <LanguageText
@@ -323,8 +356,8 @@ export function Header() {
                         <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-sm"></div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate">{user.username}</p>
-                        <p className="text-xs text-slate-600 truncate">admin@edubd.com</p>
+                        <p className="text-sm font-semibold text-slate-800 truncate">{user.user_metadata?.full_name || user.email?.split('@')[0] || 'Admin'}</p>
+                        <p className="text-xs text-slate-600 truncate">{user.email || 'admin@edubd.com'}</p>
                         <div className="flex items-center gap-1 mt-1">
                           <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                           <span className="text-xs text-green-600 font-medium">

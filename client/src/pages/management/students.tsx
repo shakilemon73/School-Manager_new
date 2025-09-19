@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCurrentAcademicYear } from '@/hooks/use-school-context';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,6 +51,7 @@ import { Trash2, Edit, Plus, Users, CheckCircle, AlertCircle, Search, Download }
 export default function StudentsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { currentAcademicYear, loading: academicYearLoading } = useCurrentAcademicYear();
   const [activeTab, setActiveTab] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
@@ -88,18 +90,25 @@ export default function StudentsPage() {
     }
   };
 
-  // Fetch students via direct Supabase calls
+  // Fetch students via direct Supabase calls - filtered by current academic year
   const { data: studentsData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['students'],
+    queryKey: ['students', currentAcademicYear?.id],
     queryFn: async () => {
-      console.log('🎓 Fetching students with direct Supabase calls');
+      console.log('🎓 Fetching students with direct Supabase calls for academic year:', currentAcademicYear?.name);
       const schoolId = await getCurrentSchoolId();
       
-      const { data, error } = await supabase
+      // Build query with academic year filtering
+      let query = supabase
         .from('students')
         .select('*')
-        .eq('school_id', schoolId)
-        .order('created_at', { ascending: false });
+        .eq('school_id', schoolId);
+      
+      // Add academic year filter if available
+      if (currentAcademicYear?.id) {
+        query = query.eq('academic_year_id', currentAcademicYear.id);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;

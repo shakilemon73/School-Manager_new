@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
 import { ResponsivePageLayout } from '@/components/layout/responsive-page-layout';
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
+import { useSchoolBranding, useCurrentAcademicYear } from '@/hooks/use-school-context';
 import { useMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/lib/supabase';
 import { userProfile } from '@/hooks/use-supabase-direct-auth';
@@ -84,6 +85,8 @@ interface CalendarEvent {
 
 export default function ResponsiveDashboard() {
   const { user } = useSupabaseDirectAuth();
+  const { schoolName, schoolNameBn } = useSchoolBranding();
+  const { currentAcademicYear, loading: academicYearLoading } = useCurrentAcademicYear();
   const { toast } = useToast();
   const isMobile = useMobile();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -108,18 +111,24 @@ export default function ResponsiveDashboard() {
     }
   };
 
-  // Fetch dashboard stats using direct Supabase calls
+  // Fetch dashboard stats using direct Supabase calls - filtered by current academic year
   const { data: dashboardStats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStats>({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', currentAcademicYear?.id],
     queryFn: async () => {
-      console.log('📊 Fetching dashboard stats with direct Supabase calls');
+      console.log('📊 Fetching dashboard stats with direct Supabase calls for academic year:', currentAcademicYear?.name);
       const schoolId = await getCurrentSchoolId();
       
+      // Build queries with academic year filtering
+      const baseFilters = { school_id: schoolId };
+      const academicYearFilters = currentAcademicYear?.id 
+        ? { ...baseFilters, academic_year_id: currentAcademicYear.id }
+        : baseFilters;
+      
       const [studentsCount, teachersCount, booksCount, inventoryCount] = await Promise.all([
-        supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
-        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), 
-        supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
-        supabase.from('inventory_items').select('id', { count: 'exact', head: true }).eq('school_id', schoolId)
+        supabase.from('students').select('id', { count: 'exact', head: true }).match(academicYearFilters),
+        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), // Teachers not year-specific
+        supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), // Books not year-specific
+        supabase.from('inventory_items').select('id', { count: 'exact', head: true }).eq('school_id', schoolId) // Inventory not year-specific
       ]);
 
       return {
