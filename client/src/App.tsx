@@ -94,6 +94,20 @@ import DocumentGenerator from "@/pages/documents/document-generator";
 import ExamPapersPage from "@/pages/documents/exam-papers";
 import TransferCertificatesPage from "@/pages/documents/transfer-certificates";
 import NoticesPage from "@/pages/documents/notices";
+import TeacherIdCardsPage from "@/pages/documents/teacher-id-cards";
+import ClassRoutinesPage from "@/pages/documents/class-routines";
+import TeacherRoutinesPage from "@/pages/documents/teacher-routines";
+import MarkSheetsPage from "@/pages/documents/marksheets";
+import ResultSheetsPage from "@/pages/documents/result-sheets";
+import TestimonialsPage from "@/pages/documents/testimonials";
+import PaySheetsPage from "@/pages/documents/pay-sheets";
+import IncomeReportsPage from "@/pages/documents/income-reports";
+import ExpenseSheetsPage from "@/pages/documents/expense-sheets";
+import AdmissionFormsPage from "@/pages/documents/admission-forms";
+import OfficeOrdersPage from "@/pages/documents/office-orders";
+import OMRSheetsPage from "@/pages/documents/omr-sheets";
+import MCQFormatsPage from "@/pages/documents/mcq-formats";
+import DocumentsTemplatesPage from "@/pages/documents/templates";
 import DeveloperPortal from "@/pages/developer-portal";
 import AdminControlPage from "@/pages/admin-control";
 import SchoolAdminDashboard from "@/pages/settings/school-admin-dashboard";
@@ -173,10 +187,24 @@ function AppRoutes() {
       <ProtectedRoute path="/documents/bengali-admit-cards" component={BanglaTemplateGenerator} />
       <ProtectedRoute path="/documents/transfer-certificates" component={TransferCertificatesPage} />
       
-      {/* Essential Document Routes - One per type */}
+      {/* Essential Document Routes - All document types */}
       <ProtectedRoute path="/documents/fee-receipts" component={FeeReceiptsMainPage} />
       <ProtectedRoute path="/documents/notices" component={NoticesPage} />
       <ProtectedRoute path="/documents/exam-papers" component={ExamPapersPage} />
+      <ProtectedRoute path="/documents/teacher-id-cards" component={TeacherIdCardsPage} />
+      <ProtectedRoute path="/documents/class-routines" component={ClassRoutinesPage} />
+      <ProtectedRoute path="/documents/teacher-routines" component={TeacherRoutinesPage} />
+      <ProtectedRoute path="/documents/marksheets" component={MarkSheetsPage} />
+      <ProtectedRoute path="/documents/result-sheets" component={ResultSheetsPage} />
+      <ProtectedRoute path="/documents/testimonials" component={TestimonialsPage} />
+      <ProtectedRoute path="/documents/pay-sheets" component={PaySheetsPage} />
+      <ProtectedRoute path="/documents/income-reports" component={IncomeReportsPage} />
+      <ProtectedRoute path="/documents/expense-sheets" component={ExpenseSheetsPage} />
+      <ProtectedRoute path="/documents/admission-forms" component={AdmissionFormsPage} />
+      <ProtectedRoute path="/documents/office-orders" component={OfficeOrdersPage} />
+      <ProtectedRoute path="/documents/omr-sheets" component={OMRSheetsPage} />
+      <ProtectedRoute path="/documents/mcq-formats" component={MCQFormatsPage} />
+      <ProtectedRoute path="/documents/templates" component={DocumentsTemplatesPage} />
 
       {/* Management routes */}
       <ProtectedRoute path="/management/students" component={StudentsPage} />
