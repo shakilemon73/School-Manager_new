@@ -1,23 +1,50 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
-import { queryClient, apiRequest } from '@/lib/queryClient';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, Trash2, BookOpen, Users } from 'lucide-react';
-import { Subject, SubjectAssignment } from '@/lib/new-features-types';
+import { supabase } from '@/lib/supabase';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { Plus, Edit2, Trash2, BookOpen, Search, Filter, GraduationCap } from 'lucide-react';
+import { Subject } from '@/lib/new-features-types';
 
 export default function SubjectsManagementPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [activeTab, setActiveTab] = useState('all');
   const [formData, setFormData] = useState({
     subject_code: '',
     subject_name: '',
@@ -28,14 +55,26 @@ export default function SubjectsManagementPage() {
     department: '',
   });
 
+  const getCurrentSchoolId = async (): Promise<number> => {
+    try {
+      const schoolId = await userProfile.getCurrentUserSchoolId();
+      if (!schoolId) throw new Error('User school ID not found');
+      return schoolId;
+    } catch (error) {
+      console.error('❌ Failed to get user school ID:', error);
+      throw new Error('Authentication required');
+    }
+  };
+
   // Fetch subjects
-  const { data: subjects, isLoading } = useQuery({
+  const { data: subjects = [], isLoading } = useQuery({
     queryKey: ['/api/subjects'],
     queryFn: async () => {
+      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('subjects')
         .select('*')
-        .eq('school_id', 1)
+        .eq('school_id', schoolId)
         .order('subject_name');
       
       if (error) throw error;
@@ -46,9 +85,10 @@ export default function SubjectsManagementPage() {
   // Create subject mutation
   const createMutation = useMutation({
     mutationFn: async (newSubject: any) => {
+      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('subjects')
-        .insert([{ ...newSubject, school_id: 1 }])
+        .insert([{ ...newSubject, school_id: schoolId }])
         .select()
         .single();
       
@@ -57,12 +97,12 @@ export default function SubjectsManagementPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/subjects'] });
-      toast({ title: 'Success', description: 'Subject created successfully' });
+      toast({ title: 'সফল', description: 'বিষয় সফলভাবে তৈরি হয়েছে' });
       setIsAddDialogOpen(false);
       resetForm();
     },
     onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -81,12 +121,12 @@ export default function SubjectsManagementPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/subjects'] });
-      toast({ title: 'Success', description: 'Subject updated successfully' });
+      toast({ title: 'সফল', description: 'বিষয় আপডেট হয়েছে' });
       setEditingSubject(null);
       resetForm();
     },
     onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -102,10 +142,10 @@ export default function SubjectsManagementPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/subjects'] });
-      toast({ title: 'Success', description: 'Subject deleted successfully' });
+      toast({ title: 'সফল', description: 'বিষয় মুছে ফেলা হয়েছে' });
     },
     onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -146,202 +186,300 @@ export default function SubjectsManagementPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('Are you sure you want to delete this subject?')) {
+    if (confirm('আপনি কি নিশ্চিত এই বিষয়টি মুছে ফেলতে চান?')) {
       deleteMutation.mutate(id);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading subjects...</div>
-      </div>
-    );
-  }
+  // Filter subjects
+  const filteredSubjects = subjects.filter(subject => {
+    const matchesSearch = searchText === '' || 
+      subject.subject_name.toLowerCase().includes(searchText.toLowerCase()) ||
+      subject.subject_code.toLowerCase().includes(searchText.toLowerCase());
+    
+    const matchesDepartment = selectedDepartment === 'all' || subject.department === selectedDepartment;
+    const matchesTab = activeTab === 'all' || 
+      (activeTab === 'compulsory' && subject.is_compulsory) ||
+      (activeTab === 'elective' && !subject.is_compulsory);
+    
+    return matchesSearch && matchesDepartment && matchesTab;
+  });
+
+  const stats = {
+    total: subjects.length,
+    compulsory: subjects.filter(s => s.is_compulsory).length,
+    elective: subjects.filter(s => !s.is_compulsory).length,
+  };
+
+  const departments = Array.from(new Set(subjects.map(s => s.department).filter(Boolean)));
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">Subjects Management</h1>
-          <p className="text-gray-600 mt-1">Manage all subjects and their assignments</p>
-        </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-subject" onClick={() => { setEditingSubject(null); resetForm(); }}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Subject
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingSubject ? 'Edit Subject' : 'Add New Subject'}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+    <AppShell>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
+              বিষয়সমূহ ব্যবস্থাপনা
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              সকল শিক্ষা বিষয় পরিচালনা করুন
+            </p>
+          </div>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-subject" onClick={() => { setEditingSubject(null); resetForm(); }}>
+                <Plus className="w-4 h-4 mr-2" />
+                নতুন বিষয় যোগ করুন
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingSubject ? 'বিষয় সম্পাদনা' : 'নতুন বিষয় যোগ করুন'}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="subject_code">বিষয় কোড *</Label>
+                    <Input
+                      id="subject_code"
+                      data-testid="input-subject-code"
+                      value={formData.subject_code}
+                      onChange={(e) => setFormData({ ...formData, subject_code: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="department">বিভাগ</Label>
+                    <Input
+                      id="department"
+                      data-testid="input-department"
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <Label htmlFor="subject_code">Subject Code *</Label>
+                  <Label htmlFor="subject_name">বিষয়ের নাম (ইংরেজি) *</Label>
                   <Input
-                    id="subject_code"
-                    data-testid="input-subject-code"
-                    value={formData.subject_code}
-                    onChange={(e) => setFormData({ ...formData, subject_code: e.target.value })}
+                    id="subject_name"
+                    data-testid="input-subject-name"
+                    value={formData.subject_name}
+                    onChange={(e) => setFormData({ ...formData, subject_name: e.target.value })}
                     required
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="department">Department</Label>
+                  <Label htmlFor="subject_name_bn">বিষয়ের নাম (বাংলা)</Label>
                   <Input
-                    id="department"
-                    data-testid="input-department"
-                    value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    id="subject_name_bn"
+                    data-testid="input-subject-name-bn"
+                    value={formData.subject_name_bn}
+                    onChange={(e) => setFormData({ ...formData, subject_name_bn: e.target.value })}
                   />
                 </div>
-              </div>
 
-              <div>
-                <Label htmlFor="subject_name">Subject Name (English) *</Label>
-                <Input
-                  id="subject_name"
-                  data-testid="input-subject-name"
-                  value={formData.subject_name}
-                  onChange={(e) => setFormData({ ...formData, subject_name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="subject_name_bn">Subject Name (Bengali)</Label>
-                <Input
-                  id="subject_name_bn"
-                  data-testid="input-subject-name-bn"
-                  value={formData.subject_name_bn}
-                  onChange={(e) => setFormData({ ...formData, subject_name_bn: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  data-testid="input-description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="credit_hours">Credit Hours</Label>
-                  <Input
-                    id="credit_hours"
-                    data-testid="input-credit-hours"
-                    type="number"
-                    min="0"
-                    value={formData.credit_hours}
-                    onChange={(e) => setFormData({ ...formData, credit_hours: parseInt(e.target.value) || 0 })}
+                  <Label htmlFor="description">বিবরণ</Label>
+                  <Textarea
+                    id="description"
+                    data-testid="input-description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
                   />
                 </div>
-                <div className="flex items-center space-x-2 pt-8">
-                  <Switch
-                    id="is_compulsory"
-                    data-testid="switch-compulsory"
-                    checked={formData.is_compulsory}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_compulsory: checked })}
-                  />
-                  <Label htmlFor="is_compulsory">Compulsory Subject</Label>
-                </div>
-              </div>
 
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" data-testid="button-submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingSubject ? 'Update' : 'Create'} Subject
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {subjects?.map((subject) => (
-          <Card key={subject.id} data-testid={`card-subject-${subject.id}`}>
-            <CardHeader>
-              <CardTitle className="flex items-start justify-between">
-                <div className="flex items-center space-x-2">
-                  <BookOpen className="w-5 h-5 text-blue-600" />
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="font-semibold" data-testid={`text-subject-name-${subject.id}`}>
-                      {subject.subject_name}
-                    </div>
-                    <div className="text-sm text-gray-500 font-normal">
-                      {subject.subject_code}
-                    </div>
+                    <Label htmlFor="credit_hours">ক্রেডিট ঘন্টা</Label>
+                    <Input
+                      id="credit_hours"
+                      data-testid="input-credit-hours"
+                      type="number"
+                      min="0"
+                      value={formData.credit_hours}
+                      onChange={(e) => setFormData({ ...formData, credit_hours: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2 pt-8">
+                    <Switch
+                      id="is_compulsory"
+                      data-testid="switch-compulsory"
+                      checked={formData.is_compulsory}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_compulsory: checked })}
+                    />
+                    <Label htmlFor="is_compulsory">বাধ্যতামূলক বিষয়</Label>
                   </div>
                 </div>
-                <div className="flex space-x-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    data-testid={`button-edit-${subject.id}`}
-                    onClick={() => handleEdit(subject)}
-                  >
-                    <Edit2 className="w-4 h-4" />
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                    বাতিল
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    data-testid={`button-delete-${subject.id}`}
-                    onClick={() => handleDelete(subject.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600" />
+                  <Button type="submit" data-testid="button-submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                    {editingSubject ? 'আপডেট করুন' : 'তৈরি করুন'}
                   </Button>
                 </div>
-              </CardTitle>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">মোট বিষয়</CardTitle>
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {subject.subject_name_bn && (
-                <p className="text-sm text-gray-600 mb-2">{subject.subject_name_bn}</p>
-              )}
-              {subject.description && (
-                <p className="text-sm text-gray-700 mb-3">{subject.description}</p>
-              )}
-              <div className="flex flex-wrap gap-2 text-xs">
-                {subject.credit_hours && (
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                    {subject.credit_hours} Credits
-                  </span>
-                )}
-                {subject.is_compulsory && (
-                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded">
-                    Compulsory
-                  </span>
-                )}
-                {subject.department && (
-                  <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded">
-                    {subject.department}
-                  </span>
-                )}
-              </div>
+              <div className="text-2xl font-bold">{stats.total}</div>
             </CardContent>
           </Card>
-        ))}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">বাধ্যতামূলক</CardTitle>
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.compulsory}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">ঐচ্ছিক</CardTitle>
+              <Filter className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.elective}</div>
+            </CardContent>
+          </Card>
+        </div>
 
-        {subjects?.length === 0 && (
-          <div className="col-span-full text-center py-12 text-gray-500">
-            <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-lg font-medium">No subjects found</p>
-            <p className="text-sm">Click "Add Subject" to create your first subject</p>
+        {/* Filters and Search */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="বিষয় বা কোড অনুসন্ধান করুন..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="pl-8"
+                data-testid="input-search"
+              />
+            </div>
           </div>
-        )}
+          <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            <SelectTrigger className="w-[200px]" data-testid="select-department">
+              <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সকল বিভাগ</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept} value={dept || ''}>
+                  {dept}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="all">সকল ({stats.total})</TabsTrigger>
+            <TabsTrigger value="compulsory">বাধ্যতামূলক ({stats.compulsory})</TabsTrigger>
+            <TabsTrigger value="elective">ঐচ্ছিক ({stats.elective})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value={activeTab} className="space-y-4">
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>কোড</TableHead>
+                      <TableHead>বিষয়ের নাম</TableHead>
+                      <TableHead>বিভাগ</TableHead>
+                      <TableHead>ক্রেডিট</TableHead>
+                      <TableHead>ধরন</TableHead>
+                      <TableHead className="text-right">কার্যক্রম</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          লোড হচ্ছে...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredSubjects.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          কোন বিষয় পাওয়া যায়নি
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredSubjects.map((subject) => (
+                        <TableRow key={subject.id} data-testid={`row-subject-${subject.id}`}>
+                          <TableCell className="font-medium">{subject.subject_code}</TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium" data-testid={`text-subject-name-${subject.id}`}>
+                                {subject.subject_name}
+                              </div>
+                              {subject.subject_name_bn && (
+                                <div className="text-sm text-muted-foreground">
+                                  {subject.subject_name_bn}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{subject.department || '-'}</TableCell>
+                          <TableCell>{subject.credit_hours || '-'}</TableCell>
+                          <TableCell>
+                            {subject.is_compulsory ? (
+                              <Badge variant="default">বাধ্যতামূলক</Badge>
+                            ) : (
+                              <Badge variant="secondary">ঐচ্ছিক</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                data-testid={`button-edit-${subject.id}`}
+                                onClick={() => handleEdit(subject)}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                data-testid={`button-delete-${subject.id}`}
+                                onClick={() => handleDelete(subject.id)}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-    </div>
+    </AppShell>
   );
 }
