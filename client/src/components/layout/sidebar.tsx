@@ -223,7 +223,7 @@ export function Sidebar() {
   return (
     <aside 
       ref={navRef}
-      className="w-72 bg-white border-r border-gray-200 hidden lg:block overflow-y-auto h-screen"
+      className="w-72 bg-white border-r border-gray-200 hidden md:block overflow-y-auto h-screen"
       role="navigation"
       aria-label="Main navigation"
     >
