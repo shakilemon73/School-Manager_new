@@ -30,7 +30,8 @@ import {
   Users2,
   Wrench,
   Shield,
-  Search
+  Search,
+  Key
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -119,7 +120,8 @@ export function Sidebar() {
         { path: "/management/students", icon: GraduationCap, textEn: "Students", textBn: "শিক্ষার্থী", textAr: "الطلاب", badge: 245 },
         { path: "/management/teachers", icon: UserCheck, textEn: "Teachers", textBn: "শিক্ষক", textAr: "المعلمون", badge: 18 },
         { path: "/management/staff", icon: Briefcase, textEn: "Staff", textBn: "কর্মচারী", textAr: "الموظفون", badge: 12 },
-        { path: "/management/parents", icon: Users2, textEn: "Parents", textBn: "অভিভাবক", textAr: "أولياء الأمور", badge: null }
+        { path: "/management/parents", icon: Users2, textEn: "Parents", textBn: "অভিভাবক", textAr: "أولياء الأمور", badge: null },
+        { path: "/portal-users", icon: Key, textEn: "Portal Users", textBn: "পোর্টাল ইউজার", textAr: "مستخدمي البوابة", badge: null }
       ]
     },
     {

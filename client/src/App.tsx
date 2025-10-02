@@ -17,6 +17,8 @@ import LoginPage from "@/pages/auth/login-page";
 import AdminPortal from "@/pages/portals/admin-portal";
 import ParentPortal from "@/pages/portals/parent-portal";
 import StudentPortal from "@/pages/portals/student-portal";
+import StudentLogin from "@/pages/portals/student-login";
+import ParentLogin from "@/pages/portals/parent-login";
 import AdminPanel from "@/pages/admin-panel";
 
 // Student Portal Pages
@@ -88,6 +90,7 @@ import PaymentOptions from "@/pages/credits/payment-options";
 import TransactionsPage from "@/pages/credits/transactions";
 import CreditPage from "@/pages/credits/supabase-dashboard";
 import UserManagement from "@/pages/user-management";
+import UserManagementPortals from "@/pages/user-management-portals";
 
 import DocumentsDashboardUX from "@/pages/documents/documents-dashboard-ux";
 import DocumentGenerator from "@/pages/documents/document-generator";
@@ -148,6 +151,8 @@ function AppRoutes() {
       {/* Portal Authentication Routes */}
       <Route path="/login" component={SimpleLogin} />
       <Route path="/simple-login" component={SimpleLogin} />
+      <Route path="/student-login" component={StudentLogin} />
+      <Route path="/parent-login" component={ParentLogin} />
       <Route path="/register-admin" component={RegisterAdminPage} />
       <Route path="/admin" component={AdminPortal} />
       <Route path="/admin-panel" component={AdminPanel} />
@@ -274,6 +279,9 @@ function AppRoutes() {
 
       {/* User Management - Supabase user tracking and management */}
       <ProtectedRoute path="/user-management" component={UserManagement} />
+      
+      {/* Portal User Management - Create and manage student/parent/teacher authentication */}
+      <ProtectedRoute path="/portal-users" component={UserManagementPortals} />
 
 
 

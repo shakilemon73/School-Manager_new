@@ -38,29 +38,26 @@ export default function SimpleLogin() {
     setError('');
 
     try {
-      // Use backend API for authentication
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-        }),
+      // Use direct Supabase authentication
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
       });
 
-      const result = await response.json();
+      if (authError) {
+        throw authError;
+      }
 
-      if (response.ok && result.success) {
+      if (authData.user) {
         toast({
           title: "Login Successful",
           description: "Welcome back!",
         });
-        localStorage.setItem('auth_user', JSON.stringify(result.user));
+        
+        // Redirect based on user role or default to home
         setLocation('/');
       } else {
-        throw new Error(result.error || 'Invalid credentials');
+        throw new Error('Invalid credentials');
       }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please try again.');
@@ -74,17 +71,17 @@ export default function SimpleLogin() {
     }
   };
 
-  const handleDemoLogin = () => {
-    // Use working admin account from memory storage
-    const adminEmail = 'admin@school.com';
-    const adminPassword = 'admin123';
+  const handleDemoLogin = async () => {
+    // Use Supabase test account
+    const testEmail = 'shakilemon73@gmail.com';
+    const testPassword = 'test123';
     
-    form.setValue('email', adminEmail);
-    form.setValue('password', adminPassword);
+    form.setValue('email', testEmail);
+    form.setValue('password', testPassword);
     
     toast({
-      title: "Admin Credentials Loaded",
-      description: "Click Login to continue with admin account",
+      title: "Test Credentials Loaded",
+      description: "Click Login to continue",
     });
   };
 

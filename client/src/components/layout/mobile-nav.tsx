@@ -169,35 +169,36 @@ export function MobileNav() {
 
   const QuickNavItem = ({ 
     path, 
-    icon, 
+    icon: Icon, 
     textEn, 
     textBn, 
     textAr 
   }: { 
     path: string; 
-    icon: string; 
+    icon: any; 
     textEn: string; 
     textBn: string; 
     textAr: string; 
   }) => (
-    <li className="text-center">
+    <li className="flex-1 max-w-[100px]">
       <Link 
         href={path}
         className={cn(
-          "flex flex-col items-center p-2 rounded-lg transition-colors duration-200",
+          "flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all duration-200",
           isActive(path) 
-            ? "text-primary bg-primary/10" 
-            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+            ? "text-blue-600 bg-blue-50 font-semibold" 
+            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100"
         )}
         aria-current={isActive(path) ? 'page' : undefined}
       >
-        <span 
-          className="material-icons text-xl" 
+        <Icon 
+          className={cn(
+            "h-5 w-5 mb-1 transition-transform",
+            isActive(path) && "scale-110"
+          )} 
           aria-hidden="true"
-        >
-          {icon}
-        </span>
-        <span className="text-xs mt-1 font-medium">
+        />
+        <span className="text-[10px] leading-tight text-center line-clamp-1">
           <LanguageText
             en={textEn}
             bn={textBn}
@@ -313,47 +314,48 @@ export function MobileNav() {
         </div>
       )}
 
-      {/* Bottom Navigation Bar */}
+      {/* Bottom Navigation Bar - Mobile Only */}
       <nav 
-        className="md:hidden bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-10 shadow-lg"
+        className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 fixed bottom-0 left-0 right-0 z-40 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-gray-900/95 safe-bottom"
         role="navigation"
         aria-label="Mobile navigation"
       >
-        <ul className="flex justify-around p-2" role="menubar">
+        <ul className="flex items-stretch justify-between px-2 py-1 gap-1 max-w-screen-sm mx-auto" role="menubar">
           <QuickNavItem 
             path="/" 
-            icon="home" 
+            icon={Home}
             textEn="Home"
             textBn="হোম"
             textAr="الرئيسية"
           />
           <QuickNavItem 
             path="/documents" 
-            icon="description" 
-            textEn="Documents"
-            textBn="ডকুমেন্টস"
-            textAr="المستندات"
+            icon={FileText}
+            textEn="Docs"
+            textBn="ডকুমেন্ট"
+            textAr="مستند"
           />
           <QuickNavItem 
             path="/management/students" 
-            icon="people" 
+            icon={GraduationCap}
             textEn="Students"
             textBn="শিক্ষার্থী"
-            textAr="الطلاب"
+            textAr="طلاب"
           />
           
           {/* Menu Button */}
-          <li className="text-center">
+          <li className="flex-1 max-w-[100px]">
             <button
               onClick={() => setIsMenuOpen(true)}
-              className="flex flex-col items-center p-2 rounded-lg transition-colors duration-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              className="w-full flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all duration-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800"
+              aria-label="Open menu"
             >
-              <Menu className="h-5 w-5" />
-              <span className="text-xs mt-1 font-medium">
+              <Menu className="h-5 w-5 mb-1" />
+              <span className="text-[10px] leading-tight text-center line-clamp-1 font-medium">
                 <LanguageText
                   en="Menu"
                   bn="মেনু"
-                  ar="القائمة"
+                  ar="قائمة"
                 />
               </span>
             </button>
