@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { Link } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useQuery } from '@tanstack/react-query';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useDesignSystem } from '@/hooks/use-design-system';
 import { cn } from '@/lib/utils';
 import {
@@ -20,7 +20,8 @@ import {
   Target,
   TrendingUp,
   Clock,
-  CheckCircle
+  CheckCircle,
+  LogOut
 } from 'lucide-react';
 
 // UX-Enhanced Components
@@ -93,49 +94,15 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color }: any) => (
 export default function TeacherPortalHome() {
   // Initialize UX design system
   useDesignSystem();
-
-  // Fetch teacher overview data
-  const { data: overview } = useQuery({
-    queryKey: ['/api/teachers/overview'],
-    staleTime: 60000,
-  });
+  const { user } = useSupabaseDirectAuth();
 
   const navigationItems = [
-    {
-      title: "ড্যাশবোর্ড",
-      description: "আজকের কার্যক্রম ও পরিসংখ্যান দেখুন",
-      icon: BarChart3,
-      href: "/teacher/dashboard",
-      color: "blue",
-      badge: "নতুন"
-    },
     {
       title: "উপস্থিতি ব্যবস্থাপনা",
       description: "ছাত্রছাত্রীদের উপস্থিতি নিন ও রেকর্ড রাখুন",
       icon: Users,
       href: "/teacher/attendance",
       color: "green"
-    },
-    {
-      title: "পাঠ পরিকল্পনা",
-      description: "কার্যকর শিক্ষাদানের জন্য পাঠ পরিকল্পনা তৈরি করুন",
-      icon: BookOpen,
-      href: "/teacher/lesson-plans",
-      color: "purple"
-    },
-    {
-      title: "অ্যাসাইনমেন্ট",
-      description: "ছাত্রদের জন্য কাজ তৈরি ও মূল্যায়ন করুন",
-      icon: ClipboardList,
-      href: "/teacher/assignments",
-      color: "orange"
-    },
-    {
-      title: "ক্লাস রুটিন",
-      description: "আপনার ক্লাসের সময়সূচী দেখুন",
-      icon: Calendar,
-      href: "/teacher/schedule",
-      color: "blue"
     },
     {
       title: "মার্ক এন্ট্রি",
@@ -145,25 +112,11 @@ export default function TeacherPortalHome() {
       color: "red"
     },
     {
-      title: "রিপোর্ট ও বিশ্লেষণ",
-      description: "শিক্ষার্থীদের পারফরম্যান্স বিশ্লেষণ করুন",
-      icon: TrendingUp,
-      href: "/teacher/reports",
-      color: "purple"
-    },
-    {
-      title: "যোগাযোগ",
-      description: "অভিভাবক ও প্রশাসনের সাথে যোগাযোগ করুন",
-      icon: MessageSquare,
-      href: "/teacher/communication",
-      color: "green"
-    },
-    {
-      title: "রিসোর্স সেন্টার",
-      description: "শিক্ষাগত উপকরণ ও টেমপ্লেট পান",
-      icon: FileText,
-      href: "/teacher/resources",
-      color: "orange"
+      title: "ক্লাস রুটিন",
+      description: "আপনার ক্লাসের সময়সূচী দেখুন",
+      icon: Calendar,
+      href: "/calendar",
+      color: "blue"
     }
   ];
 
@@ -209,6 +162,11 @@ export default function TeacherPortalHome() {
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
             আপনার শিক্ষাদান কার্যক্রম পরিচালনার জন্য সম্পূর্ণ সমাধান
           </p>
+          {user && (
+            <p className="text-sm text-slate-500">
+              স্বাগতম, {user.email}
+            </p>
+          )}
         </div>
 
         {/* Quick Stats */}
@@ -223,156 +181,78 @@ export default function TeacherPortalHome() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                  <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div className="p-3 bg-blue-100 rounded-full dark:bg-blue-900/20">
+                  <Bell className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                    আজকের কার্যক্রম
+                    দ্রুত প্রবেশ
                   </h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    আপনার আজকের গুরুত্বপূর্ণ কাজগুলো দেখুন
+                    নিচের কার্যক্রম থেকে আপনার প্রয়োজনীয় কাজটি বেছে নিন
                   </p>
                 </div>
               </div>
-              <Link href="/teacher/dashboard">
-                <Button variant="outline" size="sm">
-                  <Target className="w-4 h-4 mr-2" />
-                  ড্যাশবোর্ড দেখুন
-                </Button>
-              </Link>
             </div>
           </CardContent>
         </UXCard>
 
         {/* Navigation Grid */}
-        <div>
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-6">
-            সুবিধাসমূহ
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {navigationItems.map((item, index) => (
-              <NavigationCard key={index} {...item} />
-            ))}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {navigationItems.map((item, index) => (
+            <NavigationCard key={index} {...item} />
+          ))}
         </div>
 
-        {/* Recent Activity Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Additional Features */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <UXCard>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                সাম্প্রতিক কার্যক্রম
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                আজকের সূচি
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 rounded-full bg-green-500 mt-2"></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                      ষষ্ঠ 'ক' শ্রেণীর উপস্থিতি নেওয়া হয়েছে
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-500">৩০ মিনিট আগে</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                      নতুন পাঠ পরিকল্পনা তৈরি করা হয়েছে
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-500">১ ঘন্টা আগে</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 rounded-full bg-orange-500 mt-2"></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                      অ্যাসাইনমেন্ট জমা পড়েছে
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-500">২ ঘন্টা আগে</p>
-                  </div>
-                </div>
-              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                আপনার আজকের ক্লাস এবং কার্যক্রম দেখুন
+              </p>
+              <Button className="mt-4" variant="outline" asChild>
+                <Link href="/calendar">
+                  সূচি দেখুন
+                </Link>
+              </Button>
             </CardContent>
           </UXCard>
 
           <UXCard>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                আসন্ন কাজ
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                দ্রুত ক্রিয়া
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20">
-                  <div>
-                    <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
-                      মাসিক পরীক্ষার প্রশ্ন প্রস্তুতি
-                    </p>
-                    <p className="text-xs text-orange-700 dark:text-orange-300">
-                      সপ্তম শ্রেণী - বাংলা
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-orange-600 border-orange-600">
-                    ২ দিন
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                  <div>
-                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                      অভিভাবক সভা প্রস্তুতি
-                    </p>
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                      প্রগতি রিপোর্ট তৈরি
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-blue-600 border-blue-600">
-                    ৫ দিন
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <div>
-                    <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                      শিক্ষক প্রশিক্ষণ
-                    </p>
-                    <p className="text-xs text-green-700 dark:text-green-300">
-                      ডিজিটাল শিক্ষাদান পদ্ধতি
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-green-600 border-green-600">
-                    ১ সপ্তাহ
-                  </Badge>
-                </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                গুরুত্বপূর্ণ কাজগুলো সম্পন্ন করুন
+              </p>
+              <div className="mt-4 space-y-2">
+                <Button variant="outline" className="w-full justify-start" asChild>
+                  <Link href="/teacher/attendance">
+                    <Users className="w-4 h-4 mr-2" />
+                    উপস্থিতি নিন
+                  </Link>
+                </Button>
+                <Button variant="outline" className="w-full justify-start" asChild>
+                  <Link href="/teacher/marks">
+                    <Award className="w-4 h-4 mr-2" />
+                    মার্ক এন্ট্রি করুন
+                  </Link>
+                </Button>
               </div>
             </CardContent>
           </UXCard>
         </div>
-
-        {/* Help Section */}
-        <UXCard>
-          <CardContent className="p-8 text-center">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-              সাহায্য প্রয়োজন?
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-6">
-              আমাদের গাইড ও টিউটোরিয়াল দেখুন অথবা সাপোর্ট টিমের সাথে যোগাযোগ করুন
-            </p>
-            <div className="flex justify-center gap-4">
-              <Button variant="outline">
-                <FileText className="w-4 h-4 mr-2" />
-                ইউজার গাইড
-              </Button>
-              <Button variant="outline">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                সাপোর্ট চ্যাট
-              </Button>
-            </div>
-          </CardContent>
-        </UXCard>
       </div>
     </div>
   );

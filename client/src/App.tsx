@@ -337,18 +337,13 @@ function App() {
     // initializeUXAutoEnhancer();
   }, []);
 
-  // Check if current path is teacher portal - completely separate system
+  // Check if current path is new teacher portal - completely separate system
   const currentPath = window.location.pathname;
-  const isTeacherPortal = currentPath.startsWith('/teacher');
   const isNewTeacherPortal = currentPath.startsWith('/teacher-new');
 
   // Render teacher portal as completely independent application
   if (isNewTeacherPortal) {
     return <TeacherPortalNew />;
-  }
-  
-  if (isTeacherPortal) {
-    return <TeacherApp />;
   }
 
   return (
