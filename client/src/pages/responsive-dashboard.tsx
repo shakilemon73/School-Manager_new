@@ -926,68 +926,14 @@ export default function ResponsiveDashboard() {
             </CardContent>
           </Card>
 
-          {/* Super Admin: Student Performance */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-purple-500" />
-                ছাত্র পারফরম্যান্স
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {studentPerformance ? (
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                      🏆 সেরা পারফরমার
-                    </h4>
-                    {studentPerformance.topPerformers && studentPerformance.topPerformers.length > 0 ? (
-                      studentPerformance.topPerformers.slice(0, 5).map((student: any, idx: number) => (
-                        <div key={student.id} className="flex items-center justify-between py-2">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`}</span>
-                            <div>
-                              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{student.name}</p>
-                              <p className="text-xs text-slate-500">ক্লাস {student.class}</p>
-                            </div>
-                          </div>
-                          <Badge variant="secondary">GPA {student.gpa}</Badge>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-slate-500 text-center py-4">কোনো ডেটা নেই</p>
-                    )}
-                  </div>
-                  
-                  {studentPerformance.needsAttention && studentPerformance.needsAttention.length > 0 && (
-                    <div className="pt-4 border-t">
-                      <h4 className="text-sm font-semibold text-orange-700 dark:text-orange-400 mb-3">
-                        ⚠️ মনোযোগ প্রয়োজন
-                      </h4>
-                      <div className="space-y-2">
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          {studentPerformance.needsAttention.length} জন ছাত্রের দুর্বল পারফরম্যান্স
-                        </p>
-                        <Button size="sm" variant="outline" onClick={() => navigateTo('/students/performance')}>
-                          বিস্তারিত দেখুন
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-center text-slate-500 py-4">ডেটা লোড হচ্ছে...</p>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
-        {/* New Admin Features - Real-time Activity Feed */}
+        {/* Admin Features - Real-time Activity Feed */}
         <div className="mb-8">
           <RealtimeActivityFeed />
         </div>
 
-        {/* New Admin Features - Student Performance Analytics */}
+        {/* Admin Features - Student Performance Analytics */}
         <div className="mb-8">
           <StudentPerformanceAnalytics />
         </div>

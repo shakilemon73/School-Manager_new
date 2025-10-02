@@ -60,9 +60,11 @@ export default function AttendanceMarking() {
     queryFn: async () => {
       if (!selectedClass || !selectedDate) return [];
       
+      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('attendance_records')
         .select('*')
+        .eq('school_id', schoolId)
         .eq('date', selectedDate);
       
       if (error) throw error;
