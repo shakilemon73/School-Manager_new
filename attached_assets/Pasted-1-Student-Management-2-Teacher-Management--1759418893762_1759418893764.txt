@@ -1,0 +1,172 @@
+1. Student Management → ছাত্র-ছাত্রীদের তথ্য দেখা ও ম্যানেজ করা
+2. Teacher Management → শিক্ষকদের তথ্য দেখা ও ম্যানেজ করা  
+3. Academic Management → ক্লাস, বিষয়, পরীক্ষা, ফলাফল
+4. Financial Management → ফি কালেকশন, পেমেন্ট, রিপোর্ট
+5. Library System → বই ইনভেন্টরি, ইস্যু/রিটার্ন
+6. Transport Management → গাড়ি ট্র্যাকিং, রুট
+7. Notifications → ঘোষণা ও এলার্ট
+8. System Settings → স্কুল কনফিগারেশন 
+
+❌ 1. Teacher Activity Monitor (শিক্ষক কার্যক্রম মনিটর)
+   - কোন শিক্ষক কখন মার্ক এন্ট্রি করলেন
+   - কোন শিক্ষক কোন ক্লাসে উপস্থিতি নিলেন
+   - কোন শিক্ষক কী কী এসাইনমেন্ট দিয়েছেন
+
+❌ 2. Student Performance Overview (সব ছাত্রের পারফরমেন্স)
+   - সব ক্লাসের ছাত্রদের ফলাফল এক জায়গায়
+   - কোন ছাত্র ভালো করছে, কোন ছাত্র পিছিয়ে আছে
+   - ক্লাস-ভিত্তিক র‍্যাঙ্কিং
+
+❌ 3. Real-time Activity Feed (লাইভ কার্যক্রম ফিড)
+   - এই মুহূর্তে কী ঘটছে স্কুলে
+   - কে কী করছে (শিক্ষক/ছাত্র/কর্মচারী)
+   - লাস্ট 24 ঘন্টার সব activity
+
+❌ 4. Exam Results Analytics (পরীক্ষার ফলাফল বিশ্লেষণ)
+   - পরীক্ষা-ভিত্তিক সব ছাত্রের মার্ক
+   - কোন বিষয়ে ছাত্ররা দুর্বল
+   - শিক্ষক-ভিত্তিক ফলাফল কম্প্যারিজন
+
+❌ 5. Approval System (অনুমোদন সিস্টেম)
+   - শিক্ষক যে মার্ক এন্ট্রি করবেন তা আপনি verify করবেন
+   - ফলাফল publish করার আগে review
+
+1. OVERVIEW SECTION (একনজরে পুরো স্কুল)
+   ┌─────────────────────────────────────┐
+   │ Today's Summary                      │
+   │ • 450 ছাত্র উপস্থিত (out of 500)   │
+   │ • 25 শিক্ষক কাজ করেছেন আজ          │
+   │ • 15টি মার্ক এন্ট্রি হয়েছে          │
+   │ • 8টি নতুন ফি পেমেন্ট               │
+   └─────────────────────────────────────┘
+
+2. TEACHER ACTIVITY MONITOR
+   ┌─────────────────────────────────────┐
+   │ Recent Teacher Activities            │
+   │                                      │
+   │ 🟢 রহমান স্যার → ক্লাস 8-A Math    │
+   │    25 জন ছাত্রের মার্ক এন্ট্রি      │
+   │    ⏰ 30 minutes ago                │
+   │                                      │
+   │ 🟢 করিম স্যার → ক্লাস 9-B Science │
+   │    উপস্থিতি নিয়েছেন 35 জন          │
+   │    ⏰ 1 hour ago                    │
+   │                                      │
+   │ 🟡 আমিনা ম্যাডাম → এসাইনমেন্ট      │
+   │    ক্লাস 7 English assignment       │
+   │    ⏰ 2 hours ago                   │
+   └─────────────────────────────────────┘
+
+3. STUDENT PERFORMANCE ANALYTICS
+   ┌─────────────────────────────────────┐
+   │ Top Performers (এই মাসে)            │
+   │ 🥇 রাকিব - GPA 5.0 (Class 10)     │
+   │ 🥈 সাদিয়া - GPA 4.95 (Class 9)    │
+   │ 🥉 তানভীর - GPA 4.90 (Class 10)    │
+   │                                      │
+   │ Need Attention (মনোযোগ প্রয়োজন)    │
+   │ ⚠️ 5 জন ছাত্র failing marks        │
+   │ ⚠️ 12 জন ছাত্র attendance < 75%   │
+   └─────────────────────────────────────┘
+
+4. PENDING APPROVALS (আপনার অনুমোদন দরকার)
+   ┌─────────────────────────────────────┐
+   │ • Midterm Exam Results - Class 8     │
+   │   (রহমান স্যার entered, review করুন)│
+   │   [Review] [Approve] [Reject]        │
+   │                                      │
+   │ • Leave Application - তানভীর         │
+   │   (3 days, medical reason)           │
+   │   [Approve] [Reject]                 │
+   └─────────────────────────────────────┘
+
+5. SYSTEM-WIDE REPORTS
+   ┌─────────────────────────────────────┐
+   │ • Overall Attendance Rate: 92%       │
+   │ • Average GPA: 3.85                  │
+   │ • Total Fee Collection: ৳ 450,000    │
+   │ • Outstanding Fees: ৳ 50,000         │
+   └─────────────────────────────────────┘
+
+
+
+Teacher Login → See Their Classes → Can:
+  ├─ Enter marks for their students
+  ├─ Set up class schedules/routines
+  ├─ Mark attendance
+  ├─ Create assignments
+  └─ View student performance in their subjects
+
+
+Teacher enters marks → Saved to database → Instantly visible to:
+  ├─ Super Admin (can see ALL teachers' entries)
+  ├─ Student (sees THEIR OWN marks)
+  ├─ Parent (sees THEIR CHILD's marks)
+  └─ Other Teachers (if they teach same student)
+
+
+Admin Dashboard → Can view:
+  ├─ All teachers and their workload
+  ├─ Which teacher entered marks for which student
+  ├─ All student marks across all subjects
+  ├─ All class schedules created by teachers
+  ├─ Parent feedback and interactions
+  └─ Worker tasks and completion status
+
+
+TEACHER ENTERS DATA:
+Teacher Portal → Mark Entry Form → Database (results table)
+                                       ↓
+                    ┌──────────────────┴─────────────────┐
+                    ↓                  ↓                  ↓
+          Student Portal        Parent Portal       Admin Portal
+          (sees own marks)      (sees child)        (sees all)
+
+
+📊 exams table → Define exams (Midterm, Final, etc.)
+📊 subjects table → Define subjects (Math, Science, etc.)
+📊 exam_results table → Store student marks
+📊 teacher_assignments table → Which teacher teaches which class/subject
+📊 class_routines table → Store class schedules
+
+
+Teacher Portal APIs:
+  POST /api/teachers/marks/entry → Teacher enters marks
+  GET /api/teachers/my-students → Get students in their classes
+  GET /api/teachers/my-subjects → Get subjects they teach
+  POST /api/teachers/class-routine/create → Create class schedule
+
+Student Portal APIs:
+  GET /api/students/my-marks → Student sees their marks
+  GET /api/students/my-performance → See GPA, position, etc.
+  
+Parent Portal APIs:
+  GET /api/parents/child-marks → Parent sees child's marks
+  GET /api/parents/child-performance → Child's performance
+
+Admin Portal APIs:
+  GET /api/admin/all-results → See all marks entered
+  GET /api/admin/teacher-activity → See what teachers did
+
+
+
+TEACHER WORKFLOW:
+1. Teacher logs in → Sees assigned classes (Grade 8-A, 9-B)
+2. Opens Mark Entry → Selects class + exam (Midterm 2025)
+3. Enters marks for each student → Saves to exam_results table
+4. Data saved with: student_id, exam_id, subject_id, marks, teacher_id
+
+ADMIN VIEW:
+1. Admin dashboard → "Recent Activities"
+2. Shows: "Teacher Rahman entered marks for Grade 8-A Math (25 students)"
+3. Can click to see: Which students, what marks, timestamp
+
+STUDENT VIEW:
+1. Student logs in → Sees "My Results"
+2. Shows all exams with marks, GPA, position in class
+3. Data pulled from exam_results WHERE student_id = current_student
+
+PARENT VIEW:
+1. Parent logs in → Sees child selector
+2. Views child's marks, attendance, performance
+3. Same data as student sees, filtered by child_id
