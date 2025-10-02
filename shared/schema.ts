@@ -1695,3 +1695,795 @@ export const creditBalance = pgTable("credit_balance", {
 export const creditBalanceInsertSchema = createInsertSchema(creditBalance);
 export type InsertCreditBalance = z.infer<typeof creditBalanceInsertSchema>;
 export type CreditBalance = typeof creditBalance.$inferSelect;
+
+// ============================================================================
+// COMMUNICATION SYSTEMS
+// ============================================================================
+
+// Notification Templates
+export const notificationTemplates = pgTable("notification_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  description: text("description"),
+  category: text("category").notNull(),
+  subject: text("subject"),
+  subjectBn: text("subject_bn"),
+  body: text("body").notNull(),
+  bodyBn: text("body_bn"),
+  variables: json("variables"),
+  isActive: boolean("is_active").default(true),
+  schoolId: integer("school_id").notNull().default(1),
+  createdBy: integer("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const notificationTemplatesInsertSchema = createInsertSchema(notificationTemplates);
+export type InsertNotificationTemplate = z.infer<typeof notificationTemplatesInsertSchema>;
+export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
+
+// Notification Logs
+export const notificationLogs = pgTable("notification_logs", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").references(() => notificationTemplates.id),
+  recipientId: integer("recipient_id"),
+  recipientType: text("recipient_type").notNull(),
+  recipientEmail: text("recipient_email"),
+  recipientPhone: text("recipient_phone"),
+  channel: text("channel").notNull(),
+  subject: text("subject"),
+  body: text("body").notNull(),
+  status: text("status").default("pending"),
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  readAt: timestamp("read_at"),
+  errorMessage: text("error_message"),
+  metadata: json("metadata"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const notificationLogsInsertSchema = createInsertSchema(notificationLogs);
+export type InsertNotificationLog = z.infer<typeof notificationLogsInsertSchema>;
+export type NotificationLog = typeof notificationLogs.$inferSelect;
+
+// Conversations
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  title: text("title"),
+  participantIds: integer("participant_ids").array().notNull(),
+  participantTypes: text("participant_types").array().notNull(),
+  lastMessageAt: timestamp("last_message_at"),
+  isActive: boolean("is_active").default(true),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const conversationsInsertSchema = createInsertSchema(conversations);
+export type InsertConversation = z.infer<typeof conversationsInsertSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+
+// Messages
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => conversations.id, { onDelete: "cascade" }),
+  senderId: integer("sender_id").notNull(),
+  senderType: text("sender_type").notNull(),
+  senderName: text("sender_name").notNull(),
+  message: text("message").notNull(),
+  attachments: json("attachments"),
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const messagesInsertSchema = createInsertSchema(messages);
+export type InsertMessage = z.infer<typeof messagesInsertSchema>;
+export type Message = typeof messages.$inferSelect;
+
+// Announcements
+export const announcements = pgTable("announcements", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id"),
+  title: text("title").notNull(),
+  titleBn: text("title_bn"),
+  content: text("content").notNull(),
+  contentBn: text("content_bn"),
+  priority: text("priority").default("medium"),
+  targetAudience: text("target_audience").default("all"),
+  targetClasses: text("target_classes").array(),
+  publishDate: timestamp("publish_date").defaultNow(),
+  expiryDate: timestamp("expiry_date"),
+  isPublished: boolean("is_published").default(false),
+  viewCount: integer("view_count").default(0),
+  attachments: json("attachments"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdBy: integer("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const announcementsInsertSchema = createInsertSchema(announcements);
+export type InsertAnnouncement = z.infer<typeof announcementsInsertSchema>;
+export type Announcement = typeof announcements.$inferSelect;
+
+// Announcement Categories
+export const announcementCategories = pgTable("announcement_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  description: text("description"),
+  icon: text("icon"),
+  color: text("color").default("#3b82f6"),
+  isActive: boolean("is_active").default(true),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const announcementCategoriesInsertSchema = createInsertSchema(announcementCategories);
+export type InsertAnnouncementCategory = z.infer<typeof announcementCategoriesInsertSchema>;
+export type AnnouncementCategory = typeof announcementCategories.$inferSelect;
+
+// ============================================================================
+// ENHANCED EXAM MANAGEMENT
+// ============================================================================
+
+// Seating Arrangements
+export const seatingArrangements = pgTable("seating_arrangements", {
+  id: serial("id").primaryKey(),
+  examId: integer("exam_id").notNull(),
+  studentId: integer("student_id").notNull(),
+  roomNumber: text("room_number").notNull(),
+  seatNumber: text("seat_number").notNull(),
+  rowNumber: integer("row_number"),
+  columnNumber: integer("column_number"),
+  instructions: text("instructions"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const seatingArrangementsInsertSchema = createInsertSchema(seatingArrangements);
+export type InsertSeatingArrangement = z.infer<typeof seatingArrangementsInsertSchema>;
+export type SeatingArrangement = typeof seatingArrangements.$inferSelect;
+
+// Invigilation Duties
+export const invigilationDuties = pgTable("invigilation_duties", {
+  id: serial("id").primaryKey(),
+  examId: integer("exam_id").notNull(),
+  teacherId: integer("teacher_id").notNull(),
+  roomNumber: text("room_number").notNull(),
+  dutyType: text("duty_type").default("main"),
+  dutyDate: date("duty_date").notNull(),
+  startTime: time("start_time").notNull(),
+  endTime: time("end_time").notNull(),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const invigilationDutiesInsertSchema = createInsertSchema(invigilationDuties);
+export type InsertInvigilationDuty = z.infer<typeof invigilationDutiesInsertSchema>;
+export type InvigilationDuty = typeof invigilationDuties.$inferSelect;
+
+// ============================================================================
+// HR & STAFF MANAGEMENT
+// ============================================================================
+
+// Staff Attendance
+export const staffAttendance = pgTable("staff_attendance", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id").notNull(),
+  date: date("date").notNull(),
+  checkInTime: time("check_in_time"),
+  checkOutTime: time("check_out_time"),
+  status: text("status").notNull(),
+  lateMinutes: integer("late_minutes").default(0),
+  overtimeMinutes: integer("overtime_minutes").default(0),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const staffAttendanceInsertSchema = createInsertSchema(staffAttendance);
+export type InsertStaffAttendance = z.infer<typeof staffAttendanceInsertSchema>;
+export type StaffAttendance = typeof staffAttendance.$inferSelect;
+
+// Attendance Summary
+export const attendanceSummary = pgTable("attendance_summary", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id").notNull(),
+  month: integer("month").notNull(),
+  year: integer("year").notNull(),
+  totalDays: integer("total_days").notNull(),
+  presentDays: integer("present_days").default(0),
+  absentDays: integer("absent_days").default(0),
+  lateDays: integer("late_days").default(0),
+  halfDays: integer("half_days").default(0),
+  leaveDays: integer("leave_days").default(0),
+  attendancePercentage: decimal("attendance_percentage", { precision: 5, scale: 2 }),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const attendanceSummaryInsertSchema = createInsertSchema(attendanceSummary);
+export type InsertAttendanceSummary = z.infer<typeof attendanceSummaryInsertSchema>;
+export type AttendanceSummary = typeof attendanceSummary.$inferSelect;
+
+// Salary Components
+export const salaryComponents = pgTable("salary_components", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  type: text("type").notNull(),
+  calculationType: text("calculation_type").default("fixed"),
+  defaultAmount: decimal("default_amount", { precision: 12, scale: 2 }),
+  percentage: decimal("percentage", { precision: 5, scale: 2 }),
+  isTaxable: boolean("is_taxable").default(true),
+  isActive: boolean("is_active").default(true),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const salaryComponentsInsertSchema = createInsertSchema(salaryComponents);
+export type InsertSalaryComponent = z.infer<typeof salaryComponentsInsertSchema>;
+export type SalaryComponent = typeof salaryComponents.$inferSelect;
+
+// Payroll Records
+export const payrollRecords = pgTable("payroll_records", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id").notNull(),
+  month: integer("month").notNull(),
+  year: integer("year").notNull(),
+  basicSalary: decimal("basic_salary", { precision: 12, scale: 2 }).notNull(),
+  earnings: json("earnings"),
+  deductions: json("deductions"),
+  grossSalary: decimal("gross_salary", { precision: 12, scale: 2 }).notNull(),
+  totalDeductions: decimal("total_deductions", { precision: 12, scale: 2 }).default("0"),
+  netSalary: decimal("net_salary", { precision: 12, scale: 2 }).notNull(),
+  paymentDate: date("payment_date"),
+  paymentMethod: text("payment_method"),
+  paymentStatus: text("payment_status").default("pending"),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdBy: integer("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const payrollRecordsInsertSchema = createInsertSchema(payrollRecords);
+export type InsertPayrollRecord = z.infer<typeof payrollRecordsInsertSchema>;
+export type PayrollRecord = typeof payrollRecords.$inferSelect;
+
+// Appraisal Criteria
+export const appraisalCriteria = pgTable("appraisal_criteria", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  description: text("description"),
+  category: text("category").notNull(),
+  maxScore: integer("max_score").default(10),
+  weightage: decimal("weightage", { precision: 5, scale: 2 }).default("1.0"),
+  isActive: boolean("is_active").default(true),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const appraisalCriteriaInsertSchema = createInsertSchema(appraisalCriteria);
+export type InsertAppraisalCriteria = z.infer<typeof appraisalCriteriaInsertSchema>;
+export type AppraisalCriteria = typeof appraisalCriteria.$inferSelect;
+
+// Appraisals
+export const appraisals = pgTable("appraisals", {
+  id: serial("id").primaryKey(),
+  staffId: integer("staff_id").notNull(),
+  appraisalPeriod: text("appraisal_period").notNull(),
+  reviewDate: date("review_date").notNull(),
+  scores: json("scores").notNull(),
+  totalScore: decimal("total_score", { precision: 10, scale: 2 }),
+  percentage: decimal("percentage", { precision: 5, scale: 2 }),
+  grade: text("grade"),
+  strengths: text("strengths"),
+  areasOfImprovement: text("areas_of_improvement"),
+  goals: text("goals"),
+  reviewerId: integer("reviewer_id"),
+  reviewerName: text("reviewer_name"),
+  status: text("status").default("draft"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const appraisalsInsertSchema = createInsertSchema(appraisals);
+export type InsertAppraisal = z.infer<typeof appraisalsInsertSchema>;
+export type Appraisal = typeof appraisals.$inferSelect;
+
+// ============================================================================
+// STUDENT WELFARE SYSTEMS
+// ============================================================================
+
+// Incident Categories
+export const incidentCategories = pgTable("incident_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  description: text("description"),
+  severityLevel: text("severity_level").default("low"),
+  defaultAction: text("default_action"),
+  isActive: boolean("is_active").default(true),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const incidentCategoriesInsertSchema = createInsertSchema(incidentCategories);
+export type InsertIncidentCategory = z.infer<typeof incidentCategoriesInsertSchema>;
+export type IncidentCategory = typeof incidentCategories.$inferSelect;
+
+// Disciplinary Incidents
+export const disciplinaryIncidents = pgTable("disciplinary_incidents", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull(),
+  categoryId: integer("category_id").references(() => incidentCategories.id),
+  incidentDate: date("incident_date").notNull(),
+  incidentTime: time("incident_time"),
+  location: text("location"),
+  description: text("description").notNull(),
+  severity: text("severity").default("medium"),
+  reportedBy: integer("reported_by"),
+  reporterName: text("reporter_name"),
+  witnesses: text("witnesses"),
+  status: text("status").default("reported"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const disciplinaryIncidentsInsertSchema = createInsertSchema(disciplinaryIncidents);
+export type InsertDisciplinaryIncident = z.infer<typeof disciplinaryIncidentsInsertSchema>;
+export type DisciplinaryIncident = typeof disciplinaryIncidents.$inferSelect;
+
+// Disciplinary Actions
+export const disciplinaryActions = pgTable("disciplinary_actions", {
+  id: serial("id").primaryKey(),
+  incidentId: integer("incident_id").references(() => disciplinaryIncidents.id, { onDelete: "cascade" }),
+  actionType: text("action_type").notNull(),
+  actionDate: date("action_date").notNull(),
+  description: text("description").notNull(),
+  durationDays: integer("duration_days"),
+  assignedTo: integer("assigned_to"),
+  assignedToName: text("assigned_to_name"),
+  completionStatus: text("completion_status").default("pending"),
+  completionDate: date("completion_date"),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdBy: integer("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const disciplinaryActionsInsertSchema = createInsertSchema(disciplinaryActions);
+export type InsertDisciplinaryAction = z.infer<typeof disciplinaryActionsInsertSchema>;
+export type DisciplinaryAction = typeof disciplinaryActions.$inferSelect;
+
+// Activities
+export const activities = pgTable("activities", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  description: text("description"),
+  category: text("category").notNull(),
+  coordinatorId: integer("coordinator_id"),
+  coordinatorName: text("coordinator_name"),
+  meetingSchedule: text("meeting_schedule"),
+  location: text("location"),
+  maxParticipants: integer("max_participants"),
+  currentParticipants: integer("current_participants").default(0),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  isActive: boolean("is_active").default(true),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const activitiesInsertSchema = createInsertSchema(activities);
+export type InsertActivity = z.infer<typeof activitiesInsertSchema>;
+export type Activity = typeof activities.$inferSelect;
+
+// Activity Enrollments
+export const activityEnrollments = pgTable("activity_enrollments", {
+  id: serial("id").primaryKey(),
+  activityId: integer("activity_id").references(() => activities.id, { onDelete: "cascade" }),
+  studentId: integer("student_id").notNull(),
+  enrollmentDate: date("enrollment_date").defaultNow(),
+  status: text("status").default("active"),
+  attendancePercentage: decimal("attendance_percentage", { precision: 5, scale: 2 }),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const activityEnrollmentsInsertSchema = createInsertSchema(activityEnrollments);
+export type InsertActivityEnrollment = z.infer<typeof activityEnrollmentsInsertSchema>;
+export type ActivityEnrollment = typeof activityEnrollments.$inferSelect;
+
+// Activity Achievements
+export const activityAchievements = pgTable("activity_achievements", {
+  id: serial("id").primaryKey(),
+  activityId: integer("activity_id").references(() => activities.id),
+  studentId: integer("student_id").notNull(),
+  achievementType: text("achievement_type").notNull(),
+  achievementName: text("achievement_name").notNull(),
+  achievementNameBn: text("achievement_name_bn"),
+  level: text("level"),
+  position: text("position"),
+  achievementDate: date("achievement_date").notNull(),
+  description: text("description"),
+  certificateUrl: text("certificate_url"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const activityAchievementsInsertSchema = createInsertSchema(activityAchievements);
+export type InsertActivityAchievement = z.infer<typeof activityAchievementsInsertSchema>;
+export type ActivityAchievement = typeof activityAchievements.$inferSelect;
+
+// Health Records
+export const healthRecords = pgTable("health_records", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull().unique(),
+  bloodGroup: text("blood_group"),
+  height: decimal("height", { precision: 5, scale: 2 }),
+  weight: decimal("weight", { precision: 5, scale: 2 }),
+  bmi: decimal("bmi", { precision: 4, scale: 2 }),
+  allergies: text("allergies").array(),
+  chronicConditions: text("chronic_conditions").array(),
+  currentMedications: text("current_medications").array(),
+  emergencyContactName: text("emergency_contact_name"),
+  emergencyContactRelation: text("emergency_contact_relation"),
+  emergencyContactPhone: text("emergency_contact_phone"),
+  familyDoctorName: text("family_doctor_name"),
+  familyDoctorPhone: text("family_doctor_phone"),
+  medicalNotes: text("medical_notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const healthRecordsInsertSchema = createInsertSchema(healthRecords);
+export type InsertHealthRecord = z.infer<typeof healthRecordsInsertSchema>;
+export type HealthRecord = typeof healthRecords.$inferSelect;
+
+// Vaccinations
+export const vaccinations = pgTable("vaccinations", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull(),
+  vaccineName: text("vaccine_name").notNull(),
+  vaccineNameBn: text("vaccine_name_bn"),
+  doseNumber: integer("dose_number").notNull(),
+  vaccinationDate: date("vaccination_date").notNull(),
+  nextDoseDate: date("next_dose_date"),
+  batchNumber: text("batch_number"),
+  administeredBy: text("administered_by"),
+  location: text("location"),
+  sideEffects: text("side_effects"),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const vaccinationsInsertSchema = createInsertSchema(vaccinations);
+export type InsertVaccination = z.infer<typeof vaccinationsInsertSchema>;
+export type Vaccination = typeof vaccinations.$inferSelect;
+
+// Medical Checkups
+export const medicalCheckups = pgTable("medical_checkups", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull(),
+  checkupDate: date("checkup_date").notNull(),
+  checkupType: text("checkup_type").default("routine"),
+  height: decimal("height", { precision: 5, scale: 2 }),
+  weight: decimal("weight", { precision: 5, scale: 2 }),
+  bmi: decimal("bmi", { precision: 4, scale: 2 }),
+  bloodPressure: text("blood_pressure"),
+  visionLeft: text("vision_left"),
+  visionRight: text("vision_right"),
+  dentalStatus: text("dental_status"),
+  generalHealthStatus: text("general_health_status").default("good"),
+  findings: text("findings"),
+  recommendations: text("recommendations"),
+  examinedBy: text("examined_by"),
+  nextCheckupDate: date("next_checkup_date"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const medicalCheckupsInsertSchema = createInsertSchema(medicalCheckups);
+export type InsertMedicalCheckup = z.infer<typeof medicalCheckupsInsertSchema>;
+export type MedicalCheckup = typeof medicalCheckups.$inferSelect;
+
+// ============================================================================
+// ADMISSION SYSTEM ENHANCEMENTS
+// ============================================================================
+
+// Admission Tests
+export const admissionTests = pgTable("admission_tests", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id"),
+  testName: text("test_name").notNull(),
+  testNameBn: text("test_name_bn"),
+  testDate: date("test_date").notNull(),
+  testTime: time("test_time").notNull(),
+  durationMinutes: integer("duration_minutes").notNull(),
+  totalMarks: integer("total_marks").notNull(),
+  passMarks: integer("pass_marks").notNull(),
+  subjects: text("subjects").array(),
+  venue: text("venue"),
+  instructions: text("instructions"),
+  studentId: integer("student_id"),
+  score: decimal("score", { precision: 5, scale: 2 }),
+  obtainedMarks: decimal("obtained_marks", { precision: 5, scale: 2 }),
+  percentage: decimal("percentage", { precision: 5, scale: 2 }),
+  rank: integer("rank"),
+  status: text("status").default("scheduled"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const admissionTestsInsertSchema = createInsertSchema(admissionTests);
+export type InsertAdmissionTest = z.infer<typeof admissionTestsInsertSchema>;
+export type AdmissionTest = typeof admissionTests.$inferSelect;
+
+// Admission Interviews
+export const admissionInterviews = pgTable("admission_interviews", {
+  id: serial("id").primaryKey(),
+  applicationId: integer("application_id"),
+  studentId: integer("student_id").notNull(),
+  interviewDate: date("interview_date").notNull(),
+  interviewTime: time("interview_time").notNull(),
+  panelMembers: text("panel_members").array(),
+  venue: text("venue"),
+  durationMinutes: integer("duration_minutes").default(30),
+  rating: decimal("rating", { precision: 3, scale: 2 }),
+  feedback: text("feedback"),
+  strengths: text("strengths"),
+  weaknesses: text("weaknesses"),
+  recommendation: text("recommendation").default("pending"),
+  interviewerId: integer("interviewer_id"),
+  interviewerName: text("interviewer_name"),
+  status: text("status").default("scheduled"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const admissionInterviewsInsertSchema = createInsertSchema(admissionInterviews);
+export type InsertAdmissionInterview = z.infer<typeof admissionInterviewsInsertSchema>;
+export type AdmissionInterview = typeof admissionInterviews.$inferSelect;
+
+// ============================================================================
+// ENHANCED INVENTORY MANAGEMENT
+// ============================================================================
+
+// Vendors
+export const vendors = pgTable("vendors", {
+  id: serial("id").primaryKey(),
+  vendorCode: text("vendor_code").unique().notNull(),
+  vendorName: text("vendor_name").notNull(),
+  contactPerson: text("contact_person"),
+  email: text("email"),
+  phone: text("phone").notNull(),
+  address: text("address"),
+  city: text("city"),
+  country: text("country").default("Bangladesh"),
+  taxId: text("tax_id"),
+  paymentTerms: text("payment_terms"),
+  creditLimit: decimal("credit_limit", { precision: 12, scale: 2 }),
+  rating: decimal("rating", { precision: 2, scale: 1 }),
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const vendorsInsertSchema = createInsertSchema(vendors);
+export type InsertVendor = z.infer<typeof vendorsInsertSchema>;
+export type Vendor = typeof vendors.$inferSelect;
+
+// Purchase Orders
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: serial("id").primaryKey(),
+  poNumber: text("po_number").unique().notNull(),
+  vendorId: integer("vendor_id").references(() => vendors.id).notNull(),
+  orderDate: date("order_date").defaultNow(),
+  expectedDeliveryDate: date("expected_delivery_date"),
+  actualDeliveryDate: date("actual_delivery_date"),
+  items: json("items").notNull(),
+  subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
+  taxAmount: decimal("tax_amount", { precision: 12, scale: 2 }).default("0"),
+  discountAmount: decimal("discount_amount", { precision: 12, scale: 2 }).default("0"),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  status: text("status").default("draft"),
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdBy: integer("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const purchaseOrdersInsertSchema = createInsertSchema(purchaseOrders);
+export type InsertPurchaseOrder = z.infer<typeof purchaseOrdersInsertSchema>;
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+
+// Stock Alerts
+export const stockAlerts = pgTable("stock_alerts", {
+  id: serial("id").primaryKey(),
+  itemId: integer("item_id").notNull(),
+  itemName: text("item_name").notNull(),
+  alertType: text("alert_type").notNull(),
+  currentQuantity: integer("current_quantity"),
+  reorderLevel: integer("reorder_level"),
+  expiryDate: date("expiry_date"),
+  daysToExpiry: integer("days_to_expiry"),
+  priority: text("priority").default("medium"),
+  isAcknowledged: boolean("is_acknowledged").default(false),
+  acknowledgedBy: integer("acknowledged_by"),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  actionTaken: text("action_taken"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const stockAlertsInsertSchema = createInsertSchema(stockAlerts);
+export type InsertStockAlert = z.infer<typeof stockAlertsInsertSchema>;
+export type StockAlert = typeof stockAlerts.$inferSelect;
+
+// ============================================================================
+// HOSTEL MANAGEMENT ENHANCEMENTS
+// ============================================================================
+
+// Hostel Rooms
+export const hostelRooms = pgTable("hostel_rooms", {
+  id: serial("id").primaryKey(),
+  hostelId: integer("hostel_id"),
+  roomNumber: text("room_number").notNull(),
+  floor: integer("floor").notNull(),
+  roomType: text("room_type").notNull(),
+  capacity: integer("capacity").notNull(),
+  currentOccupancy: integer("current_occupancy").default(0),
+  monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
+  facilities: text("facilities").array(),
+  status: text("status").default("available"),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const hostelRoomsInsertSchema = createInsertSchema(hostelRooms);
+export type InsertHostelRoom = z.infer<typeof hostelRoomsInsertSchema>;
+export type HostelRoom = typeof hostelRooms.$inferSelect;
+
+// Hostel Attendance
+export const hostelAttendance = pgTable("hostel_attendance", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull(),
+  roomId: integer("room_id").references(() => hostelRooms.id),
+  date: date("date").notNull(),
+  checkInTime: time("check_in_time"),
+  checkOutTime: time("check_out_time"),
+  status: text("status").notNull(),
+  leaveType: text("leave_type"),
+  leaveApprovedBy: integer("leave_approved_by"),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const hostelAttendanceInsertSchema = createInsertSchema(hostelAttendance);
+export type InsertHostelAttendance = z.infer<typeof hostelAttendanceInsertSchema>;
+export type HostelAttendance = typeof hostelAttendance.$inferSelect;
+
+// Meal Plans
+export const mealPlans = pgTable("meal_plans", {
+  id: serial("id").primaryKey(),
+  planName: text("plan_name").notNull(),
+  planNameBn: text("plan_name_bn"),
+  description: text("description"),
+  mealTypes: text("meal_types").array().notNull(),
+  monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const mealPlansInsertSchema = createInsertSchema(mealPlans);
+export type InsertMealPlan = z.infer<typeof mealPlansInsertSchema>;
+export type MealPlan = typeof mealPlans.$inferSelect;
+
+// Meal Menu
+export const mealMenu = pgTable("meal_menu", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull(),
+  dayOfWeek: text("day_of_week"),
+  mealType: text("meal_type").notNull(),
+  menuItems: text("menu_items").array().notNull(),
+  menuItemsBn: text("menu_items_bn").array(),
+  specialNotes: text("special_notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const mealMenuInsertSchema = createInsertSchema(mealMenu);
+export type InsertMealMenu = z.infer<typeof mealMenuInsertSchema>;
+export type MealMenu = typeof mealMenu.$inferSelect;
+
+// Meal Subscriptions
+export const mealSubscriptions = pgTable("meal_subscriptions", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull(),
+  planId: integer("plan_id").references(() => mealPlans.id),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date"),
+  isActive: boolean("is_active").default(true),
+  monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const mealSubscriptionsInsertSchema = createInsertSchema(mealSubscriptions);
+export type InsertMealSubscription = z.infer<typeof mealSubscriptionsInsertSchema>;
+export type MealSubscription = typeof mealSubscriptions.$inferSelect;
+
+// Meal Transactions
+export const mealTransactions = pgTable("meal_transactions", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull(),
+  subscriptionId: integer("subscription_id").references(() => mealSubscriptions.id),
+  date: date("date").notNull(),
+  mealType: text("meal_type").notNull(),
+  isConsumed: boolean("is_consumed").default(false),
+  consumedAt: timestamp("consumed_at"),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const mealTransactionsInsertSchema = createInsertSchema(mealTransactions);
+export type InsertMealTransaction = z.infer<typeof mealTransactionsInsertSchema>;
+export type MealTransaction = typeof mealTransactions.$inferSelect;
+
+// ============================================================================
+// ADVANCED REPORTS & ANALYTICS
+// ============================================================================
+
+// Report Templates
+export const reportTemplates = pgTable("report_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  description: text("description"),
+  category: text("category").notNull(),
+  dataSource: text("data_source").notNull(),
+  columns: json("columns").notNull(),
+  filters: json("filters"),
+  grouping: json("grouping"),
+  sorting: json("sorting"),
+  chartConfig: json("chart_config"),
+  isPublic: boolean("is_public").default(false),
+  schoolId: integer("school_id").notNull().default(1),
+  createdBy: integer("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const reportTemplatesInsertSchema = createInsertSchema(reportTemplates);
+export type InsertReportTemplate = z.infer<typeof reportTemplatesInsertSchema>;
+export type ReportTemplate = typeof reportTemplates.$inferSelect;
