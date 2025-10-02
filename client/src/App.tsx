@@ -128,7 +128,14 @@ import TeacherDashboard from "@/pages/teacher-portal/teacher-dashboard";
 // New Admin Pages
 import MarksApproval from "@/pages/admin/marks-approval";
 
-
+// New Feature Pages - All Missing Modules
+import SubjectsManagement from "@/pages/academic/subjects-management";
+import AssignmentsManagement from "@/pages/academic/assignments-management";
+import TimetablePage from "@/pages/academic/timetable";
+import LeaveManagement from "@/pages/hr/leave-management";
+import ReportsDashboard from "@/pages/reports/reports-dashboard";
+import HostelManagement from "@/pages/hostel/hostel-management";
+import AdmissionPortal from "@/pages/admission/admission-portal";
 
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -308,7 +315,22 @@ function AppRoutes() {
       {/* Admin Routes */}
       <ProtectedRoute path="/admin/marks-approval" component={MarksApproval} />
 
-
+      {/* New Feature Routes - Academic Management */}
+      <ProtectedRoute path="/academic/subjects" component={SubjectsManagement} />
+      <ProtectedRoute path="/academic/assignments" component={AssignmentsManagement} />
+      <ProtectedRoute path="/academic/timetable" component={TimetablePage} />
+      
+      {/* HR & Staff Management Routes */}
+      <ProtectedRoute path="/hr/leave-management" component={LeaveManagement} />
+      
+      {/* Reports & Analytics */}
+      <ProtectedRoute path="/reports" component={ReportsDashboard} />
+      
+      {/* Hostel Management */}
+      <ProtectedRoute path="/hostel" component={HostelManagement} />
+      
+      {/* Admission Portal */}
+      <ProtectedRoute path="/admission" component={AdmissionPortal} />
 
       {/* Public website route */}
       <Route path="/public" component={PublicHomePage} />

@@ -109,6 +109,20 @@ export function Sidebar() {
       ]
     },
     {
+      id: "academic",
+      titleEn: "Academic Management",
+      titleBn: "একাডেমিক ব্যবস্থাপনা",
+      titleAr: "الإدارة الأكاديمية",
+      icon: GraduationCap,
+      priority: "high",
+      color: "purple",
+      items: [
+        { path: "/academic/subjects", icon: BookOpen, textEn: "Subjects", textBn: "বিষয়সমূহ", textAr: "المواد", badge: null },
+        { path: "/academic/assignments", icon: FileText, textEn: "Assignments", textBn: "অ্যাসাইনমেন্ট", textAr: "الواجبات", badge: null },
+        { path: "/academic/timetable", icon: Calendar, textEn: "Timetable", textBn: "সময়সূচী", textAr: "الجدول", badge: null }
+      ]
+    },
+    {
       id: "people",
       titleEn: "People Management",
       titleBn: "ব্যক্তি ব্যবস্থাপনা",
@@ -180,6 +194,51 @@ export function Sidebar() {
       priority: "medium",
       color: "emerald",
       directLink: "/credits",
+      items: []
+    },
+    {
+      id: "hr",
+      titleEn: "HR & Staff",
+      titleBn: "এইচআর ও কর্মীবৃন্দ",
+      titleAr: "الموارد البشرية",
+      icon: Briefcase,
+      priority: "medium",
+      color: "indigo",
+      items: [
+        { path: "/hr/leave-management", icon: Calendar, textEn: "Leave Management", textBn: "ছুটি ব্যবস্থাপনা", textAr: "إدارة الإجازات", badge: null }
+      ]
+    },
+    {
+      id: "reports",
+      titleEn: "Reports & Analytics",
+      titleBn: "রিপোর্ট ও বিশ্লেষণ",
+      titleAr: "التقارير والتحليلات",
+      icon: Zap,
+      priority: "high",
+      color: "yellow",
+      directLink: "/reports",
+      items: []
+    },
+    {
+      id: "hostel",
+      titleEn: "Hostel Management",
+      titleBn: "হোস্টেল ব্যবস্থাপনা",
+      titleAr: "إدارة السكن",
+      icon: Home,
+      priority: "medium",
+      color: "pink",
+      directLink: "/hostel",
+      items: []
+    },
+    {
+      id: "admission",
+      titleEn: "Admission Portal",
+      titleBn: "ভর্তি পোর্টাল",
+      titleAr: "بوابة القبول",
+      icon: Users,
+      priority: "high",
+      color: "cyan",
+      directLink: "/admission",
       items: []
     },
     {
