@@ -124,7 +124,6 @@ import TeacherDashboard from "@/pages/teacher-portal/teacher-dashboard";
 
 // New Admin Pages
 import MarksApproval from "@/pages/admin/marks-approval";
-import EnhancedParentPortal from "@/pages/portals/enhanced-parent-portal";
 
 
 
@@ -300,9 +299,6 @@ function AppRoutes() {
 
       {/* Admin Routes */}
       <ProtectedRoute path="/admin/marks-approval" component={MarksApproval} />
-
-      {/* Enhanced Parent Portal */}
-      <ProtectedRoute path="/parent/enhanced" component={EnhancedParentPortal} />
 
 
 
