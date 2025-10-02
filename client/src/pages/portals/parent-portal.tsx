@@ -50,7 +50,7 @@ interface ChildPerformance {
 }
 
 export default function ParentPortal() {
-  const { user, isLoading: authLoading } = useSupabaseDirectAuth();
+  const { user, loading: authLoading } = useSupabaseDirectAuth();
   const [, navigate] = useLocation();
 
   // Get parent data

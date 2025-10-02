@@ -73,7 +73,7 @@ interface UpcomingEvent {
 
 export default function StudentPortal() {
   useDesignSystem();
-  const { user, isLoading: authLoading } = useSupabaseDirectAuth();
+  const { user, loading: authLoading } = useSupabaseDirectAuth();
   const [, navigate] = useLocation();
 
   // Get current student data from Supabase
@@ -173,14 +173,17 @@ export default function StudentPortal() {
         return [];
       }
       
-      return data.map((activity, index) => ({
-        id: activity.id,
-        type: activity.action_type || 'info',
-        title: activity.action || 'Activity',
-        description: activity.details || 'Recent activity',
-        date: new Date(activity.created_at).toLocaleDateString(),
-        status: (index % 3 === 0 ? 'success' : index % 3 === 1 ? 'warning' : 'info') as const
-      }));
+      return data.map((activity, index) => {
+        const statusValue = index % 3 === 0 ? 'success' : index % 3 === 1 ? 'warning' : 'info';
+        return {
+          id: activity.id,
+          type: activity.action_type || 'info',
+          title: activity.action || 'Activity',
+          description: activity.details || 'Recent activity',
+          date: new Date(activity.created_at).toLocaleDateString(),
+          status: statusValue as 'success' | 'warning' | 'info'
+        };
+      });
     },
     enabled: !!student?.id,
   });
