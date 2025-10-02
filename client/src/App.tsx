@@ -117,6 +117,15 @@ import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsOfService from "@/pages/terms-of-service";
 import DiagnosticPage from "@/pages/diagnostic";
 
+// New Teacher Portal Pages
+import TeacherMarkEntry from "@/pages/teacher-portal/mark-entry";
+import TeacherAttendanceMarking from "@/pages/teacher-portal/attendance-marking";
+import TeacherDashboard from "@/pages/teacher-portal/teacher-dashboard";
+
+// New Admin Pages
+import MarksApproval from "@/pages/admin/marks-approval";
+import EnhancedParentPortal from "@/pages/portals/enhanced-parent-portal";
+
 
 
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -283,6 +292,17 @@ function AppRoutes() {
       <ProtectedRoute path="/student/results" component={StudentResults} />
       <ProtectedRoute path="/student/schedule" component={StudentSchedule} />
       <ProtectedRoute path="/student/notifications" component={StudentNotifications} />
+
+      {/* Teacher Portal Routes */}
+      <ProtectedRoute path="/teacher" component={TeacherDashboard} />
+      <ProtectedRoute path="/teacher/marks" component={TeacherMarkEntry} />
+      <ProtectedRoute path="/teacher/attendance" component={TeacherAttendanceMarking} />
+
+      {/* Admin Routes */}
+      <ProtectedRoute path="/admin/marks-approval" component={MarksApproval} />
+
+      {/* Enhanced Parent Portal */}
+      <ProtectedRoute path="/parent/enhanced" component={EnhancedParentPortal} />
 
 
 

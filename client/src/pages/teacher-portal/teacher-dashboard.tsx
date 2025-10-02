@@ -46,7 +46,9 @@ const UXCard = ({ children, variant = "default", interactive = false, ...props }
 };
 
 const UXButton = ({ children, variant = "primary", size = "default", ...props }: any) => {
-  const variantClass = designClasses.button[variant] || designClasses.button.primary;
+  const validVariants = ['primary', 'secondary', 'ghost', 'destructive'] as const;
+  const safeVariant = (validVariants.includes(variant as any) ? variant : 'primary') as 'primary' | 'secondary' | 'ghost' | 'destructive';
+  const variantClass = designClasses.button[safeVariant];
   const sizeClasses = size === "sm" ? "px-3 py-2 text-sm min-h-[40px]" : "px-4 py-2.5 min-h-[44px]";
   
   return (

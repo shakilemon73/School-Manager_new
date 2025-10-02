@@ -7,6 +7,9 @@ import { useSchoolBranding, useCurrentAcademicYear } from '@/hooks/use-school-co
 import { useMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/lib/supabase';
 import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { TeacherActivityMonitor } from '@/components/admin/teacher-activity-monitor';
+import { RealtimeActivityFeed } from '@/components/admin/realtime-activity-feed';
+import { StudentPerformanceAnalytics } from '@/components/admin/student-performance-analytics';
 import { 
   Card, 
   CardContent, 
@@ -742,46 +745,7 @@ export default function ResponsiveDashboard() {
 
         {/* Super Admin: Teacher Activity Monitor */}
         <div className="mb-8">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-green-500" />
-                  শিক্ষক কার্যক্রম মনিটর
-                  <Badge variant="secondary" className="ml-2">লাইভ</Badge>
-                </CardTitle>
-                <span className="text-xs text-slate-500">শেষ ৩০ সেকেন্ড আগে আপডেট</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {teacherActivities && teacherActivities.length > 0 ? (
-                <div className="space-y-3">
-                  {teacherActivities.slice(0, 10).map((activity: any) => (
-                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2 animate-pulse"></div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                              {activity.userName || activity.user_type} → {activity.action}
-                            </p>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                              {activity.description}
-                            </p>
-                          </div>
-                          <span className="text-xs text-slate-500 whitespace-nowrap">
-                            {new Date(activity.created_at).toLocaleTimeString('bn-BD', {hour: '2-digit', minute: '2-digit'})}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-slate-500 py-8">কোনো সাম্প্রতিক কার্যক্রম নেই</p>
-              )}
-            </CardContent>
-          </Card>
+          <TeacherActivityMonitor />
         </div>
 
         {/* Super Admin: Pending Approvals */}
@@ -789,11 +753,20 @@ export default function ResponsiveDashboard() {
           <div className="mb-8">
             <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
-                  <AlertCircle className="w-5 h-5" />
-                  অনুমোদনের জন্য অপেক্ষমাণ
-                  <Badge variant="destructive" className="ml-2">{pendingApprovals.length}</Badge>
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                    <AlertCircle className="w-5 h-5" />
+                    অনুমোদনের জন্য অপেক্ষমাণ
+                    <Badge variant="destructive" className="ml-2">{pendingApprovals.length}</Badge>
+                  </CardTitle>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => navigateTo('/admin/marks-approval')}
+                  >
+                    সব দেখুন
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -808,12 +781,10 @@ export default function ResponsiveDashboard() {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => navigateTo(`/exam-results/${approval.exam_id}`)}>
+                        <Button size="sm" variant="outline" onClick={() => navigateTo('/admin/marks-approval')}>
                           রিভিউ
                         </Button>
-                        <Button size="sm" onClick={() => {
-                          showToast('অনুমোদন প্রক্রিয়া শুরু হয়েছে', 'ফলাফল verify করা হচ্ছে...');
-                        }}>
+                        <Button size="sm" onClick={() => navigateTo('/admin/marks-approval')}>
                           অনুমোদন করুন
                         </Button>
                       </div>
@@ -1009,6 +980,16 @@ export default function ResponsiveDashboard() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* New Admin Features - Real-time Activity Feed */}
+        <div className="mb-8">
+          <RealtimeActivityFeed />
+        </div>
+
+        {/* New Admin Features - Student Performance Analytics */}
+        <div className="mb-8">
+          <StudentPerformanceAnalytics />
         </div>
 
         {/* Mobile-Only Additional Features */}
