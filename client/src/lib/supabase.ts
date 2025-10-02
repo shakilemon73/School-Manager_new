@@ -245,6 +245,82 @@ const transportFieldMapping = {
   updatedAt: 'updated_at',
 };
 
+// Exam field mapping: UI camelCase -> DB snake_case
+const examFieldMapping = {
+  nameBn: 'name_bn',
+  examType: 'exam_type',
+  examDate: 'exam_date',
+  academicYearId: 'academic_year_id',
+  totalMarks: 'total_marks',
+  passMarks: 'pass_marks',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Subject field mapping: UI camelCase -> DB snake_case
+const subjectFieldMapping = {
+  nameBn: 'name_bn',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Exam Result field mapping: UI camelCase -> DB snake_case
+const examResultFieldMapping = {
+  studentId: 'student_id',
+  examId: 'exam_id',
+  subjectId: 'subject_id',
+  marksObtained: 'marks_obtained',
+  totalMarks: 'total_marks',
+  teacherId: 'teacher_id',
+  verifiedBy: 'verified_by',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Teacher Assignment field mapping: UI camelCase -> DB snake_case
+const teacherAssignmentFieldMapping = {
+  teacherId: 'teacher_id',
+  subjectId: 'subject_id',
+  academicYearId: 'academic_year_id',
+  isClassTeacher: 'is_class_teacher',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Class Schedule field mapping: UI camelCase -> DB snake_case
+const classScheduleFieldMapping = {
+  subjectId: 'subject_id',
+  teacherId: 'teacher_id',
+  dayOfWeek: 'day_of_week',
+  startTime: 'start_time',
+  endTime: 'end_time',
+  roomNumber: 'room_number',
+  academicYearId: 'academic_year_id',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Assignment field mapping: UI camelCase -> DB snake_case
+const assignmentFieldMapping = {
+  titleBn: 'title_bn',
+  subjectId: 'subject_id',
+  teacherId: 'teacher_id',
+  dueDate: 'due_date',
+  totalMarks: 'total_marks',
+  academicYearId: 'academic_year_id',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Attendance Record field mapping: UI camelCase -> DB snake_case
+const attendanceRecordFieldMapping = {
+  studentId: 'student_id',
+  subjectId: 'subject_id',
+  teacherId: 'teacher_id',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
 // Convert camelCase student object to snake_case for database
 function toDbStudent(camelCaseStudent: any): Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update'] {
   if (!camelCaseStudent) return {} as any;
@@ -471,6 +547,202 @@ function fromDbTransport(dbTransport: any): any {
   });
   
   return uiTransport;
+}
+
+// Exam conversion functions
+function toDbExam(camelCaseExam: any): any {
+  if (!camelCaseExam) return {} as any;
+  const dbExam: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseExam).forEach(([camelKey, value]) => {
+    const dbKey = examFieldMapping[camelKey as keyof typeof examFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbExam[dbKey] = value;
+    }
+  });
+  return dbExam;
+}
+
+function fromDbExam(dbExam: any): any {
+  if (!dbExam) return {};
+  const uiExam: any = {};
+  const reverseExamMapping: Record<string, string> = {};
+  Object.entries(examFieldMapping).forEach(([camel, snake]) => {
+    reverseExamMapping[snake] = camel;
+  });
+  Object.entries(dbExam).forEach(([snakeKey, value]) => {
+    const camelKey = reverseExamMapping[snakeKey] || snakeKey;
+    uiExam[camelKey] = value;
+  });
+  return uiExam;
+}
+
+// Subject conversion functions
+function toDbSubject(camelCaseSubject: any): any {
+  if (!camelCaseSubject) return {} as any;
+  const dbSubject: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseSubject).forEach(([camelKey, value]) => {
+    const dbKey = subjectFieldMapping[camelKey as keyof typeof subjectFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbSubject[dbKey] = value;
+    }
+  });
+  return dbSubject;
+}
+
+function fromDbSubject(dbSubject: any): any {
+  if (!dbSubject) return {};
+  const uiSubject: any = {};
+  const reverseSubjectMapping: Record<string, string> = {};
+  Object.entries(subjectFieldMapping).forEach(([camel, snake]) => {
+    reverseSubjectMapping[snake] = camel;
+  });
+  Object.entries(dbSubject).forEach(([snakeKey, value]) => {
+    const camelKey = reverseSubjectMapping[snakeKey] || snakeKey;
+    uiSubject[camelKey] = value;
+  });
+  return uiSubject;
+}
+
+// Exam Result conversion functions
+function toDbExamResult(camelCaseResult: any): any {
+  if (!camelCaseResult) return {} as any;
+  const dbResult: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseResult).forEach(([camelKey, value]) => {
+    const dbKey = examResultFieldMapping[camelKey as keyof typeof examResultFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbResult[dbKey] = value;
+    }
+  });
+  return dbResult;
+}
+
+function fromDbExamResult(dbResult: any): any {
+  if (!dbResult) return {};
+  const uiResult: any = {};
+  const reverseExamResultMapping: Record<string, string> = {};
+  Object.entries(examResultFieldMapping).forEach(([camel, snake]) => {
+    reverseExamResultMapping[snake] = camel;
+  });
+  Object.entries(dbResult).forEach(([snakeKey, value]) => {
+    const camelKey = reverseExamResultMapping[snakeKey] || snakeKey;
+    uiResult[camelKey] = value;
+  });
+  return uiResult;
+}
+
+// Teacher Assignment conversion functions
+function toDbTeacherAssignment(camelCaseAssignment: any): any {
+  if (!camelCaseAssignment) return {} as any;
+  const dbAssignment: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseAssignment).forEach(([camelKey, value]) => {
+    const dbKey = teacherAssignmentFieldMapping[camelKey as keyof typeof teacherAssignmentFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbAssignment[dbKey] = value;
+    }
+  });
+  return dbAssignment;
+}
+
+function fromDbTeacherAssignment(dbAssignment: any): any {
+  if (!dbAssignment) return {};
+  const uiAssignment: any = {};
+  const reverseTeacherAssignmentMapping: Record<string, string> = {};
+  Object.entries(teacherAssignmentFieldMapping).forEach(([camel, snake]) => {
+    reverseTeacherAssignmentMapping[snake] = camel;
+  });
+  Object.entries(dbAssignment).forEach(([snakeKey, value]) => {
+    const camelKey = reverseTeacherAssignmentMapping[snakeKey] || snakeKey;
+    uiAssignment[camelKey] = value;
+  });
+  return uiAssignment;
+}
+
+// Class Schedule conversion functions
+function toDbClassSchedule(camelCaseSchedule: any): any {
+  if (!camelCaseSchedule) return {} as any;
+  const dbSchedule: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseSchedule).forEach(([camelKey, value]) => {
+    const dbKey = classScheduleFieldMapping[camelKey as keyof typeof classScheduleFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbSchedule[dbKey] = value;
+    }
+  });
+  return dbSchedule;
+}
+
+function fromDbClassSchedule(dbSchedule: any): any {
+  if (!dbSchedule) return {};
+  const uiSchedule: any = {};
+  const reverseClassScheduleMapping: Record<string, string> = {};
+  Object.entries(classScheduleFieldMapping).forEach(([camel, snake]) => {
+    reverseClassScheduleMapping[snake] = camel;
+  });
+  Object.entries(dbSchedule).forEach(([snakeKey, value]) => {
+    const camelKey = reverseClassScheduleMapping[snakeKey] || snakeKey;
+    uiSchedule[camelKey] = value;
+  });
+  return uiSchedule;
+}
+
+// Assignment conversion functions
+function toDbAssignment(camelCaseAssignment: any): any {
+  if (!camelCaseAssignment) return {} as any;
+  const dbAssignment: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseAssignment).forEach(([camelKey, value]) => {
+    const dbKey = assignmentFieldMapping[camelKey as keyof typeof assignmentFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbAssignment[dbKey] = value;
+    }
+  });
+  return dbAssignment;
+}
+
+function fromDbAssignment(dbAssignment: any): any {
+  if (!dbAssignment) return {};
+  const uiAssignment: any = {};
+  const reverseAssignmentMapping: Record<string, string> = {};
+  Object.entries(assignmentFieldMapping).forEach(([camel, snake]) => {
+    reverseAssignmentMapping[snake] = camel;
+  });
+  Object.entries(dbAssignment).forEach(([snakeKey, value]) => {
+    const camelKey = reverseAssignmentMapping[snakeKey] || snakeKey;
+    uiAssignment[camelKey] = value;
+  });
+  return uiAssignment;
+}
+
+// Attendance Record conversion functions
+function toDbAttendanceRecord(camelCaseRecord: any): any {
+  if (!camelCaseRecord) return {} as any;
+  const dbRecord: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseRecord).forEach(([camelKey, value]) => {
+    const dbKey = attendanceRecordFieldMapping[camelKey as keyof typeof attendanceRecordFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbRecord[dbKey] = value;
+    }
+  });
+  return dbRecord;
+}
+
+function fromDbAttendanceRecord(dbRecord: any): any {
+  if (!dbRecord) return {};
+  const uiRecord: any = {};
+  const reverseAttendanceRecordMapping: Record<string, string> = {};
+  Object.entries(attendanceRecordFieldMapping).forEach(([camel, snake]) => {
+    reverseAttendanceRecordMapping[snake] = camel;
+  });
+  Object.entries(dbRecord).forEach(([snakeKey, value]) => {
+    const camelKey = reverseAttendanceRecordMapping[snakeKey] || snakeKey;
+    uiRecord[camelKey] = value;
+  });
+  return uiRecord;
 }
 
 // Direct Database Query Functions (replacing Express API calls)
@@ -1888,33 +2160,6 @@ export const db = {
     return data;
   },
 
-  async getExamResults(studentId?: number, examId?: number) {
-    let query = supabase.from('exam_results').select(`
-      *,
-      students!inner(name, student_id),
-      exams!inner(name)
-    `);
-    
-    if (studentId) query = query.eq('student_id', studentId);
-    if (examId) query = query.eq('exam_id', examId);
-    
-    const { data, error } = await query.order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async createExam(exam: any) {
-    const { data, error } = await supabase
-      .from('exams')
-      .insert(exam)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
   // Meeting & Video Conference (replacing 4 Express routes)
   async getMeetings(schoolId: number) {
     if (!schoolId) {
@@ -2867,6 +3112,804 @@ export const db = {
     } catch (error: any) {
       console.error('Error generating document:', error);
       throw error;
+    }
+  },
+
+  // ==================== STUDENT PORTAL FUNCTIONS ====================
+  
+  async getStudentAttendanceStats(studentId: number, schoolId: number) {
+    console.log('📊 Fetching attendance stats for student:', studentId);
+    try {
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('status')
+        .eq('student_id', studentId)
+        .eq('school_id', schoolId);
+      
+      if (error) {
+        console.error('Error fetching attendance:', error);
+        return { present: 0, total: 0, percentage: 0 };
+      }
+      
+      const total = data?.length || 0;
+      const present = data?.filter(r => r.status === 'present').length || 0;
+      const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+      
+      return { present, total, percentage };
+    } catch (error) {
+      console.error('Error in getStudentAttendanceStats:', error);
+      return { present: 0, total: 0, percentage: 0 };
+    }
+  },
+
+  async getStudentAcademicStats(studentId: number, schoolId: number) {
+    console.log('📚 Fetching academic stats for student:', studentId);
+    try {
+      const { data, error } = await supabase
+        .from('exam_results')
+        .select('grade, gpa, position')
+        .eq('student_id', studentId)
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (error) {
+        console.error('Error fetching academic stats:', error);
+        return { gpa: 0, grade: 'N/A', position: 0 };
+      }
+      
+      const latest = data?.[0];
+      return {
+        gpa: latest?.gpa || 0,
+        grade: latest?.grade || 'N/A',
+        position: latest?.position || 0
+      };
+    } catch (error) {
+      console.error('Error in getStudentAcademicStats:', error);
+      return { gpa: 0, grade: 'N/A', position: 0 };
+    }
+  },
+
+  async getStudentRecentActivities(studentId: number, schoolId: number) {
+    console.log('📋 Fetching recent activities for student:', studentId);
+    try {
+      const [examResults, assignments, feeReceipts, libraryBooks] = await Promise.all([
+        supabase.from('exam_results').select('*, exams(name)').eq('student_id', studentId).eq('school_id', schoolId).order('created_at', { ascending: false }).limit(3),
+        supabase.from('assignments').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(3),
+        supabase.from('fee_receipts').select('*').eq('student_id', studentId).eq('school_id', schoolId).order('payment_date', { ascending: false }).limit(2),
+        supabase.from('library_borrows').select('*, library_books(title)').eq('student_id', studentId).eq('school_id', schoolId).order('borrow_date', { ascending: false }).limit(2)
+      ]);
+
+      const activities: any[] = [];
+      
+      examResults.data?.forEach(result => {
+        activities.push({
+          type: 'exam_result',
+          title: `Exam Result: ${result.exams?.name || 'Exam'}`,
+          description: `Score: ${result.marks_obtained}/${result.total_marks}`,
+          timestamp: result.created_at
+        });
+      });
+      
+      assignments.data?.forEach(assignment => {
+        activities.push({
+          type: 'assignment',
+          title: assignment.title,
+          description: `Due: ${assignment.due_date}`,
+          timestamp: assignment.created_at
+        });
+      });
+      
+      feeReceipts.data?.forEach(receipt => {
+        activities.push({
+          type: 'fee_payment',
+          title: 'Fee Payment',
+          description: `Amount: ${receipt.total_amount}`,
+          timestamp: receipt.payment_date
+        });
+      });
+      
+      libraryBooks.data?.forEach(borrow => {
+        activities.push({
+          type: 'library',
+          title: `Borrowed: ${borrow.library_books?.title || 'Book'}`,
+          description: `Return by: ${borrow.return_date}`,
+          timestamp: borrow.borrow_date
+        });
+      });
+      
+      return activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10);
+    } catch (error) {
+      console.error('Error in getStudentRecentActivities:', error);
+      return [];
+    }
+  },
+
+  async getStudentUpcomingEvents(studentId: number, schoolId: number) {
+    console.log('📅 Fetching upcoming events for student:', studentId);
+    try {
+      const student = await supabase.from('students').select('class, section').eq('id', studentId).single();
+      if (!student.data) return [];
+      
+      const [exams, assignments] = await Promise.all([
+        supabase.from('exams').select('*').eq('school_id', schoolId).gte('exam_date', new Date().toISOString()).order('exam_date', { ascending: true }).limit(5),
+        supabase.from('assignments').select('*').eq('class', student.data.class).eq('section', student.data.section).eq('school_id', schoolId).gte('due_date', new Date().toISOString()).order('due_date', { ascending: true }).limit(5)
+      ]);
+
+      const events: any[] = [];
+      
+      exams.data?.forEach(exam => {
+        events.push({
+          type: 'exam',
+          title: exam.name,
+          date: exam.exam_date,
+          description: `${exam.exam_type} - ${exam.total_marks} marks`
+        });
+      });
+      
+      assignments.data?.forEach(assignment => {
+        events.push({
+          type: 'assignment',
+          title: assignment.title,
+          date: assignment.due_date,
+          description: `${assignment.total_marks} marks`
+        });
+      });
+      
+      return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    } catch (error) {
+      console.error('Error in getStudentUpcomingEvents:', error);
+      return [];
+    }
+  },
+
+  async getStudentExamResults(studentId: number, schoolId: number) {
+    console.log('📝 Fetching exam results for student:', studentId);
+    try {
+      const { data, error } = await supabase
+        .from('exam_results')
+        .select(`
+          *,
+          exams(name, exam_date, total_marks),
+          subjects(name, code)
+        `)
+        .eq('student_id', studentId)
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching exam results:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getStudentExamResults:', error);
+      return [];
+    }
+  },
+
+  async getStudentAssignments(studentId: number, schoolId: number) {
+    console.log('📚 Fetching assignments for student:', studentId);
+    try {
+      const student = await supabase.from('students').select('class, section').eq('id', studentId).single();
+      if (!student.data) return [];
+      
+      const { data, error } = await supabase
+        .from('assignments')
+        .select(`
+          *,
+          subjects(name),
+          teachers(name)
+        `)
+        .eq('class', student.data.class)
+        .eq('section', student.data.section)
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .order('due_date', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching assignments:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getStudentAssignments:', error);
+      return [];
+    }
+  },
+
+  // ==================== TEACHER PORTAL FUNCTIONS ====================
+  
+  async getTeacherOverview(teacherId: number, schoolId: number) {
+    console.log('👨‍🏫 Fetching teacher overview for:', teacherId);
+    try {
+      const [classes, students, assignments, schedules] = await Promise.all([
+        supabase.from('teacher_assignments').select('id', { count: 'exact', head: true }).eq('teacher_id', teacherId).eq('school_id', schoolId),
+        supabase.from('teacher_assignments').select('class, section').eq('teacher_id', teacherId).eq('school_id', schoolId).then(async (res) => {
+          if (!res.data?.length) return { count: 0 };
+          const classData = res.data[0];
+          return supabase.from('students').select('id', { count: 'exact', head: true }).eq('class', classData.class).eq('section', classData.section).eq('school_id', schoolId);
+        }),
+        supabase.from('assignments').select('id', { count: 'exact', head: true }).eq('teacher_id', teacherId).eq('school_id', schoolId),
+        supabase.from('class_schedules').select('id', { count: 'exact', head: true }).eq('teacher_id', teacherId).eq('school_id', schoolId)
+      ]);
+      
+      return {
+        totalClasses: classes.count || 0,
+        totalStudents: students.count || 0,
+        totalAssignments: assignments.count || 0,
+        totalSchedules: schedules.count || 0
+      };
+    } catch (error) {
+      console.error('Error in getTeacherOverview:', error);
+      return { totalClasses: 0, totalStudents: 0, totalAssignments: 0, totalSchedules: 0 };
+    }
+  },
+
+  async getTeacherClasses(teacherId: number, schoolId: number) {
+    console.log('📚 Fetching teacher classes for:', teacherId);
+    try {
+      const { data, error } = await supabase
+        .from('teacher_assignments')
+        .select(`
+          *,
+          subjects(name, code),
+          academic_years(year)
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching teacher classes:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getTeacherClasses:', error);
+      return [];
+    }
+  },
+
+  async getTeacherStudents(teacherId: number, schoolId: number) {
+    console.log('👥 Fetching students for teacher:', teacherId);
+    try {
+      const assignments = await supabase
+        .from('teacher_assignments')
+        .select('class, section')
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId);
+      
+      if (!assignments.data?.length) return [];
+      
+      const classSection = assignments.data[0];
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('class', classSection.class)
+        .eq('section', classSection.section)
+        .eq('school_id', schoolId)
+        .order('roll_number', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching students:', error);
+        return [];
+      }
+      
+      return data ? data.map(s => fromDbStudent(s)) : [];
+    } catch (error) {
+      console.error('Error in getTeacherStudents:', error);
+      return [];
+    }
+  },
+
+  async createExamResult(data: any) {
+    console.log('✍️ Creating exam result:', data);
+    try {
+      const dbData = toDbExamResult(data);
+      const { data: result, error } = await supabase
+        .from('exam_results')
+        .insert(dbData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return fromDbExamResult(result);
+    } catch (error) {
+      console.error('Error in createExamResult:', error);
+      throw error;
+    }
+  },
+
+  async getExamResults(examId: number, subjectId: number, classValue: string, section: string, schoolId: number) {
+    console.log('📊 Fetching exam results for:', { examId, subjectId, classValue, section });
+    try {
+      let query = supabase
+        .from('exam_results')
+        .select(`
+          *,
+          students(name, roll_number),
+          exams(name),
+          subjects(name)
+        `)
+        .eq('school_id', schoolId);
+      
+      if (examId) query = query.eq('exam_id', examId);
+      if (subjectId) query = query.eq('subject_id', subjectId);
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching exam results:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getExamResults:', error);
+      return [];
+    }
+  },
+
+  async markAttendance(data: any) {
+    console.log('✅ Marking attendance:', data);
+    try {
+      const dbData = toDbAttendanceRecord(data);
+      const { data: result, error } = await supabase
+        .from('attendance_records')
+        .insert(dbData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return fromDbAttendanceRecord(result);
+    } catch (error) {
+      console.error('Error in markAttendance:', error);
+      throw error;
+    }
+  },
+
+  async getTeacherSchedule(teacherId: number, schoolId: number) {
+    console.log('📅 Fetching teacher schedule for:', teacherId);
+    try {
+      const { data, error } = await supabase
+        .from('class_schedules')
+        .select(`
+          *,
+          subjects(name, code)
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId)
+        .order('day_of_week', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching schedule:', error);
+        return [];
+      }
+      
+      return data ? data.map(s => fromDbClassSchedule(s)) : [];
+    } catch (error) {
+      console.error('Error in getTeacherSchedule:', error);
+      return [];
+    }
+  },
+
+  async createAssignment(data: any) {
+    console.log('📝 Creating assignment:', data);
+    try {
+      const dbData = toDbAssignment(data);
+      const { data: result, error } = await supabase
+        .from('assignments')
+        .insert(dbData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return fromDbAssignment(result);
+    } catch (error) {
+      console.error('Error in createAssignment:', error);
+      throw error;
+    }
+  },
+
+  async getTeacherAssignments(teacherId: number, schoolId: number) {
+    console.log('📚 Fetching teacher assignments for:', teacherId);
+    try {
+      const { data, error } = await supabase
+        .from('assignments')
+        .select(`
+          *,
+          subjects(name)
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching assignments:', error);
+        return [];
+      }
+      
+      return data ? data.map(a => fromDbAssignment(a)) : [];
+    } catch (error) {
+      console.error('Error in getTeacherAssignments:', error);
+      return [];
+    }
+  },
+
+  // ==================== PARENT PORTAL FUNCTIONS ====================
+  
+  async getParentChildren(parentId: number, schoolId: number) {
+    console.log('👨‍👩‍👧‍👦 Fetching children for parent:', parentId);
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('parent_id', parentId)
+        .eq('school_id', schoolId)
+        .order('name', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching children:', error);
+        return [];
+      }
+      
+      return data ? data.map(s => fromDbStudent(s)) : [];
+    } catch (error) {
+      console.error('Error in getParentChildren:', error);
+      return [];
+    }
+  },
+
+  async getChildProfile(studentId: number, schoolId: number) {
+    console.log('👤 Fetching child profile:', studentId);
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('id', studentId)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching child profile:', error);
+        return null;
+      }
+      
+      return fromDbStudent(data);
+    } catch (error) {
+      console.error('Error in getChildProfile:', error);
+      return null;
+    }
+  },
+
+  async getChildExamResults(studentId: number, schoolId: number) {
+    console.log('📊 Fetching exam results for child:', studentId);
+    return db.getStudentExamResults(studentId, schoolId);
+  },
+
+  async getChildAttendance(studentId: number, month: string, schoolId: number) {
+    console.log('📅 Fetching attendance for child:', studentId, 'month:', month);
+    try {
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('school_id', schoolId)
+        .gte('date', `${month}-01`)
+        .lt('date', `${month}-32`)
+        .order('date', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching attendance:', error);
+        return [];
+      }
+      
+      return data ? data.map(a => fromDbAttendanceRecord(a)) : [];
+    } catch (error) {
+      console.error('Error in getChildAttendance:', error);
+      return [];
+    }
+  },
+
+  async getChildFees(studentId: number, schoolId: number) {
+    console.log('💰 Fetching fee status for child:', studentId);
+    try {
+      const { data, error } = await supabase
+        .from('fee_receipts')
+        .select(`
+          *,
+          fee_items(*)
+        `)
+        .eq('student_id', studentId)
+        .eq('school_id', schoolId)
+        .order('payment_date', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching fees:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getChildFees:', error);
+      return [];
+    }
+  },
+
+  // ==================== ADMIN PORTAL FUNCTIONS ====================
+  
+  async getAdminDashboardStats(schoolId: number) {
+    console.log('📊 Fetching admin dashboard stats for school:', schoolId);
+    try {
+      const [students, teachers, staff, parents, exams, subjects, pending] = await Promise.all([
+        supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('staff').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('parents').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('exams').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('subjects').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('exam_results').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('verified', false)
+      ]);
+      
+      return {
+        totalStudents: students.count || 0,
+        totalTeachers: teachers.count || 0,
+        totalStaff: staff.count || 0,
+        totalParents: parents.count || 0,
+        totalExams: exams.count || 0,
+        totalSubjects: subjects.count || 0,
+        pendingApprovals: pending.count || 0
+      };
+    } catch (error) {
+      console.error('Error in getAdminDashboardStats:', error);
+      return {
+        totalStudents: 0,
+        totalTeachers: 0,
+        totalStaff: 0,
+        totalParents: 0,
+        totalExams: 0,
+        totalSubjects: 0,
+        pendingApprovals: 0
+      };
+    }
+  },
+
+  async getTeacherActivityLog(schoolId: number, limit: number = 50) {
+    console.log('📜 Fetching teacher activity log for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('user_type', 'teacher')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (error) {
+        console.error('Error fetching activity log:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getTeacherActivityLog:', error);
+      return [];
+    }
+  },
+
+  async getStudentPerformanceAnalytics(schoolId: number, classValue?: string, section?: string) {
+    console.log('📈 Fetching student performance analytics:', { schoolId, classValue, section });
+    try {
+      let query = supabase
+        .from('exam_results')
+        .select(`
+          *,
+          students(name, class, section),
+          exams(name),
+          subjects(name)
+        `)
+        .eq('school_id', schoolId);
+      
+      if (classValue) {
+        query = query.eq('students.class', classValue);
+      }
+      if (section) {
+        query = query.eq('students.section', section);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching performance analytics:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getStudentPerformanceAnalytics:', error);
+      return [];
+    }
+  },
+
+  async getAllExamResults(schoolId: number, examId?: number, classValue?: string) {
+    console.log('📊 Fetching all exam results:', { schoolId, examId, classValue });
+    try {
+      let query = supabase
+        .from('exam_results')
+        .select(`
+          *,
+          students(name, roll_number, class, section),
+          exams(name, exam_date),
+          subjects(name, code),
+          teachers(name)
+        `)
+        .eq('school_id', schoolId);
+      
+      if (examId) query = query.eq('exam_id', examId);
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching exam results:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getAllExamResults:', error);
+      return [];
+    }
+  },
+
+  async getPendingApprovals(schoolId: number) {
+    console.log('⏳ Fetching pending approvals for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('exam_results')
+        .select(`
+          *,
+          students(name, roll_number),
+          exams(name),
+          subjects(name),
+          teachers(name)
+        `)
+        .eq('school_id', schoolId)
+        .eq('verified', false)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching pending approvals:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getPendingApprovals:', error);
+      return [];
+    }
+  },
+
+  async approveExamResult(resultId: number, adminId: number) {
+    console.log('✅ Approving exam result:', resultId, 'by admin:', adminId);
+    try {
+      const { data, error } = await supabase
+        .from('exam_results')
+        .update({
+          verified: true,
+          verified_by: adminId
+        })
+        .eq('id', resultId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return fromDbExamResult(data);
+    } catch (error) {
+      console.error('Error in approveExamResult:', error);
+      throw error;
+    }
+  },
+
+  async createExam(data: any) {
+    console.log('📝 Creating exam:', data);
+    try {
+      const dbData = toDbExam(data);
+      const { data: result, error } = await supabase
+        .from('exams')
+        .insert(dbData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return fromDbExam(result);
+    } catch (error) {
+      console.error('Error in createExam:', error);
+      throw error;
+    }
+  },
+
+  async createSubject(data: any) {
+    console.log('📚 Creating subject:', data);
+    try {
+      const dbData = toDbSubject(data);
+      const { data: result, error } = await supabase
+        .from('subjects')
+        .insert(dbData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return fromDbSubject(result);
+    } catch (error) {
+      console.error('Error in createSubject:', error);
+      throw error;
+    }
+  },
+
+  async getSystemWideActivity(schoolId: number, limit: number = 100) {
+    console.log('🌐 Fetching system-wide activity for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (error) {
+        console.error('Error fetching system-wide activity:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getSystemWideActivity:', error);
+      return [];
+    }
+  },
+
+  // ==================== ACTIVITY LOGGING FUNCTION ====================
+  
+  async logActivity(
+    userId: number,
+    userType: string,
+    action: string,
+    entityType: string,
+    entityId: number,
+    description: string,
+    metadata: any,
+    schoolId: number
+  ) {
+    console.log('📝 Logging activity:', { action, entityType, entityId });
+    try {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .insert({
+          user_id: userId,
+          user_type: userType,
+          action,
+          entity_type: entityType,
+          entity_id: entityId,
+          description,
+          metadata: JSON.stringify(metadata),
+          school_id: schoolId
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error logging activity:', error);
+        return null;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error in logActivity:', error);
+      return null;
     }
   }
 };
