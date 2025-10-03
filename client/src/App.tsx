@@ -133,9 +133,20 @@ import SubjectsManagement from "@/pages/academic/subjects-management";
 import AssignmentsManagement from "@/pages/academic/assignments-management";
 import TimetablePage from "@/pages/academic/timetable";
 import LeaveManagement from "@/pages/hr/leave-management";
+import StaffAttendance from "@/pages/hr/staff-attendance";
+import PayrollSystem from "@/pages/hr/payroll-system";
 import ReportsDashboard from "@/pages/reports/reports-dashboard";
 import HostelManagement from "@/pages/hostel/hostel-management";
 import AdmissionPortal from "@/pages/admission/admission-portal";
+
+// Communication System Pages
+import AnnouncementsBoard from "@/pages/communication/announcements-board";
+import NotificationsSystem from "@/pages/communication/notifications-system";
+import ParentTeacherMessaging from "@/pages/communication/parent-teacher-messaging";
+
+// Student Welfare Pages
+import CoCurricularActivities from "@/pages/student-welfare/co-curricular-activities";
+import DisciplinaryRecords from "@/pages/student-welfare/disciplinary-records";
 
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -322,6 +333,17 @@ function AppRoutes() {
       
       {/* HR & Staff Management Routes */}
       <ProtectedRoute path="/hr/leave-management" component={LeaveManagement} />
+      <ProtectedRoute path="/hr/staff-attendance" component={StaffAttendance} />
+      <ProtectedRoute path="/hr/payroll" component={PayrollSystem} />
+      
+      {/* Communication System Routes */}
+      <ProtectedRoute path="/communication/announcements" component={AnnouncementsBoard} />
+      <ProtectedRoute path="/communication/notifications" component={NotificationsSystem} />
+      <ProtectedRoute path="/communication/messaging" component={ParentTeacherMessaging} />
+      
+      {/* Student Welfare Routes */}
+      <ProtectedRoute path="/student-welfare/activities" component={CoCurricularActivities} />
+      <ProtectedRoute path="/student-welfare/disciplinary" component={DisciplinaryRecords} />
       
       {/* Reports & Analytics */}
       <ProtectedRoute path="/reports" component={ReportsDashboard} />
