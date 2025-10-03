@@ -148,6 +148,11 @@ import ParentTeacherMessaging from "@/pages/communication/parent-teacher-messagi
 import CoCurricularActivities from "@/pages/student-welfare/co-curricular-activities";
 import DisciplinaryRecords from "@/pages/student-welfare/disciplinary-records";
 
+// Exam Management Pages
+import ExamScheduling from "@/pages/exam-management/exam-scheduling";
+import SeatingArrangements from "@/pages/exam-management/seating-arrangements";
+import InvigilationDuties from "@/pages/exam-management/invigilation-duties";
+
 import { ProtectedRoute } from "@/lib/protected-route";
 
 import { SupabaseAuthProvider } from "@/hooks/use-supabase-direct-auth";
@@ -353,6 +358,11 @@ function AppRoutes() {
       
       {/* Admission Portal */}
       <ProtectedRoute path="/admission" component={AdmissionPortal} />
+      
+      {/* Exam Management Routes */}
+      <ProtectedRoute path="/exam-management/scheduling" component={ExamScheduling} />
+      <ProtectedRoute path="/exam-management/seating-arrangements" component={SeatingArrangements} />
+      <ProtectedRoute path="/exam-management/invigilation-duties" component={InvigilationDuties} />
 
       {/* Public website route */}
       <Route path="/public" component={PublicHomePage} />

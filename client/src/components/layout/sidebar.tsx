@@ -31,7 +31,13 @@ import {
   Wrench,
   Shield,
   Search,
-  Key
+  Key,
+  ClipboardCheck,
+  Wallet,
+  Megaphone,
+  MessageSquare,
+  Trophy,
+  AlertTriangle
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -205,7 +211,36 @@ export function Sidebar() {
       priority: "medium",
       color: "indigo",
       items: [
-        { path: "/hr/leave-management", icon: Calendar, textEn: "Leave Management", textBn: "ছুটি ব্যবস্থাপনা", textAr: "إدارة الإجازات", badge: null }
+        { path: "/hr/leave-management", icon: Calendar, textEn: "Leave Management", textBn: "ছুটি ব্যবস্থাপনা", textAr: "إدارة الإجازات", badge: null },
+        { path: "/hr/staff-attendance", icon: ClipboardCheck, textEn: "Staff Attendance", textBn: "কর্মচারী উপস্থিতি", textAr: "حضور الموظفين", badge: null },
+        { path: "/hr/payroll", icon: Wallet, textEn: "Payroll System", textBn: "বেতন ব্যবস্থা", textAr: "نظام الرواتب", badge: null }
+      ]
+    },
+    {
+      id: "communication",
+      titleEn: "Communication",
+      titleBn: "যোগাযোগ",
+      titleAr: "الاتصالات",
+      icon: MessageSquare,
+      priority: "high",
+      color: "blue",
+      items: [
+        { path: "/communication/announcements", icon: Megaphone, textEn: "Announcements", textBn: "ঘোষণা", textAr: "الإعلانات", badge: null },
+        { path: "/communication/notifications", icon: Bell, textEn: "Notifications", textBn: "বিজ্ঞপ্তি", textAr: "الإشعارات", badge: null },
+        { path: "/communication/messaging", icon: MessageSquare, textEn: "Parent-Teacher Messaging", textBn: "অভিভাবক-শিক্ষক বার্তা", textAr: "رسائل أولياء الأمور والمعلمين", badge: null }
+      ]
+    },
+    {
+      id: "student-welfare",
+      titleEn: "Student Welfare",
+      titleBn: "শিক্ষার্থী কল্যাণ",
+      titleAr: "رعاية الطلاب",
+      icon: Trophy,
+      priority: "medium",
+      color: "rose",
+      items: [
+        { path: "/student-welfare/activities", icon: Trophy, textEn: "Co-curricular Activities", textBn: "সহশিক্ষা কার্যক্রম", textAr: "الأنشطة اللامنهجية", badge: null },
+        { path: "/student-welfare/disciplinary", icon: AlertTriangle, textEn: "Disciplinary Records", textBn: "শৃঙ্খলা রেকর্ড", textAr: "السجلات التأديبية", badge: null }
       ]
     },
     {
@@ -267,7 +302,12 @@ export function Sidebar() {
       teal: active ? 'bg-teal-50 text-teal-700 border-teal-200' : 'hover:bg-teal-50 hover:text-teal-700',
       slate: active ? 'bg-slate-50 text-slate-700 border-slate-200' : 'hover:bg-slate-50 hover:text-slate-700',
       gray: active ? 'bg-gray-50 text-gray-700 border-gray-200' : 'hover:bg-gray-50 hover:text-gray-700',
-      emerald: active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'hover:bg-emerald-50 hover:text-emerald-700'
+      emerald: active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'hover:bg-emerald-50 hover:text-emerald-700',
+      indigo: active ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'hover:bg-indigo-50 hover:text-indigo-700',
+      rose: active ? 'bg-rose-50 text-rose-700 border-rose-200' : 'hover:bg-rose-50 hover:text-rose-700',
+      cyan: active ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'hover:bg-cyan-50 hover:text-cyan-700',
+      yellow: active ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'hover:bg-yellow-50 hover:text-yellow-700',
+      pink: active ? 'bg-pink-50 text-pink-700 border-pink-200' : 'hover:bg-pink-50 hover:text-pink-700'
     };
     return colors[color as keyof typeof colors] || colors.blue;
   };
@@ -408,6 +448,7 @@ export function Sidebar() {
             {group.directLink ? (
               <Link
                 href={group.directLink}
+                data-testid={`link-${group.id}`}
                 className={cn(
                   "w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 group",
                   isActive(group.directLink)
@@ -468,37 +509,41 @@ export function Sidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="mt-2 ml-4 space-y-1">
-                    {group.items.map((item) => (
-                      <Link
-                        key={item.path}
-                        href={item.path}
-                        className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 group",
-                          isActive(item.path)
-                            ? getColorClasses(group.color, true)
-                            : `bg-white border-gray-200 ${getColorClasses(group.color)}`
-                        )}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span className="flex-1 text-sm font-medium">
-                          <LanguageText 
-                            en={item.textEn} 
-                            bn={item.textBn} 
-                            ar={item.textAr} 
-                          />
-                        </span>
-                        {item.badge && (
-                          <Badge variant="secondary" className="text-xs">
-                            {item.badge}
-                          </Badge>
-                        )}
-                        {item.shortcut && (
-                          <span className="text-xs text-gray-400 font-mono">
-                            {item.shortcut}
+                    {group.items.map((item) => {
+                      const pageName = item.path.split('/').pop() || item.path.replace(/\//g, '-');
+                      return (
+                        <Link
+                          key={item.path}
+                          href={item.path}
+                          data-testid={`link-${pageName}`}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 group",
+                            isActive(item.path)
+                              ? getColorClasses(group.color, true)
+                              : `bg-white border-gray-200 ${getColorClasses(group.color)}`
+                          )}
+                        >
+                          <item.icon className="w-4 h-4" />
+                          <span className="flex-1 text-sm font-medium">
+                            <LanguageText 
+                              en={item.textEn} 
+                              bn={item.textBn} 
+                              ar={item.textAr} 
+                            />
                           </span>
-                        )}
-                      </Link>
-                    ))}
+                          {item.badge && (
+                            <Badge variant="secondary" className="text-xs">
+                              {item.badge}
+                            </Badge>
+                          )}
+                          {item.shortcut && (
+                            <span className="text-xs text-gray-400 font-mono">
+                              {item.shortcut}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
                   </div>
                 </CollapsibleContent>
               </Collapsible>
