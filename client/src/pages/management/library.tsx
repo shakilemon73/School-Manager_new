@@ -231,20 +231,30 @@ export default function LibraryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockBooks.map((book) => (
-                <TableRow key={book.id}>
-                  <TableCell className="font-medium">{book.title}</TableCell>
-                  <TableCell>{book.author}</TableCell>
-                  <TableCell>{book.category}</TableCell>
-                  <TableCell>{book.copies}</TableCell>
-                  <TableCell>{book.available}</TableCell>
-                  <TableCell>{book.shelf}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">দেখুন</Button>
-                    <Button variant="ghost" size="sm">সম্পাদনা</Button>
-                  </TableCell>
+              {booksLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center">লোড হচ্ছে...</TableCell>
                 </TableRow>
-              ))}
+              ) : booksData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center">কোন বই পাওয়া যায়নি</TableCell>
+                </TableRow>
+              ) : (
+                booksData.map((book: any) => (
+                  <TableRow key={book.id}>
+                    <TableCell className="font-medium">{book.title}</TableCell>
+                    <TableCell>{book.author}</TableCell>
+                    <TableCell>{book.category}</TableCell>
+                    <TableCell>{book.total_copies}</TableCell>
+                    <TableCell>{book.available_copies}</TableCell>
+                    <TableCell>{book.location}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm">দেখুন</Button>
+                      <Button variant="ghost" size="sm">সম্পাদনা</Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TabsContent>
@@ -262,18 +272,28 @@ export default function LibraryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockIssues.map((issue) => (
-                <TableRow key={issue.id}>
-                  <TableCell className="font-medium">{issue.book}</TableCell>
-                  <TableCell>{issue.student}</TableCell>
-                  <TableCell>{issue.class}</TableCell>
-                  <TableCell>{issue.issueDate}</TableCell>
-                  <TableCell>{issue.dueDate}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm">ফেরত নিন</Button>
-                  </TableCell>
+              {borrowedLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">লোড হচ্ছে...</TableCell>
                 </TableRow>
-              ))}
+              ) : borrowedBooksData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">কোন ইস্যুকৃত বই নেই</TableCell>
+                </TableRow>
+              ) : (
+                borrowedBooksData.map((issue: any) => (
+                  <TableRow key={issue.id}>
+                    <TableCell className="font-medium">{issue.library_books?.title || 'N/A'}</TableCell>
+                    <TableCell>{issue.students?.name || 'N/A'}</TableCell>
+                    <TableCell>{issue.students?.class || 'N/A'}</TableCell>
+                    <TableCell>{new Date(issue.borrow_date).toLocaleDateString('bn-BD')}</TableCell>
+                    <TableCell>{new Date(issue.return_date).toLocaleDateString('bn-BD')}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" size="sm">ফেরত নিন</Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TabsContent>
@@ -379,7 +399,7 @@ export default function LibraryPage() {
                 
                 <FormField
                   control={form.control}
-                  name="publicationYear"
+                  name="publishYear"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>প্রকাশনার বছর</FormLabel>
@@ -393,7 +413,7 @@ export default function LibraryPage() {
                 
                 <FormField
                   control={form.control}
-                  name="copies"
+                  name="totalCopies"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>কপি সংখ্যা *</FormLabel>
@@ -407,7 +427,7 @@ export default function LibraryPage() {
                 
                 <FormField
                   control={form.control}
-                  name="shelf"
+                  name="location"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>শেলফ নম্বর *</FormLabel>

@@ -572,7 +572,12 @@ export default function HostelMealsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {plan.meal_types.map(type => (
+                            {(Array.isArray(plan.meal_types) 
+                              ? plan.meal_types 
+                              : typeof plan.meal_types === 'string' 
+                                ? JSON.parse(plan.meal_types) 
+                                : []
+                            ).map((type: string) => (
                               <Badge key={type} variant="secondary" className="capitalize">{type}</Badge>
                             ))}
                           </div>

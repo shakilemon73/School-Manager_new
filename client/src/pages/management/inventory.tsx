@@ -278,13 +278,13 @@ export default function InventoryPage() {
       const dbMovement = {
         school_id: currentSchoolId,
         item_id: parseInt(data.itemId),
-        movement_type: data.type,
+        type: data.type,
         quantity: parseInt(data.quantity),
         reason: data.reason,
         reference: data.reference || null,
         notes: data.notes || null,
         movement_date: new Date().toISOString().split('T')[0], // Today's date
-        created_by: 'Admin' // TODO: Get from current user
+        created_by: 1 // TODO: Get from current user
       };
       
       return await db.createInventoryMovement(dbMovement);
