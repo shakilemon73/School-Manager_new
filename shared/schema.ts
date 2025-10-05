@@ -2487,3 +2487,155 @@ export const reportTemplates = pgTable("report_templates", {
 export const reportTemplatesInsertSchema = createInsertSchema(reportTemplates);
 export type InsertReportTemplate = z.infer<typeof reportTemplatesInsertSchema>;
 export type ReportTemplate = typeof reportTemplates.$inferSelect;
+
+// ============================================================================
+// ADVANCED MARK & GRADE MANAGEMENT SYSTEM
+// ============================================================================
+
+// Subjects table
+export const subjects = pgTable("subjects", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn").notNull(),
+  code: text("code").unique(),
+  description: text("description"),
+  schoolId: integer("school_id").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const subjectsInsertSchema = createInsertSchema(subjects).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSubject = z.infer<typeof subjectsInsertSchema>;
+export type Subject = typeof subjects.$inferSelect;
+
+// Grade Scales table
+export const gradeScales = pgTable("grade_scales", {
+  id: serial("id").primaryKey(),
+  schoolId: integer("school_id").notNull().default(1),
+  scaleName: text("scale_name").notNull(),
+  scaleNameBn: text("scale_name_bn"),
+  scaleType: text("scale_type").notNull(), // percentage, letter, points, descriptive
+  minValue: decimal("min_value", { precision: 5, scale: 2 }),
+  maxValue: decimal("max_value", { precision: 5, scale: 2 }),
+  gradeLabels: json("grade_labels").$type<Array<{
+    min: number;
+    max: number;
+    grade: string;
+    gpa?: number;
+    description?: string;
+  }>>(),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const gradeScalesInsertSchema = createInsertSchema(gradeScales).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertGradeScale = z.infer<typeof gradeScalesInsertSchema>;
+export type GradeScale = typeof gradeScales.$inferSelect;
+
+// Assessments table
+export const assessments = pgTable("assessments", {
+  id: serial("id").primaryKey(),
+  schoolId: integer("school_id").notNull().default(1),
+  subjectId: integer("subject_id").references(() => subjects.id).notNull(),
+  class: text("class").notNull(),
+  section: text("section").notNull(),
+  academicYearId: integer("academic_year_id").references(() => academicYears.id),
+  termId: integer("term_id").references(() => academicTerms.id),
+  assessmentName: text("assessment_name").notNull(),
+  assessmentNameBn: text("assessment_name_bn"),
+  assessmentType: text("assessment_type").notNull(), // homework, quiz, project, exam, test
+  totalMarks: decimal("total_marks", { precision: 6, scale: 2 }).notNull(),
+  weightPercentage: decimal("weight_percentage", { precision: 5, scale: 2 }),
+  date: date("date"),
+  createdByTeacherId: integer("created_by_teacher_id").references(() => teachers.id),
+  description: text("description"),
+  descriptionBn: text("description_bn"),
+  isPublished: boolean("is_published").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const assessmentsInsertSchema = createInsertSchema(assessments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAssessment = z.infer<typeof assessmentsInsertSchema>;
+export type Assessment = typeof assessments.$inferSelect;
+
+// Assessment Components table
+export const assessmentComponents = pgTable("assessment_components", {
+  id: serial("id").primaryKey(),
+  assessmentId: integer("assessment_id").references(() => assessments.id).notNull(),
+  componentName: text("component_name").notNull(),
+  componentNameBn: text("component_name_bn"),
+  maxScore: decimal("max_score", { precision: 6, scale: 2 }).notNull(),
+  weightPercentage: decimal("weight_percentage", { precision: 5, scale: 2 }),
+  rubricCriteria: json("rubric_criteria").$type<Array<{
+    criterion: string;
+    points: number;
+    description?: string;
+  }>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const assessmentComponentsInsertSchema = createInsertSchema(assessmentComponents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAssessmentComponent = z.infer<typeof assessmentComponentsInsertSchema>;
+export type AssessmentComponent = typeof assessmentComponents.$inferSelect;
+
+// Student Scores table
+export const studentScores = pgTable("student_scores", {
+  id: serial("id").primaryKey(),
+  assessmentId: integer("assessment_id").references(() => assessments.id).notNull(),
+  studentId: integer("student_id").references(() => students.id).notNull(),
+  scoreObtained: decimal("score_obtained", { precision: 6, scale: 2 }),
+  gradeLetter: text("grade_letter"),
+  remarks: text("remarks"),
+  remarksBn: text("remarks_bn"),
+  submittedDate: date("submitted_date"),
+  gradedByTeacherId: integer("graded_by_teacher_id").references(() => teachers.id),
+  gradedDate: date("graded_date"),
+  isAbsent: boolean("is_absent").default(false),
+  isExcused: boolean("is_excused").default(false),
+  bonusPoints: decimal("bonus_points", { precision: 6, scale: 2 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const studentScoresInsertSchema = createInsertSchema(studentScores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertStudentScore = z.infer<typeof studentScoresInsertSchema>;
+export type StudentScore = typeof studentScores.$inferSelect;
+
+// Grade Overrides table
+export const gradeOverrides = pgTable("grade_overrides", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").references(() => students.id).notNull(),
+  subjectId: integer("subject_id").references(() => subjects.id).notNull(),
+  termId: integer("term_id").references(() => academicTerms.id),
+  overrideGrade: text("override_grade").notNull(),
+  reason: text("reason").notNull(),
+  reasonBn: text("reason_bn"),
+  createdBy: integer("created_by").references(() => teachers.id),
+  approvedBy: integer("approved_by").references(() => teachers.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  approvedAt: timestamp("approved_at"),
+});
+
+export const gradeOverridesInsertSchema = createInsertSchema(gradeOverrides).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertGradeOverride = z.infer<typeof gradeOverridesInsertSchema>;
+export type GradeOverride = typeof gradeOverrides.$inferSelect;

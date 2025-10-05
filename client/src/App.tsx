@@ -132,6 +132,7 @@ import MarksApproval from "@/pages/admin/marks-approval";
 import SubjectsManagement from "@/pages/academic/subjects-management";
 import AssignmentsManagement from "@/pages/academic/assignments-management";
 import TimetablePage from "@/pages/academic/timetable";
+import Gradebook from "@/pages/academic/gradebook";
 import LeaveManagement from "@/pages/hr/leave-management";
 import StaffAttendance from "@/pages/hr/staff-attendance";
 import PayrollSystem from "@/pages/hr/payroll-system";
@@ -359,6 +360,7 @@ function AppRoutes() {
       <ProtectedRoute path="/academic/subjects" component={SubjectsManagement} />
       <ProtectedRoute path="/academic/assignments" component={AssignmentsManagement} />
       <ProtectedRoute path="/academic/timetable" component={TimetablePage} />
+      <ProtectedRoute path="/academic/gradebook" component={Gradebook} />
       
       {/* HR & Staff Management Routes */}
       <ProtectedRoute path="/hr/leave-management" component={LeaveManagement} />
