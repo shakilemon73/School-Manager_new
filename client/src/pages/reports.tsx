@@ -38,7 +38,7 @@ import type {
 
 export default function Reports() {
   const [selectedReportType, setSelectedReportType] = useState("overview");
-  const [selectedGrade, setSelectedGrade] = useState<string>("");
+  const [selectedGrade, setSelectedGrade] = useState<string>("all");
 
   const { data: students = [] } = useQuery<StudentWithDetails[]>({
     queryKey: ["/api/students"],
@@ -98,7 +98,7 @@ export default function Reports() {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 10);
 
-  const filteredStudents = selectedGrade 
+  const filteredStudents = selectedGrade && selectedGrade !== 'all'
     ? students.filter(s => s.grade.toString() === selectedGrade)
     : students;
 
@@ -462,7 +462,7 @@ export default function Reports() {
                   <SelectValue placeholder="All Grades" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Grades</SelectItem>
+                  <SelectItem value="all">All Grades</SelectItem>
                   <SelectItem value="9">Grade 9</SelectItem>
                   <SelectItem value="10">Grade 10</SelectItem>
                   <SelectItem value="11">Grade 11</SelectItem>

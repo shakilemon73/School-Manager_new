@@ -366,14 +366,14 @@ export default function Gradebook() {
               <div className="space-y-2">
                 <Label htmlFor="subject">{language === 'bn' ? 'বিষয়' : 'Subject'}</Label>
                 <Select
-                  value={selectedSubject?.toString()}
-                  onValueChange={(val) => setSelectedSubject(val ? Number(val) : undefined)}
+                  value={selectedSubject?.toString() || 'all'}
+                  onValueChange={(val) => setSelectedSubject(val === 'all' ? undefined : Number(val))}
                 >
                   <SelectTrigger id="subject" data-testid="select-subject">
                     <SelectValue placeholder={language === 'bn' ? 'সকল বিষয়' : 'All Subjects'} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">
+                    <SelectItem value="all">
                       {language === 'bn' ? 'সকল বিষয়' : 'All Subjects'}
                     </SelectItem>
                     {subjects?.map((subject) => (
@@ -388,14 +388,14 @@ export default function Gradebook() {
               <div className="space-y-2">
                 <Label htmlFor="term">{language === 'bn' ? 'টার্ম' : 'Term'}</Label>
                 <Select
-                  value={selectedTerm?.toString()}
-                  onValueChange={(val) => setSelectedTerm(val ? Number(val) : undefined)}
+                  value={selectedTerm?.toString() || 'all'}
+                  onValueChange={(val) => setSelectedTerm(val === 'all' ? undefined : Number(val))}
                 >
                   <SelectTrigger id="term" data-testid="select-term">
                     <SelectValue placeholder={language === 'bn' ? 'সকল টার্ম' : 'All Terms'} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">
+                    <SelectItem value="all">
                       {language === 'bn' ? 'সকল টার্ম' : 'All Terms'}
                     </SelectItem>
                     <SelectItem value="1">

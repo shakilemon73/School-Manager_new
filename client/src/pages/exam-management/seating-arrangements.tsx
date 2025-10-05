@@ -59,7 +59,7 @@ export default function SeatingArrangements() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingArrangement, setEditingArrangement] = useState<any>(null);
-  const [filterExam, setFilterExam] = useState<string>("");
+  const [filterExam, setFilterExam] = useState<string>("all");
   const [filterRoom, setFilterRoom] = useState<string>("");
 
   const { data: arrangements, isLoading } = useQuery({
@@ -83,7 +83,7 @@ export default function SeatingArrangements() {
         .order("room_number", { ascending: true })
         .order("seat_number", { ascending: true });
 
-      if (filterExam) {
+      if (filterExam && filterExam !== 'all') {
         query = query.eq("exam_id", filterExam);
       }
       if (filterRoom) {
@@ -522,7 +522,7 @@ export default function SeatingArrangements() {
                   <SelectValue placeholder="All Exams" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Exams</SelectItem>
+                  <SelectItem value="all">All Exams</SelectItem>
                   {exams?.map((exam) => (
                     <SelectItem key={exam.id} value={exam.id.toString()}>
                       {exam.name}

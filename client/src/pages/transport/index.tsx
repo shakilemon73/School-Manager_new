@@ -101,7 +101,7 @@ export default function TransportPage() {
       driverPhone: '',
       helperName: '',
       helperPhone: '',
-      routeId: '',
+      routeId: 'none',
       isActive: true,
     },
   });
@@ -173,7 +173,7 @@ export default function TransportPage() {
       driverPhone: vehicle.driverPhone,
       helperName: vehicle.helperName || '',
       helperPhone: vehicle.helperPhone || '',
-      routeId: vehicle.routeId?.toString() || '',
+      routeId: vehicle.routeId?.toString() || 'none',
       isActive: vehicle.isActive,
     });
     setIsEditVehicleOpen(true);
@@ -197,7 +197,13 @@ export default function TransportPage() {
 
   // Mutations for CRUD operations
   const addVehicleMutation = useMutation({
-    mutationFn: (data: VehicleFormData) => db.createTransportVehicle({ ...data, school_id: 1 }),
+    mutationFn: (data: VehicleFormData) => {
+      const vehicleData = { ...data, school_id: 1 };
+      if (vehicleData.routeId === 'none') {
+        vehicleData.routeId = '';
+      }
+      return db.createTransportVehicle(vehicleData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
@@ -260,8 +266,13 @@ export default function TransportPage() {
 
   // Edit vehicle mutation
   const editVehicleMutation = useMutation({
-    mutationFn: (data: VehicleFormData) => 
-      db.updateTransportVehicle(editingVehicle?.id, { ...data, school_id: 1 }),
+    mutationFn: (data: VehicleFormData) => {
+      const vehicleData = { ...data, school_id: 1 };
+      if (vehicleData.routeId === 'none') {
+        vehicleData.routeId = '';
+      }
+      return db.updateTransportVehicle(editingVehicle?.id, vehicleData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
@@ -1242,7 +1253,7 @@ export default function TransportPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">কোনো রুট নয়</SelectItem>
+                          <SelectItem value="none">কোনো রুট নয়</SelectItem>
                           {routes.map((route: any) => (
                             <SelectItem key={route.id} value={route.id.toString()}>
                               {route.routeName || route.name}

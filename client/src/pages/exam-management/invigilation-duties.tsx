@@ -61,7 +61,7 @@ export default function InvigilationDuties() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDuty, setEditingDuty] = useState<any>(null);
-  const [filterExam, setFilterExam] = useState<string>("");
+  const [filterExam, setFilterExam] = useState<string>("all");
   const [filterDate, setFilterDate] = useState<string>("");
 
   const { data: duties, isLoading } = useQuery({
@@ -85,7 +85,7 @@ export default function InvigilationDuties() {
         .order("duty_date", { ascending: true })
         .order("start_time", { ascending: true });
 
-      if (filterExam) {
+      if (filterExam && filterExam !== 'all') {
         query = query.eq("exam_id", filterExam);
       }
       if (filterDate) {
@@ -484,7 +484,7 @@ export default function InvigilationDuties() {
                   <SelectValue placeholder="All Exams" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Exams</SelectItem>
+                  <SelectItem value="all">All Exams</SelectItem>
                   {exams?.map((exam) => (
                     <SelectItem key={exam.id} value={exam.id.toString()}>
                       {exam.name}
