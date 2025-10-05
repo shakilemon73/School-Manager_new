@@ -10,6 +10,7 @@ import AuthPage from "@/pages/auth-page";
 import UnifiedAuthPage from "@/pages/auth/unified-auth-page";
 import SimpleLogin from "@/pages/simple-login";
 import RegisterAdminPage from "@/pages/auth/register-admin";
+import SchoolEnrollment from "@/pages/auth/school-enrollment";
 import WelcomePage from "@/pages/welcome";
 
 // Portal Pages
@@ -196,6 +197,8 @@ function AppRoutes() {
       <Route path="/student-login" component={StudentLogin} />
       <Route path="/parent-login" component={ParentLogin} />
       <Route path="/register-admin" component={RegisterAdminPage} />
+      <Route path="/enroll" component={SchoolEnrollment} />
+      <Route path="/school-enrollment" component={SchoolEnrollment} />
       <Route path="/parent" component={ParentPortal} />
       <Route path="/student" component={StudentPortal} />
       
