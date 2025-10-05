@@ -147,11 +147,30 @@ import ParentTeacherMessaging from "@/pages/communication/parent-teacher-messagi
 // Student Welfare Pages
 import CoCurricularActivities from "@/pages/student-welfare/co-curricular-activities";
 import DisciplinaryRecords from "@/pages/student-welfare/disciplinary-records";
+import HealthRecords from "@/pages/student-welfare/health-records";
+import MedicalCheckups from "@/pages/student-welfare/medical-checkups";
+import Vaccinations from "@/pages/student-welfare/vaccinations";
 
 // Exam Management Pages
 import ExamScheduling from "@/pages/exam-management/exam-scheduling";
 import SeatingArrangements from "@/pages/exam-management/seating-arrangements";
 import InvigilationDuties from "@/pages/exam-management/invigilation-duties";
+
+// HR Additional Pages
+import PerformanceAppraisal from "@/pages/hr/performance-appraisal";
+
+// Inventory Additional Pages
+import VendorsPage from "@/pages/inventory/vendors";
+import PurchaseOrdersPage from "@/pages/inventory/purchase-orders";
+
+// Admission Additional Pages
+import AdmissionTests from "@/pages/admission/tests";
+import AdmissionInterviews from "@/pages/admission/interviews";
+
+// Hostel Additional Pages
+import HostelRooms from "@/pages/hostel/rooms";
+import HostelMeals from "@/pages/hostel/meals";
+import HostelAttendance from "@/pages/hostel/attendance";
 
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -255,6 +274,8 @@ function AppRoutes() {
       {/* Direct routes for new enhanced modules */}
       <ProtectedRoute path="/library" component={LibraryPage} />
       <ProtectedRoute path="/inventory" component={InventoryPage} />
+      <ProtectedRoute path="/inventory/vendors" component={VendorsPage} />
+      <ProtectedRoute path="/inventory/purchase-orders" component={PurchaseOrdersPage} />
       <ProtectedRoute path="/transport" component={TransportPage} />
       <ProtectedRoute path="/tools" component={ToolsPage} />
 
@@ -340,6 +361,7 @@ function AppRoutes() {
       <ProtectedRoute path="/hr/leave-management" component={LeaveManagement} />
       <ProtectedRoute path="/hr/staff-attendance" component={StaffAttendance} />
       <ProtectedRoute path="/hr/payroll" component={PayrollSystem} />
+      <ProtectedRoute path="/hr/performance-appraisal" component={PerformanceAppraisal} />
       
       {/* Communication System Routes */}
       <ProtectedRoute path="/communication/announcements" component={AnnouncementsBoard} />
@@ -349,15 +371,23 @@ function AppRoutes() {
       {/* Student Welfare Routes */}
       <ProtectedRoute path="/student-welfare/activities" component={CoCurricularActivities} />
       <ProtectedRoute path="/student-welfare/disciplinary" component={DisciplinaryRecords} />
+      <ProtectedRoute path="/student-welfare/health" component={HealthRecords} />
+      <ProtectedRoute path="/student-welfare/medical-checkups" component={MedicalCheckups} />
+      <ProtectedRoute path="/student-welfare/vaccinations" component={Vaccinations} />
       
       {/* Reports & Analytics */}
       <ProtectedRoute path="/reports" component={ReportsDashboard} />
       
       {/* Hostel Management */}
       <ProtectedRoute path="/hostel" component={HostelManagement} />
+      <ProtectedRoute path="/hostel/rooms" component={HostelRooms} />
+      <ProtectedRoute path="/hostel/meals" component={HostelMeals} />
+      <ProtectedRoute path="/hostel/attendance" component={HostelAttendance} />
       
       {/* Admission Portal */}
       <ProtectedRoute path="/admission" component={AdmissionPortal} />
+      <ProtectedRoute path="/admission/tests" component={AdmissionTests} />
+      <ProtectedRoute path="/admission/interviews" component={AdmissionInterviews} />
       
       {/* Exam Management Routes */}
       <ProtectedRoute path="/exam-management/scheduling" component={ExamScheduling} />
