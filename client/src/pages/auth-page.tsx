@@ -30,6 +30,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 const loginSchema = z.object({
   email: z.string().email('সঠিক ইমেইল ঠিকানা প্রয়োজন'),
@@ -82,9 +83,45 @@ export default function AuthPage() {
         description: "সফলভাবে লগইন হয়েছে",
       });
     } catch (error: any) {
+      const errorMsg = error.message || "অনুগ্রহ করে আবার চেষ্টা করুন";
+      const isBadCredentials = errorMsg.includes("Invalid") || errorMsg.includes("credentials") || errorMsg.includes("invalid_credentials");
+      
       toast({
         title: "লগইন ব্যর্থ",
-        description: error.message || "অনুগ্রহ করে আবার চেষ্টা করুন",
+        description: isBadCredentials 
+          ? "ইমেইল অথবা পাসওয়ার্ড ভুল। পাসওয়ার্ড ভুলে গেলে 'পাসওয়ার্ড রিসেট' ক্লিক করুন।" 
+          : errorMsg,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const email = loginForm.getValues('email');
+    if (!email) {
+      toast({
+        title: "ইমেইল প্রয়োজন",
+        description: "পাসওয়ার্ড রিসেট করার জন্য প্রথমে আপনার ইমেইল লিখুন",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "ইমেইল পাঠানো হয়েছে",
+        description: "আপনার ইমেইলে পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে",
+      });
+    } catch (error: any) {
+      toast({
+        title: "ব্যর্থ",
+        description: error.message || "পাসওয়ার্ড রিসেট ইমেইল পাঠাতে ব্যর্থ",
         variant: "destructive",
       });
     }
@@ -269,6 +306,17 @@ export default function AuthPage() {
                         </FormItem>
                       )}
                     />
+
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline transition-colors"
+                        data-testid="button-forgot-password"
+                      >
+                        পাসওয়ার্ড ভুলে গেছেন?
+                      </button>
+                    </div>
 
                     <Button
                       type="submit"
