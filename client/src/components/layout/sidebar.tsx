@@ -136,6 +136,7 @@ export function Sidebar() {
       color: "purple",
       items: [
         { path: "/academic/subjects", icon: BookOpen, textEn: "Subjects", textBn: "বিষয়সমূহ", textAr: "المواد", badge: null },
+        { path: "/academic/gradebook", icon: ClipboardList, textEn: "Gradebook", textBn: "গ্রেডবুক", textAr: "سجل الدرجات", badge: null },
         { path: "/academic/assignments", icon: FileText, textEn: "Assignments", textBn: "অ্যাসাইনমেন্ট", textAr: "الواجبات", badge: null },
         { path: "/academic/timetable", icon: Calendar, textEn: "Timetable", textBn: "সময়সূচী", textAr: "الجدول", badge: null }
       ]

@@ -111,10 +111,8 @@ export default function DocumentsDashboardUX() {
   const { data: creditBalance, isLoading: creditLoading } = useQuery({
     queryKey: ['credit-stats', 1], // School ID
     queryFn: async () => {
-      // Get current authenticated user ID
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id || 'default-user';
-      return await db.getUserCreditStats(userId, 1);
+      // Get current user stats
+      return await db.getUserStats();
     }
   });
 
