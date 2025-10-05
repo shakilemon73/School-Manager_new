@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, AlertTriangle, Package, TrendingDown, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useSchoolContext } from "@/hooks/use-school-context";
+import { userProfile } from "@/hooks/use-supabase-direct-auth";
 
 interface StockAlert {
   id: number;
@@ -36,7 +36,6 @@ interface InventoryItem {
 }
 
 export default function StockAlerts() {
-  const { schoolId } = useSchoolContext();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAlert, setEditingAlert] = useState<StockAlert | null>(null);
@@ -48,10 +47,22 @@ export default function StockAlerts() {
     alert_status: "active"
   });
 
+  const getCurrentSchoolId = async (): Promise<number> => {
+    try {
+      const schoolId = await userProfile.getCurrentUserSchoolId();
+      if (!schoolId) throw new Error('User school ID not found');
+      return schoolId;
+    } catch (error) {
+      console.error('❌ Failed to get user school ID:', error);
+      return 1;
+    }
+  };
+
   // Fetch stock alerts
   const { data: alerts, isLoading: alertsLoading } = useQuery({
-    queryKey: ['/api/stock-alerts', schoolId],
+    queryKey: ['/api/stock-alerts'],
     queryFn: async () => {
+      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('stock_alerts')
         .select(`
@@ -72,14 +83,14 @@ export default function StockAlerts() {
         item_name: alert.inventory_items?.item_name || 'Unknown Item',
         current_quantity: alert.inventory_items?.quantity || 0
       }));
-    },
-    enabled: !!schoolId
+    }
   });
 
   // Fetch inventory items for dropdown
   const { data: inventoryItems } = useQuery({
-    queryKey: ['/api/inventory-items', schoolId],
+    queryKey: ['/api/inventory-items'],
     queryFn: async () => {
+      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('inventory_items')
         .select('id, item_name, quantity, category')
@@ -88,13 +99,13 @@ export default function StockAlerts() {
       
       if (error) throw error;
       return data as InventoryItem[];
-    },
-    enabled: !!schoolId
+    }
   });
 
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (alertData: any) => {
+      const schoolId = await getCurrentSchoolId();
       if (editingAlert) {
         const { error } = await supabase
           .from('stock_alerts')
@@ -103,14 +114,14 @@ export default function StockAlerts() {
           .eq('school_id', schoolId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error} = await supabase
           .from('stock_alerts')
           .insert({ ...alertData, school_id: schoolId });
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts'] });
       toast({
         title: "Success",
         description: `Stock alert ${editingAlert ? 'updated' : 'created'} successfully`
@@ -130,6 +141,7 @@ export default function StockAlerts() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
+      const schoolId = await getCurrentSchoolId();
       const { error } = await supabase
         .from('stock_alerts')
         .delete()
@@ -138,7 +150,7 @@ export default function StockAlerts() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts'] });
       toast({
         title: "Success",
         description: "Stock alert deleted successfully"

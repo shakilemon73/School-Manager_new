@@ -37,7 +37,19 @@ import {
   Megaphone,
   MessageSquare,
   Trophy,
-  AlertTriangle
+  AlertTriangle,
+  Heart,
+  Syringe,
+  Activity,
+  ShieldCheck,
+  BarChart,
+  Building2,
+  Utensils,
+  BedDouble,
+  ClipboardList,
+  UserCog,
+  Truck,
+  ShoppingCart
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -129,6 +141,20 @@ export function Sidebar() {
       ]
     },
     {
+      id: "exam-management",
+      titleEn: "Exam Management",
+      titleBn: "পরীক্ষা ব্যবস্থাপনা",
+      titleAr: "إدارة الامتحانات",
+      icon: ClipboardCheck,
+      priority: "high",
+      color: "violet",
+      items: [
+        { path: "/exam-management/scheduling", icon: Calendar, textEn: "Exam Scheduling", textBn: "পরীক্ষার সময়সূচী", textAr: "جدولة الامتحانات", badge: null },
+        { path: "/exam-management/seating-arrangements", icon: Users, textEn: "Seating Arrangements", textBn: "আসন বিন্যাস", textAr: "ترتيب المقاعد", badge: null },
+        { path: "/exam-management/invigilation-duties", icon: ShieldCheck, textEn: "Invigilation Duties", textBn: "তত্ত্বাবধান দায়িত্ব", textAr: "واجبات المراقبة", badge: null }
+      ]
+    },
+    {
       id: "people",
       titleEn: "People Management",
       titleBn: "ব্যক্তি ব্যবস্থাপনা",
@@ -177,6 +203,9 @@ export function Sidebar() {
       items: [
         { path: "/management/library", icon: BookOpen, textEn: "Library", textBn: "লাইব্রেরী", textAr: "المكتبة", badge: 5 },
         { path: "/management/inventory", icon: Package, textEn: "Inventory", textBn: "ইনভেন্টরি", textAr: "المخزون", badge: 8 },
+        { path: "/inventory/vendors", icon: Truck, textEn: "Vendors", textBn: "সরবরাহকারী", textAr: "الموردون", badge: null },
+        { path: "/inventory/purchase-orders", icon: ShoppingCart, textEn: "Purchase Orders", textBn: "ক্রয় আদেশ", textAr: "أوامر الشراء", badge: null },
+        { path: "/inventory/stock-alerts", icon: Bell, textEn: "Stock Alerts", textBn: "স্টক সতর্কতা", textAr: "تنبيهات المخزون", badge: null },
         { path: "/management/transport", icon: Bus, textEn: "Transport", textBn: "ট্রান্সপোর্ট", textAr: "النقل", badge: null }
       ]
     },
@@ -213,7 +242,8 @@ export function Sidebar() {
       items: [
         { path: "/hr/leave-management", icon: Calendar, textEn: "Leave Management", textBn: "ছুটি ব্যবস্থাপনা", textAr: "إدارة الإجازات", badge: null },
         { path: "/hr/staff-attendance", icon: ClipboardCheck, textEn: "Staff Attendance", textBn: "কর্মচারী উপস্থিতি", textAr: "حضور الموظفين", badge: null },
-        { path: "/hr/payroll", icon: Wallet, textEn: "Payroll System", textBn: "বেতন ব্যবস্থা", textAr: "نظام الرواتب", badge: null }
+        { path: "/hr/payroll", icon: Wallet, textEn: "Payroll System", textBn: "বেতন ব্যবস্থা", textAr: "نظام الرواتب", badge: null },
+        { path: "/hr/performance-appraisal", icon: UserCog, textEn: "Performance Appraisal", textBn: "কর্মক্ষমতা মূল্যায়ন", textAr: "تقييم الأداء", badge: null }
       ]
     },
     {
@@ -240,7 +270,10 @@ export function Sidebar() {
       color: "rose",
       items: [
         { path: "/student-welfare/activities", icon: Trophy, textEn: "Co-curricular Activities", textBn: "সহশিক্ষা কার্যক্রম", textAr: "الأنشطة اللامنهجية", badge: null },
-        { path: "/student-welfare/disciplinary", icon: AlertTriangle, textEn: "Disciplinary Records", textBn: "শৃঙ্খলা রেকর্ড", textAr: "السجلات التأديبية", badge: null }
+        { path: "/student-welfare/disciplinary", icon: AlertTriangle, textEn: "Disciplinary Records", textBn: "শৃঙ্খলা রেকর্ড", textAr: "السجلات التأديبية", badge: null },
+        { path: "/student-welfare/health", icon: Heart, textEn: "Health Records", textBn: "স্বাস্থ্য রেকর্ড", textAr: "السجلات الصحية", badge: null },
+        { path: "/student-welfare/medical-checkups", icon: Activity, textEn: "Medical Checkups", textBn: "চিকিৎসা পরীক্ষা", textAr: "الفحوصات الطبية", badge: null },
+        { path: "/student-welfare/vaccinations", icon: Syringe, textEn: "Vaccinations", textBn: "টিকাকরণ", textAr: "التطعيمات", badge: null }
       ]
     },
     {
@@ -251,8 +284,10 @@ export function Sidebar() {
       icon: Zap,
       priority: "high",
       color: "yellow",
-      directLink: "/reports",
-      items: []
+      items: [
+        { path: "/reports", icon: BarChart, textEn: "Reports Dashboard", textBn: "রিপোর্ট ড্যাশবোর্ড", textAr: "لوحة التقارير", badge: null },
+        { path: "/reports/custom-builder", icon: ClipboardList, textEn: "Custom Report Builder", textBn: "কাস্টম রিপোর্ট তৈরি", textAr: "منشئ التقارير المخصص", badge: null }
+      ]
     },
     {
       id: "hostel",
@@ -262,8 +297,12 @@ export function Sidebar() {
       icon: Home,
       priority: "medium",
       color: "pink",
-      directLink: "/hostel",
-      items: []
+      items: [
+        { path: "/hostel", icon: Building2, textEn: "Hostel Overview", textBn: "হোস্টেল ওভারভিউ", textAr: "نظرة عامة على السكن", badge: null },
+        { path: "/hostel/rooms", icon: BedDouble, textEn: "Room Management", textBn: "রুম ব্যবস্থাপনা", textAr: "إدارة الغرف", badge: null },
+        { path: "/hostel/meals", icon: Utensils, textEn: "Meal Management", textBn: "খাবার ব্যবস্থাপনা", textAr: "إدارة الوجبات", badge: null },
+        { path: "/hostel/attendance", icon: ClipboardCheck, textEn: "Hostel Attendance", textBn: "হোস্টেল উপস্থিতি", textAr: "حضور السكن", badge: null }
+      ]
     },
     {
       id: "admission",
@@ -273,8 +312,11 @@ export function Sidebar() {
       icon: Users,
       priority: "high",
       color: "cyan",
-      directLink: "/admission",
-      items: []
+      items: [
+        { path: "/admission", icon: FileText, textEn: "Admission Portal", textBn: "ভর্তি পোর্টাল", textAr: "بوابة القبول", badge: null },
+        { path: "/admission/tests", icon: ClipboardList, textEn: "Admission Tests", textBn: "ভর্তি পরীক্ষা", textAr: "اختبارات القبول", badge: null },
+        { path: "/admission/interviews", icon: Users2, textEn: "Interviews", textBn: "সাক্ষাৎকার", textAr: "المقابلات", badge: null }
+      ]
     },
     {
       id: "settings",
@@ -298,6 +340,7 @@ export function Sidebar() {
       blue: active ? 'bg-blue-50 text-blue-700 border-blue-200' : 'hover:bg-blue-50 hover:text-blue-700',
       green: active ? 'bg-green-50 text-green-700 border-green-200' : 'hover:bg-green-50 hover:text-green-700',
       purple: active ? 'bg-purple-50 text-purple-700 border-purple-200' : 'hover:bg-purple-50 hover:text-purple-700',
+      violet: active ? 'bg-violet-50 text-violet-700 border-violet-200' : 'hover:bg-violet-50 hover:text-violet-700',
       orange: active ? 'bg-orange-50 text-orange-700 border-orange-200' : 'hover:bg-orange-50 hover:text-orange-700',
       teal: active ? 'bg-teal-50 text-teal-700 border-teal-200' : 'hover:bg-teal-50 hover:text-teal-700',
       slate: active ? 'bg-slate-50 text-slate-700 border-slate-200' : 'hover:bg-slate-50 hover:text-slate-700',
@@ -314,6 +357,11 @@ export function Sidebar() {
 
   const filteredGroups = navGroups.filter(group => {
     if (!searchTerm) return true;
+    if (group.items.length === 0) {
+      return group.titleEn.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        group.titleBn.includes(searchTerm) ||
+        group.titleAr.includes(searchTerm);
+    }
     return group.items.some(item =>
       item.textEn.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.textBn.includes(searchTerm) ||

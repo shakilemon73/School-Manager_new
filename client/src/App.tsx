@@ -136,6 +136,7 @@ import LeaveManagement from "@/pages/hr/leave-management";
 import StaffAttendance from "@/pages/hr/staff-attendance";
 import PayrollSystem from "@/pages/hr/payroll-system";
 import ReportsDashboard from "@/pages/reports/reports-dashboard";
+import CustomReportBuilder from "@/pages/reports/custom-report-builder";
 import HostelManagement from "@/pages/hostel/hostel-management";
 import AdmissionPortal from "@/pages/admission/admission-portal";
 
@@ -379,6 +380,7 @@ function AppRoutes() {
       
       {/* Reports & Analytics */}
       <ProtectedRoute path="/reports" component={ReportsDashboard} />
+      <ProtectedRoute path="/reports/custom-builder" component={CustomReportBuilder} />
       
       {/* Hostel Management */}
       <ProtectedRoute path="/hostel" component={HostelManagement} />
