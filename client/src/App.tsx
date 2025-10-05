@@ -14,7 +14,6 @@ import SchoolEnrollment from "@/pages/auth/school-enrollment";
 import WelcomePage from "@/pages/welcome";
 
 // Portal Pages
-import LoginPage from "@/pages/auth/login-page";
 import ParentPortal from "@/pages/portals/parent-portal";
 import StudentPortal from "@/pages/portals/student-portal";
 import StudentLogin from "@/pages/portals/student-login";

@@ -120,9 +120,9 @@ export default function SchoolEnrollment() {
         description: "Please check your email to verify your account. You'll receive a confirmation link.",
       });
 
-      // Redirect to login page after successful enrollment
+      // Redirect to auth page after successful enrollment
       setTimeout(() => {
-        setLocation('/login');
+        setLocation('/auth');
       }, 3000);
 
     } catch (err: any) {
@@ -496,8 +496,9 @@ export default function SchoolEnrollment() {
                   Already have an account?{' '}
                   <button
                     type="button"
-                    onClick={() => setLocation('/login')}
+                    onClick={() => setLocation('/auth')}
                     className="text-blue-600 hover:text-blue-500 font-medium"
+                    data-testid="button-signin-link"
                   >
                     Sign in here
                   </button>
