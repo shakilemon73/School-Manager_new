@@ -182,6 +182,19 @@ export default function SimpleLogin() {
             </Button>
           </div>
 
+          <div className="text-center pt-4 border-t">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              New school?{' '}
+              <button
+                type="button"
+                onClick={() => setLocation('/enroll')}
+                className="text-blue-600 hover:text-blue-500 dark:text-blue-400 font-medium"
+              >
+                Enroll your school here
+              </button>
+            </p>
+          </div>
+
           <div className="text-center text-xs text-slate-500">
             <p>Admin: admin@school.com / admin123</p>
           </div>
