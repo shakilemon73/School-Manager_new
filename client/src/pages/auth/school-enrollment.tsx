@@ -141,6 +141,25 @@ export default function SchoolEnrollment() {
         throw authError;
       }
 
+      // Step 3: Create user_school_memberships entry for RLS access control
+      // This is CRITICAL - without this, the admin cannot access their school data
+      const { error: membershipError } = await supabase
+        .from('user_school_memberships')
+        .insert({
+          user_id: authData.user?.id,
+          school_id: schoolId,
+          role: 'admin',
+          is_active: true,
+          permissions: {},
+        });
+
+      if (membershipError) {
+        console.error('Membership creation error:', membershipError);
+        // Rollback: Delete auth user and school if membership creation fails
+        await supabase.from('schools').delete().eq('id', schoolId);
+        throw new Error('Failed to create admin membership: ' + membershipError.message);
+      }
+
       toast({
         title: "স্কুল নিবন্ধন সফল!",
         description: `স্কুল আইডি: ${schoolId} | আপনার ইমেইল যাচাই করুন। একটি নিশ্চিতকরণ লিংক পাঠানো হয়েছে।`,
