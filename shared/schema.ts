@@ -21,7 +21,7 @@ export const users = pgTable("app_users", {
   name: text("name").notNull(),
   email: text("email").unique().notNull(),
   passwordHash: text("password_hash").notNull(),
-  role: text("role").default("user").notNull(), // admin, teacher, student, parent
+  role: text("role").default("user").notNull(), // super_admin (system owner), school_admin (school owner), teacher, student, parent
   schoolId: integer("school_id"),
   studentId: integer("student_id"), // For parent accounts to link to their children
   credits: integer("credits").default(0),

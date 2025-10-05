@@ -743,6 +743,94 @@ export default function ResponsiveDashboard() {
           </div>
         </div>
 
+        {/* School Admin: Portal Access - Integrated access to all portals */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-slate-100">
+                পোর্টাল অ্যাক্সেস
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                শিক্ষক, অভিভাবক ও শিক্ষার্থী পোর্টাল পরিচালনা করুন
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Teacher Portal Access */}
+            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-2 border-green-200 dark:border-green-800" onClick={() => navigateTo('/teacher')}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                    <GraduationCap className="w-7 h-7 text-white" />
+                  </div>
+                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700">
+                    সক্রিয়
+                  </Badge>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+                  শিক্ষক পোর্টাল
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  উপস্থিতি, নম্বর এন্ট্রি, ক্লাস ম্যানেজমেন্ট
+                </p>
+                <div className="flex items-center text-green-600 dark:text-green-400 font-medium text-sm">
+                  পোর্টালে প্রবেশ করুন
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Parent Portal Access */}
+            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-2 border-blue-200 dark:border-blue-800" onClick={() => navigateTo('/parent')}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                    <Users className="w-7 h-7 text-white" />
+                  </div>
+                  <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700">
+                    সক্রিয়
+                  </Badge>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+                  অভিভাবক পোর্টাল
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  সন্তানের রেজাল্ট, উপস্থিতি ও ফি দেখুন
+                </p>
+                <div className="flex items-center text-blue-600 dark:text-blue-400 font-medium text-sm">
+                  পোর্টালে প্রবেশ করুন
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Student Portal Access */}
+            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-2 border-purple-200 dark:border-purple-800" onClick={() => navigateTo('/student')}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                    <BookOpen className="w-7 h-7 text-white" />
+                  </div>
+                  <Badge variant="outline" className="bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700">
+                    সক্রিয়
+                  </Badge>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+                  শিক্ষার্থী পোর্টাল
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  পরীক্ষার রেজাল্ট, রুটিন ও লাইব্রেরি
+                </p>
+                <div className="flex items-center text-purple-600 dark:text-purple-400 font-medium text-sm">
+                  পোর্টালে প্রবেশ করুন
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* Super Admin: Teacher Activity Monitor */}
         <div className="mb-8">
           <TeacherActivityMonitor />

@@ -136,9 +136,12 @@ export function requireRole(allowedRoles: string[]) {
 // Get redirect URL based on user role
 function getRedirectUrlByRole(role: string): string {
   switch (role) {
-    case "admin":
     case "super_admin":
-      return "/admin";
+      // System owner - will have separate control portal (to be created later)
+      return "/portal";
+    case "school_admin":
+      // School owner - unified dashboard with integrated access to all portals
+      return "/dashboard";
     case "teacher":
       return "/teacher";
     case "student":
