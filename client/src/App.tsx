@@ -162,6 +162,7 @@ import PerformanceAppraisal from "@/pages/hr/performance-appraisal";
 // Inventory Additional Pages
 import VendorsPage from "@/pages/inventory/vendors";
 import PurchaseOrdersPage from "@/pages/inventory/purchase-orders";
+import StockAlertsPage from "@/pages/inventory/stock-alerts";
 
 // Admission Additional Pages
 import AdmissionTests from "@/pages/admission/tests";
@@ -276,6 +277,7 @@ function AppRoutes() {
       <ProtectedRoute path="/inventory" component={InventoryPage} />
       <ProtectedRoute path="/inventory/vendors" component={VendorsPage} />
       <ProtectedRoute path="/inventory/purchase-orders" component={PurchaseOrdersPage} />
+      <ProtectedRoute path="/inventory/stock-alerts" component={StockAlertsPage} />
       <ProtectedRoute path="/transport" component={TransportPage} />
       <ProtectedRoute path="/tools" component={ToolsPage} />
 
