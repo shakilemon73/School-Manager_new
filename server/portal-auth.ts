@@ -20,7 +20,7 @@ export async function handleLogin(req: express.Request, res: express.Response) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
@@ -177,7 +177,7 @@ export async function handleRegister(req: express.Request, res: express.Response
       username,
       name,
       email,
-      password: hashedPassword,
+      passwordHash: hashedPassword,
       role: role || "user",
       schoolId,
       phoneNumber,

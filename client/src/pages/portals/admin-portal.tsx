@@ -34,7 +34,7 @@ interface SchoolStats {
 }
 
 export default function AdminPortal() {
-  const { user, isLoading: authLoading } = useSupabaseDirectAuth();
+  const { user, loading: authLoading } = useSupabaseDirectAuth();
   const [, navigate] = useLocation();
 
   // Get school statistics
