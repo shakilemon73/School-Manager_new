@@ -14,12 +14,10 @@ import WelcomePage from "@/pages/welcome";
 
 // Portal Pages
 import LoginPage from "@/pages/auth/login-page";
-import AdminPortal from "@/pages/portals/admin-portal";
 import ParentPortal from "@/pages/portals/parent-portal";
 import StudentPortal from "@/pages/portals/student-portal";
 import StudentLogin from "@/pages/portals/student-login";
 import ParentLogin from "@/pages/portals/parent-login";
-import AdminPanel from "@/pages/admin-panel";
 
 // Student Portal Pages
 import StudentProfile from "@/pages/student/profile";
@@ -111,7 +109,6 @@ import OfficeOrdersPage from "@/pages/documents/office-orders";
 import OMRSheetsPage from "@/pages/documents/omr-sheets";
 import MCQFormatsPage from "@/pages/documents/mcq-formats";
 import DocumentsTemplatesPage from "@/pages/documents/templates";
-import DeveloperPortal from "@/pages/developer-portal";
 import AdminControlPage from "@/pages/admin-control";
 import SchoolAdminDashboard from "@/pages/settings/school-admin-dashboard";
 import RealtimeTestPage from "@/pages/realtime-test";
@@ -199,8 +196,6 @@ function AppRoutes() {
       <Route path="/student-login" component={StudentLogin} />
       <Route path="/parent-login" component={ParentLogin} />
       <Route path="/register-admin" component={RegisterAdminPage} />
-      <Route path="/admin" component={AdminPortal} />
-      <Route path="/admin-panel" component={AdminPanel} />
       <Route path="/parent" component={ParentPortal} />
       <Route path="/student" component={StudentPortal} />
       
@@ -312,9 +307,6 @@ function AppRoutes() {
       <ProtectedRoute path="/video-conferencing" component={VideoConferencing} />
 
 
-
-      {/* Developer Portal - Master control system for managing multiple schools */}
-      <Route path="/portal" component={DeveloperPortal} />
 
       {/* School Admin Dashboard - Pure Supabase school administration */}
       <ProtectedRoute path="/school-admin" component={SchoolAdminDashboard} />
