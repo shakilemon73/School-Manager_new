@@ -112,35 +112,31 @@ export default function SchoolEnrollment() {
 
       const schoolId = schoolData.id;
 
-      // Step 2: Create the school admin auth account with school_id
+      // Step 2: Create the school admin auth account with minimal metadata
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.adminEmail,
         password: data.adminPassword,
         options: {
           data: {
             full_name: data.adminFullName,
-            phone: data.adminPhone,
             role: 'school_admin',
-            school_id: schoolId, // Link to the school record
-            school_name: data.schoolName,
-            school_type: data.schoolType,
-            school_address: data.schoolAddress,
-            school_city: data.schoolCity,
-            school_state: data.schoolState,
-            school_postal_code: data.schoolPostalCode,
-            school_phone: data.schoolPhone,
-            school_email: data.schoolEmail,
-            student_count: data.studentCount,
-            teacher_count: data.teacherCount,
-            enrollment_notes: data.notes,
+            school_id: schoolId,
           },
+          emailRedirectTo: undefined,
         },
       });
 
       if (authError) {
+        console.error('Auth signup error details:', {
+          message: authError.message,
+          status: authError.status,
+          code: (authError as any).code,
+          name: authError.name,
+          full: authError
+        });
         // Rollback: Delete the school record if auth creation fails
         await supabase.from('schools').delete().eq('id', schoolId);
-        throw authError;
+        throw new Error(`Auth Error: ${authError.message}`);
       }
 
       // Step 3: Create user_school_memberships entry for RLS access control
