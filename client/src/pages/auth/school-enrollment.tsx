@@ -95,10 +95,12 @@ export default function SchoolEnrollment() {
         .from('schools')
         .insert({
           name: data.schoolName,
+          type: data.schoolType,
           address: `${data.schoolAddress}, ${data.schoolCity}, ${data.schoolState} ${data.schoolPostalCode}`,
           phone: data.schoolPhone,
           email: data.schoolEmail,
           principal_name: data.adminFullName,
+          principal_phone: data.adminPhone,
         })
         .select()
         .single();

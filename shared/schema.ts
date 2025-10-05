@@ -53,6 +53,7 @@ export const schools = pgTable("schools", {
   email: text("email"),
   website: text("website"),
   principalName: text("principal_name"),
+  principalPhone: text("principal_phone"),
   establishedYear: integer("established_year"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
