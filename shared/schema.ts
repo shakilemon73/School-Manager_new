@@ -2640,3 +2640,23 @@ export const gradeOverridesInsertSchema = createInsertSchema(gradeOverrides).omi
 });
 export type InsertGradeOverride = z.infer<typeof gradeOverridesInsertSchema>;
 export type GradeOverride = typeof gradeOverrides.$inferSelect;
+
+// User School Memberships table - CRITICAL for multi-tenant RLS security
+export const userSchoolMemberships = pgTable("user_school_memberships", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(), // UUID from Supabase auth.users
+  schoolId: integer("school_id").references(() => schools.id).notNull(),
+  role: text("role").notNull(), // super_admin, admin, staff, teacher, student, parent
+  isActive: boolean("is_active").default(true),
+  permissions: json("permissions").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const userSchoolMembershipsInsertSchema = createInsertSchema(userSchoolMemberships).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertUserSchoolMembership = z.infer<typeof userSchoolMembershipsInsertSchema>;
+export type UserSchoolMembership = typeof userSchoolMemberships.$inferSelect;
