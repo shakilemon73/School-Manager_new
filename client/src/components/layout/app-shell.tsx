@@ -26,7 +26,8 @@ export function AppShell({ children }: AppShellProps) {
         
         {/* Main content area with enhanced styling */}
         <main 
-          className={`flex-1 overflow-auto ${isMobile ? 'p-3 pb-20' : 'p-6'}`}
+          className={`flex-1 overflow-auto ${isMobile ? 'p-3' : 'p-6'}`}
+          style={isMobile ? { paddingBottom: 'max(5rem, calc(5rem + env(safe-area-inset-bottom, 0px)))' } : undefined}
           role="main"
           aria-label="Main content"
         >

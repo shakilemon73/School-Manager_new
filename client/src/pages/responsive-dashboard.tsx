@@ -144,7 +144,7 @@ export default function ResponsiveDashboard() {
         documents: 0
       };
     },
-    enabled: !!user,
+    enabled: !!user && !academicYearLoading,
     retry: 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -160,9 +160,13 @@ export default function ResponsiveDashboard() {
         .select('*')
         .eq('school_id', schoolId)
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        return [];
+      }
       
       return data?.map((n: any) => ({
         id: n.id,
@@ -173,7 +177,7 @@ export default function ResponsiveDashboard() {
         read: n.is_read || false
       })) || [];
     },
-    enabled: !!user,
+    enabled: !!user && !academicYearLoading,
     retry: 2,
   });
 
@@ -188,9 +192,13 @@ export default function ResponsiveDashboard() {
         .select('*')
         .eq('school_id', schoolId)
         .eq('is_active', true)
-        .order('usage_count', { ascending: false });
+        .order('usage_count', { ascending: false })
+        .limit(20);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching document templates:', error);
+        return [];
+      }
       
       return data?.map(t => ({
         id: t.id,
@@ -202,7 +210,7 @@ export default function ResponsiveDashboard() {
         isActive: t.is_active || false
       })) || [];
     },
-    enabled: !!user,
+    enabled: !!user && !academicYearLoading,
     retry: 2,
   });
 
@@ -217,9 +225,13 @@ export default function ResponsiveDashboard() {
         .select('*')
         .eq('school_id', schoolId)
         .eq('is_active', true)
-        .order('start_date', { ascending: true });
+        .order('start_date', { ascending: true })
+        .limit(10);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching calendar events:', error);
+        return [];
+      }
       
       return data?.map(e => ({
         id: e.id,
@@ -230,7 +242,7 @@ export default function ResponsiveDashboard() {
         description: e.description || undefined
       })) || [];
     },
-    enabled: !!user,
+    enabled: !!user && !academicYearLoading,
     retry: 2,
   });
 
@@ -249,7 +261,10 @@ export default function ResponsiveDashboard() {
         .order('created_at', { ascending: false })
         .limit(20);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching teacher activities:', error);
+        return [];
+      }
       
       return data?.map(n => ({
         id: n.id,
@@ -260,7 +275,7 @@ export default function ResponsiveDashboard() {
         user_type: 'Teacher'
       })) || [];
     },
-    enabled: !!user,
+    enabled: !!user && !academicYearLoading,
     staleTime: 30000,
     refetchInterval: 30000
   });
@@ -276,6 +291,7 @@ export default function ResponsiveDashboard() {
       const { data: results, error } = await supabase
         .from('exam_results')
         .select('*')
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
         .limit(5);
       
@@ -296,7 +312,7 @@ export default function ResponsiveDashboard() {
         teacher_name: 'Teacher'
       }));
     },
-    enabled: !!user,
+    enabled: !!user && !academicYearLoading,
     staleTime: 30000
   });
 
@@ -314,11 +330,14 @@ export default function ResponsiveDashboard() {
         .order('created_at', { ascending: false })
         .limit(50);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching system activities:', error);
+        return [];
+      }
       
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!user && !academicYearLoading,
     staleTime: 30000,
     refetchInterval: 30000
   });
@@ -361,7 +380,7 @@ export default function ResponsiveDashboard() {
       
       return { topPerformers, needsAttention };
     },
-    enabled: !!user,
+    enabled: !!user && !academicYearLoading,
     staleTime: 60000
   });
 
@@ -419,7 +438,7 @@ export default function ResponsiveDashboard() {
         pendingApprovals: pendingCount.count || 0
       };
     },
-    enabled: !!user,
+    enabled: !!user && !academicYearLoading,
     staleTime: 30000,
     refetchInterval: 30000
   });
@@ -609,7 +628,7 @@ export default function ResponsiveDashboard() {
             </Button>
           </div>
 
-          {statsLoading ? (
+          {(statsLoading || academicYearLoading) ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[...Array(4)].map((_, i) => (
                 <Card key={i} className="animate-pulse">

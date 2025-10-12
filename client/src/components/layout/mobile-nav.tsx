@@ -316,7 +316,8 @@ export function MobileNav() {
 
       {/* Bottom Navigation Bar - Mobile Only */}
       <nav 
-        className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 fixed bottom-0 left-0 right-0 z-40 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-gray-900/95 safe-bottom"
+        className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 fixed bottom-0 left-0 right-0 z-50 shadow-lg backdrop-blur-sm bg-white/95 dark:bg-gray-900/95"
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
         role="navigation"
         aria-label="Mobile navigation"
       >
