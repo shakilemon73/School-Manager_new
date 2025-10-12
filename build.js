@@ -21,9 +21,8 @@ try {
   
   console.log('✅ Client build completed successfully');
   
-  // Push database schema
-  console.log('🗄️  Pushing database schema...');
-  execSync('npm run db:push', { stdio: 'inherit' });
+  // Note: Database schema is managed in Supabase
+  // No need to push schema during build
   
   console.log('✅ Production build completed successfully');
   console.log('🌐 Ready for deployment!');
