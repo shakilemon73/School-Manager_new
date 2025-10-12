@@ -32,10 +32,11 @@ export default function BuyCreditsClean() {
   const { user, schoolId } = useSupabaseDirectAuth();
 
   // Fetch credit packages using direct Supabase
+  // Note: Packages are system-wide, same for all schools
   const { data: packages = [], isLoading } = useQuery<CreditPackage[]>({
-    queryKey: ["credit-packages", schoolId],
-    queryFn: () => db.getCreditPackages(schoolId || 1),
-    enabled: !!schoolId
+    queryKey: ["credit-packages"],
+    queryFn: () => db.getCreditPackages(),
+    enabled: !!user
   });
 
   // Credit purchase mutation using direct Supabase

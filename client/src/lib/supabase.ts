@@ -2872,7 +2872,9 @@ export const db = {
     }
   },
 
-  async getCreditPackages(schoolId: number = 1) {
+  async getCreditPackages() {
+    // Note: credit_packages are SYSTEM-WIDE, not school-specific
+    // All schools see the same packages (controlled by system admin)
     try {
       const { data, error } = await supabase
         .from('credit_packages')
@@ -2943,8 +2945,9 @@ export const db = {
     }
   },
 
-  async getDocumentCosts(schoolId: number = 1) {
-    // Return static document costs - this could be stored in database if needed
+  async getDocumentCosts() {
+    // Return static document costs - system-wide (same for all schools)
+    // This could be stored in database if dynamic management is needed
     return [
       { id: 1, name: "Admit Card", nameBn: "প্রবেশপত্র", requiredCredits: 5, category: "academic" },
       { id: 2, name: "ID Card", nameBn: "পরিচয়পত্র", requiredCredits: 10, category: "identity" },

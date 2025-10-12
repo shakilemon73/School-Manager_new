@@ -5,15 +5,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useMobile } from "@/hooks/use-mobile";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { db } from "@/lib/supabase";
 
 interface Transaction {
   id: number;
   date?: Date;
   createdAt: string;
+  created_at?: string;
   type: "purchase" | "usage";
   amount?: number;
   credits: number;
   paymentMethod?: string;
+  payment_method?: string;
   status: "completed" | "pending" | "failed";
   description: string;
 }
@@ -21,15 +25,19 @@ interface Transaction {
 export default function TransactionsPage() {
   const [_, setLocation] = useLocation();
   const isMobile = useMobile();
+  const { user, schoolId } = useSupabaseDirectAuth();
   
-  // Fetch transaction data from API
+  // Fetch transaction data using direct Supabase with proper school isolation
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ["/api/credit-transactions"],
+    queryKey: ["credit-transactions", user?.id, schoolId],
+    queryFn: () => db.getCreditTransactions(user?.id || '', schoolId || 1),
+    enabled: !!user?.id && !!schoolId
   });
 
   // Group transactions by month
   const groupedTransactions = Array.isArray(transactions) ? transactions.reduce((groups: Record<string, Transaction[]>, transaction) => {
-    const date = new Date(transaction.createdAt);
+    const dateStr = transaction.created_at || transaction.createdAt;
+    const date = new Date(dateStr);
     const monthYear = `${date.getFullYear()}-${date.getMonth() + 1}`;
     
     if (!groups[monthYear]) {
@@ -90,20 +98,26 @@ export default function TransactionsPage() {
                           })}
                         </h3>
                         {monthTransactions
-                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                          .map((transaction) => (
+                          .sort((a, b) => {
+                            const dateA = new Date(a.created_at || a.createdAt).getTime();
+                            const dateB = new Date(b.created_at || b.createdAt).getTime();
+                            return dateB - dateA;
+                          })
+                          .map((transaction) => {
+                            const paymentMethod = transaction.payment_method || transaction.paymentMethod || '';
+                            return (
                             <Card key={transaction.id} className="border-l-4 border-l-primary/20">
                               <CardContent className="p-4">
                                 <div className="flex justify-between items-start">
                                   <div>
                                     <p className="font-medium">{transaction.description}</p>
                                     <p className="text-xs text-muted-foreground mt-1">
-                                      {new Date(transaction.createdAt).toLocaleDateString('bn-BD')} • 
+                                      {new Date(transaction.created_at || transaction.createdAt).toLocaleDateString('bn-BD')} • 
                                       {transaction.type === "purchase" ? 
-                                        ` ${transaction.paymentMethod === "bkash" ? "বিকাশ" : 
-                                          transaction.paymentMethod === "nagad" ? "নগদ" : 
-                                          transaction.paymentMethod === "rocket" ? "রকেট" :
-                                          transaction.paymentMethod === "bank" ? "ব্যাংক" : "অন্যান্য"}` : 
+                                        ` ${paymentMethod === "bkash" ? "বিকাশ" : 
+                                          paymentMethod === "nagad" ? "নগদ" : 
+                                          paymentMethod === "rocket" ? "রকেট" :
+                                          paymentMethod === "bank" ? "ব্যাংক" : "অন্যান্য"}` : 
                                         " ক্রেডিট ব্যবহার"
                                       }
                                     </p>
@@ -124,7 +138,8 @@ export default function TransactionsPage() {
                                 </div>
                               </CardContent>
                             </Card>
-                          ))}
+                          );
+                        })}
                       </div>
                     ))}
                 </div>
@@ -143,20 +158,22 @@ export default function TransactionsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {transactions.map((transaction: Transaction) => (
+                        {transactions.map((transaction: Transaction) => {
+                          const paymentMethod = transaction.payment_method || transaction.paymentMethod || '';
+                          return (
                           <tr key={transaction.id} className="hover:bg-muted/30">
                             <td className="whitespace-nowrap px-4 py-3 text-sm">
-                              {new Date(transaction.createdAt).toLocaleDateString('bn-BD')}
+                              {new Date(transaction.created_at || transaction.createdAt).toLocaleDateString('bn-BD')}
                             </td>
                             <td className="px-4 py-3 text-sm">
                               {transaction.description}
                             </td>
                             <td className="px-4 py-3 text-sm">
                               {transaction.type === "purchase" ? 
-                                `ক্রেডিট ক্রয় (${transaction.paymentMethod === "bkash" ? "বিকাশ" : 
-                                  transaction.paymentMethod === "nagad" ? "নগদ" : 
-                                  transaction.paymentMethod === "rocket" ? "রকেট" :
-                                  transaction.paymentMethod === "bank" ? "ব্যাংক" : "অন্যান্য"})` : 
+                                `ক্রেডিট ক্রয় (${paymentMethod === "bkash" ? "বিকাশ" : 
+                                  paymentMethod === "nagad" ? "নগদ" : 
+                                  paymentMethod === "rocket" ? "রকেট" :
+                                  paymentMethod === "bank" ? "ব্যাংক" : "অন্যান্য"})` : 
                                 "ক্রেডিট ব্যবহার"
                               }
                             </td>
@@ -176,7 +193,8 @@ export default function TransactionsPage() {
                               </div>
                             </td>
                           </tr>
-                        ))}
+                        );
+                        })}
                       </tbody>
                     </table>
                   </div>

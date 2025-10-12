@@ -73,9 +73,10 @@ export default function SupabaseDashboard() {
   const queryClient = useQueryClient();
   
   // Fetch real-time data using direct Supabase calls
+  // Note: Packages are system-wide (no school filtering needed)
   const { data: packages, isLoading: packagesLoading } = useQuery({
-    queryKey: ["credit-packages", schoolId],
-    queryFn: () => db.getCreditPackages(schoolId || 1),
+    queryKey: ["credit-packages"],
+    queryFn: () => db.getCreditPackages(),
     enabled: !!supabaseUser
   });
 
@@ -108,8 +109,8 @@ export default function SupabaseDashboard() {
   const statsLoading = balanceLoading;
 
   const { data: documentCosts, isLoading: costsLoading } = useQuery<DocumentCost[]>({
-    queryKey: ["document-costs", schoolId],
-    queryFn: () => db.getDocumentCosts(schoolId || 1),
+    queryKey: ["document-costs"],
+    queryFn: () => db.getDocumentCosts(),
     enabled: !!supabaseUser
   });
 
