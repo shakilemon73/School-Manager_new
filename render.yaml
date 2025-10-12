@@ -3,7 +3,7 @@ services:
     name: school-management-system
     env: node
     plan: free
-    buildCommand: "npm install && node build.js"
+    buildCommand: "npm install --include=dev && node build.js"
     startCommand: "node start.js"
     envVars:
       - key: NODE_ENV
