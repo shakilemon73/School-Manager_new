@@ -413,16 +413,21 @@ app.use((req, res, next) => {
   // Export serverless handler for Vercel
   const handler = serverless(app);
   
-  if (app.get("env") !== "development") {
-    // For serverless environments (Vercel, Netlify, etc.)
+  // Determine if we're running in a serverless environment
+  const isServerless = process.env.VERCEL || process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME;
+  
+  if (isServerless) {
+    // For serverless environments (Vercel, Netlify, AWS Lambda)
     console.log("✅ Serverless handler configured for production deployment");
   } else {
+    // For traditional server environments (Render, Railway, Heroku, Docker, VPS)
+    const host = app.get("env") === "development" ? "127.0.0.1" : "0.0.0.0";
     server.listen({
       port,
-      host: "127.0.0.1",
+      host,
       reusePort: true,
     }, () => {
-      log(`serving on port ${port}`);
+      log(`🚀 Server running on ${host}:${port} (${app.get("env")} mode)`);
     });
   }
   
