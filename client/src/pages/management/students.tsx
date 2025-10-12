@@ -111,8 +111,9 @@ export default function StudentsPage() {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
+    enabled: !academicYearLoading, // Only fetch when academic year is loaded
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
@@ -372,7 +373,7 @@ export default function StudentsPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || academicYearLoading) {
     return (
       <AppShell>
         <div className="flex items-center justify-center h-64">
