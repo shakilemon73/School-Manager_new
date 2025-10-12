@@ -13,10 +13,10 @@ try {
   console.log('📦 Building client...');
   execSync('vite build', { stdio: 'inherit' });
   
-  // Check if build was successful
-  const distPath = path.resolve('dist', 'public');
+  // Check if build was successful (vite outputs to /public)
+  const distPath = path.resolve('public');
   if (!fs.existsSync(distPath)) {
-    throw new Error('Build failed - dist directory not found');
+    throw new Error('Build failed - public directory not found');
   }
   
   console.log('✅ Client build completed successfully');
