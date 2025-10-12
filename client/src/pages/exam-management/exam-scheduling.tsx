@@ -41,6 +41,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CalendarIcon, Clock, Plus, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { userProfile } from "@/hooks/use-supabase-direct-auth";
 
 const examScheduleSchema = z.object({
   examId: z.number().min(1, "Exam is required"),
@@ -114,15 +115,18 @@ export default function ExamScheduling() {
 
   const form = useForm<ExamScheduleForm>({
     resolver: zodResolver(examScheduleSchema),
-    defaultValues: {
-      examId: 0,
-      subject: "",
-      date: "",
-      startTime: "",
-      endTime: "",
-      fullMarks: 100,
-      passMarks: 33,
-      schoolId: 1,
+    defaultValues: async () => {
+      const schoolId = await userProfile.getCurrentUserSchoolId();
+      return {
+        examId: 0,
+        subject: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+        fullMarks: 100,
+        passMarks: 33,
+        schoolId: schoolId,
+      };
     },
   });
 

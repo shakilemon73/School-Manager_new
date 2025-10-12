@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/lib/supabase';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { 
   Search, 
   Package, 
@@ -83,6 +84,12 @@ export default function InventoryPage() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [editingItem, setEditingItem] = useState<any>(null);
 
+  const getCurrentSchoolId = async (): Promise<number> => {
+    const schoolId = await userProfile.getCurrentUserSchoolId();
+    if (!schoolId) throw new Error('School ID not found');
+    return schoolId;
+  };
+
   // Enhanced form handling following Luke Wroblewski's principles
   const itemForm = useForm<ItemFormData>({
     resolver: zodResolver(itemSchema),
@@ -122,7 +129,8 @@ export default function InventoryPage() {
     queryKey: ['inventory-items', { schoolId: 1 }],
     queryFn: async () => {
       console.log('🔄 Fetching inventory items directly from Supabase...');
-      const items = await db.getInventoryItems(1);
+      const schoolId = await getCurrentSchoolId();
+      const items = await db.getInventoryItems(schoolId);
       console.log('✅ Inventory items from Supabase:', items?.length || 0);
       return items || [];
     },
@@ -133,7 +141,8 @@ export default function InventoryPage() {
     queryKey: ['inventory-movements', { schoolId: 1 }],
     queryFn: async () => {
       console.log('🔄 Fetching inventory movements directly from Supabase...');
-      const movements = await db.getInventoryMovements(1);
+      const schoolId = await getCurrentSchoolId();
+      const movements = await db.getInventoryMovements(schoolId);
       console.log('✅ Inventory movements from Supabase:', movements?.length || 0);
       return movements || [];
     },
@@ -144,7 +153,8 @@ export default function InventoryPage() {
     queryKey: ['inventory-stats', { schoolId: 1 }],
     queryFn: async () => {
       console.log('🔄 Fetching inventory stats directly from Supabase...');
-      const stats = await db.getInventoryStats(1);
+      const schoolId = await getCurrentSchoolId();
+      const stats = await db.getInventoryStats(schoolId);
       console.log('✅ Inventory stats from Supabase:', stats);
       return stats || { total_items: 0, low_stock_items: 0 };
     },
@@ -155,8 +165,9 @@ export default function InventoryPage() {
     queryKey: ['inventory-low-stock', { schoolId: 1 }],
     queryFn: async () => {
       console.log('🔄 Fetching low stock items directly from Supabase...');
+      const schoolId = await getCurrentSchoolId();
       // Get items where current_quantity <= minimum_threshold
-      const items = await db.getInventoryItems(1);
+      const items = await db.getInventoryItems(schoolId);
       const lowStockItems = items?.filter(item => item.current_quantity <= item.minimum_threshold) || [];
       console.log('✅ Low stock items from Supabase:', lowStockItems?.length || 0);
       return lowStockItems;
@@ -168,7 +179,8 @@ export default function InventoryPage() {
   const addItemMutation = useMutation({
     mutationFn: async (data: ItemFormData) => {
       console.log('🔄 Adding inventory item via Supabase...', data);
-      const itemWithSchool = { ...data, school_id: 1 };
+      const schoolId = await getCurrentSchoolId();
+      const itemWithSchool = { ...data, school_id: schoolId };
       const result = await db.createInventoryItem(itemWithSchool);
       console.log('✅ Inventory item added via Supabase:', result);
       return result;
@@ -196,13 +208,14 @@ export default function InventoryPage() {
   const stockMovementMutation = useMutation({
     mutationFn: async (data: StockMovementFormData) => {
       console.log('🔄 Creating inventory movement via Supabase...', data);
+      const schoolId = await getCurrentSchoolId();
       const movementWithSchool = { 
         item_id: parseInt(data.itemId), 
         type: data.type, 
         quantity: data.quantity, 
         reason: data.reason, 
         reference_number: data.reference, 
-        school_id: 1 
+        school_id: schoolId 
       };
       const result = await db.createInventoryMovement(movementWithSchool);
       console.log('✅ Inventory movement created via Supabase:', result);

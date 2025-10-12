@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { Calendar, Clock, Plus, Edit2 } from 'lucide-react';
 import { TimetableSlot, Period, Subject } from '@/lib/new-features-types';
 
@@ -16,14 +17,21 @@ export default function TimetablePage() {
   const [selectedClass, setSelectedClass] = useState('Class 6');
   const [selectedSection, setSelectedSection] = useState('A');
 
+  const getCurrentSchoolId = async (): Promise<number> => {
+    const schoolId = await userProfile.getCurrentUserSchoolId();
+    if (!schoolId) throw new Error('School ID not found');
+    return schoolId;
+  };
+
   // Fetch periods
   const { data: periods } = useQuery({
     queryKey: ['/api/periods'],
     queryFn: async () => {
+      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('periods')
         .select('*')
-        .eq('school_id', 1)
+        .eq('school_id', schoolId)
         .order('period_number');
       
       if (error) throw error;
@@ -35,6 +43,7 @@ export default function TimetablePage() {
   const { data: slots, isLoading } = useQuery({
     queryKey: ['/api/timetable', selectedClass, selectedSection],
     queryFn: async () => {
+      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('timetable_slots')
         .select(`
@@ -42,7 +51,7 @@ export default function TimetablePage() {
           subjects (subject_name),
           teachers (name)
         `)
-        .eq('school_id', 1)
+        .eq('school_id', schoolId)
         .eq('class', selectedClass)
         .eq('section', selectedSection);
       
@@ -55,10 +64,11 @@ export default function TimetablePage() {
   const { data: subjects } = useQuery({
     queryKey: ['/api/subjects'],
     queryFn: async () => {
+      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('subjects')
         .select('*')
-        .eq('school_id', 1);
+        .eq('school_id', schoolId);
       
       if (error) throw error;
       return data as Subject[];

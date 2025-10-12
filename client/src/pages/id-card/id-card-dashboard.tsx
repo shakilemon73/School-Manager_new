@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/supabase';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 
 interface IdCardStats {
   totalGenerated: number;
@@ -36,12 +37,13 @@ interface Template {
 
 export default function IdCardDashboard() {
   const { toast } = useToast();
+  const { schoolId } = useSupabaseDirectAuth();
 
   // Fetch dashboard statistics
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['id-cards', 'stats'],
+    queryKey: ['id-cards', 'stats', schoolId],
     queryFn: async () => {
-      const schoolId = 1; // TODO: Get from user context/session in production
+      if (!schoolId) throw new Error('School ID not found');
       const data = await db.getIdCardStats(schoolId);
       return {
         totalGenerated: data.total_cards,
@@ -53,9 +55,9 @@ export default function IdCardDashboard() {
 
   // Fetch recent history
   const { data: recentHistory, isLoading: historyLoading } = useQuery({
-    queryKey: ['id-cards', 'recent'],
+    queryKey: ['id-cards', 'recent', schoolId],
     queryFn: async () => {
-      const schoolId = 1; // TODO: Get from user context/session in production
+      if (!schoolId) throw new Error('School ID not found');
       const data = await db.getRecentIdCards(schoolId, 10);
       return data.map((card: any) => ({
         id: card.id.toString(),

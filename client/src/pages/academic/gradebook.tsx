@@ -57,11 +57,13 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { InsertAssessment, InsertStudentScore } from '@shared/schema';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 
 export default function Gradebook() {
   const { toast } = useToast();
   const { language } = useLanguage();
   const queryClient = useQueryClient();
+  const { schoolId } = useSupabaseDirectAuth();
 
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
@@ -71,8 +73,6 @@ export default function Gradebook() {
   const [bulkEntryMode, setBulkEntryMode] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingScores, setEditingScores] = useState<Record<string, string>>({});
-
-  const schoolId = 1;
 
   const { data: subjects, isLoading: subjectsLoading } = useQuery({
     queryKey: ['subjects', schoolId],

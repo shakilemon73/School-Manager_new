@@ -175,6 +175,9 @@ export function registerInventoryRoutes(app: Express) {
     try {
       const validatedData = itemSchema.parse(req.body);
       
+      // Get school ID from authenticated user
+      const schoolId = req.user?.user_metadata?.school_id || req.user?.school_id || 1;
+      
       const [newItem] = await db.insert(inventoryItems).values({
         name: validatedData.name,
         nameBn: validatedData.nameInBangla,
@@ -188,7 +191,7 @@ export function registerInventoryRoutes(app: Express) {
         minimumThreshold: validatedData.minimumStock,
         location: validatedData.location || 'Main Store',
         condition: 'good',
-        schoolId: 1
+        schoolId: schoolId
       }).returning();
       
       res.status(201).json(newItem);
@@ -290,6 +293,9 @@ export function registerInventoryRoutes(app: Express) {
         newQuantity = validatedData.quantity;
       }
       
+      // Get school ID from authenticated user
+      const schoolId = req.user?.user_metadata?.school_id || req.user?.school_id || 1;
+      
       // Record movement
       const [movement] = await db.insert(inventoryMovements).values({
         itemId: validatedData.itemId,
@@ -298,7 +304,7 @@ export function registerInventoryRoutes(app: Express) {
         reason: validatedData.reason,
         reference: validatedData.reference,
         notes: validatedData.notes,
-        schoolId: 1,
+        schoolId: schoolId,
         createdBy: req.user?.id
       }).returning();
       

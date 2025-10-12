@@ -33,6 +33,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { db, supabase } from '@/lib/supabase';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -109,11 +110,18 @@ export default function FinancesPage() {
   const [reportType, setReportType] = useState('summary');
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
+  const getCurrentSchoolId = async (): Promise<number> => {
+    const schoolId = await userProfile.getCurrentUserSchoolId();
+    if (!schoolId) throw new Error('School ID not found');
+    return schoolId;
+  };
+
   // Fetch financial data from Supabase
   const { data: financialStats } = useQuery({
     queryKey: ['finance-stats'],
     queryFn: async () => {
-      const stats = await db.getFinancialStats(1); // schoolId = 1, RLS will handle filtering
+      const schoolId = await getCurrentSchoolId();
+      const stats = await db.getFinancialStats(schoolId);
       return stats;
     },
   });
@@ -121,7 +129,8 @@ export default function FinancesPage() {
   const { data: transactions = [], isLoading: transactionsLoading } = useQuery({
     queryKey: ['finance-transactions'],
     queryFn: async () => {
-      const data = await db.getFinancialTransactions(1); // schoolId = 1, RLS will handle filtering
+      const schoolId = await getCurrentSchoolId();
+      const data = await db.getFinancialTransactions(schoolId);
       return data;
     },
   });
@@ -143,10 +152,11 @@ export default function FinancesPage() {
   // Create transaction mutation
   const createTransaction = useMutation({
     mutationFn: async (data: TransactionFormData) => {
+      const schoolId = await getCurrentSchoolId();
       return await db.createFinancialTransaction({
         ...data,
         amount: parseFloat(data.amount),
-        schoolId: 1,
+        schoolId,
         createdAt: new Date().toISOString().split('T')[0]
       });
     },

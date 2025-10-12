@@ -42,6 +42,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { UserCheck, Plus, Pencil, Trash2, CalendarIcon, Clock, Filter } from "lucide-react";
 import { format } from "date-fns";
+import { userProfile } from "@/hooks/use-supabase-direct-auth";
 
 const invigilationDutySchema = z.object({
   examId: z.number().min(1, "Exam is required"),
@@ -128,16 +129,19 @@ export default function InvigilationDuties() {
 
   const form = useForm<InvigilationDutyForm>({
     resolver: zodResolver(invigilationDutySchema),
-    defaultValues: {
-      examId: 0,
-      teacherId: 0,
-      roomNumber: "",
-      dutyType: "Main Invigilator",
-      dutyDate: "",
-      startTime: "",
-      endTime: "",
-      notes: "",
-      schoolId: 1,
+    defaultValues: async () => {
+      const schoolId = await userProfile.getCurrentUserSchoolId();
+      return {
+        examId: 0,
+        teacherId: 0,
+        roomNumber: "",
+        dutyType: "Main Invigilator",
+        dutyDate: "",
+        startTime: "",
+        endTime: "",
+        notes: "",
+        schoolId: schoolId,
+      };
     },
   });
 

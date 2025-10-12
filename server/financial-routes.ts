@@ -59,9 +59,12 @@ export function registerFinancialRoutes(app: Express) {
 
   app.post('/api/financial/transactions', requireAuth, async (req: Request, res: Response) => {
     try {
+      // Get school ID from authenticated user
+      const schoolId = req.user?.user_metadata?.school_id || req.user?.school_id || 1;
+      
       const validatedData = insertTransactionSchema.parse({
         ...req.body,
-        schoolId: 1,
+        schoolId: schoolId,
         createdBy: req.user.id
       });
       
@@ -234,9 +237,12 @@ export function registerFinancialRoutes(app: Express) {
 
   app.post('/api/financial/budgets', requireAuth, async (req: Request, res: Response) => {
     try {
+      // Get school ID from authenticated user
+      const schoolId = req.user?.user_metadata?.school_id || req.user?.school_id || 1;
+      
       const validatedData = insertBudgetSchema.parse({
         ...req.body,
-        schoolId: 1,
+        schoolId: schoolId,
         createdBy: req.user.id
       });
       
@@ -273,9 +279,12 @@ export function registerFinancialRoutes(app: Express) {
 
   app.post('/api/financial/fee-structures', requireAuth, async (req: Request, res: Response) => {
     try {
+      // Get school ID from authenticated user
+      const schoolId = req.user?.user_metadata?.school_id || req.user?.school_id || 1;
+      
       const validatedData = insertFeeStructureSchema.parse({
         ...req.body,
-        schoolId: 1,
+        schoolId: schoolId,
         createdBy: req.user.id
       });
       
@@ -320,9 +329,12 @@ export function registerFinancialRoutes(app: Express) {
 
   app.post('/api/financial/student-fees', requireAuth, async (req: Request, res: Response) => {
     try {
+      // Get school ID from authenticated user
+      const schoolId = req.user?.user_metadata?.school_id || req.user?.school_id || 1;
+      
       const validatedData = insertStudentFeeSchema.parse({
         ...req.body,
-        schoolId: 1,
+        schoolId: schoolId,
         createdBy: req.user.id
       });
       

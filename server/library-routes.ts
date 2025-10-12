@@ -124,8 +124,11 @@ export function registerLibraryRoutes(app: Express) {
         description
       } = req.body;
 
+      // Get school ID from authenticated user
+      const schoolId = (req as any).user?.user_metadata?.school_id || (req as any).user?.school_id || 1;
+
       const newBook = await db.insert(libraryBooks).values({
-        schoolId: 1, // Default school ID
+        schoolId: schoolId,
         title,
         titleBn,
         author,

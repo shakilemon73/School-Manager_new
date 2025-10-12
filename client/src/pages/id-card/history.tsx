@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Search, Download, Eye, MoreHorizontal } from 'lucide-react';
 import { db } from '@/lib/supabase';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 
 interface HistoryItem {
   id: string;
@@ -24,15 +25,16 @@ interface HistoryItem {
 }
 
 export default function IdCardHistory() {
+  const { schoolId } = useSupabaseDirectAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [templateFilter, setTemplateFilter] = useState('all');
 
   // Fetch history data
   const { data: history, isLoading } = useQuery({
-    queryKey: ['id-cards', 'history'],
+    queryKey: ['id-cards', 'history', schoolId],
     queryFn: async () => {
-      const schoolId = 1; // TODO: Get from user context/session in production
+      if (!schoolId) throw new Error('School ID not found');
       const data = await db.getIdCardHistory(schoolId, 50);
       return data.map((card: any) => ({
         id: card.id.toString(),

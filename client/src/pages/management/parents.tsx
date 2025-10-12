@@ -34,6 +34,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/supabase';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { ProfileDetailsModal } from '@/components/profile-details-modal';
 import { Trash2, Edit, Plus, Users, CheckCircle, AlertCircle, Search, Download } from 'lucide-react';
 
@@ -58,11 +59,18 @@ export default function ParentsPage() {
     emergencyContact: '',
   });
 
+  const getCurrentSchoolId = async (): Promise<number> => {
+    const schoolId = await userProfile.getCurrentUserSchoolId();
+    if (!schoolId) throw new Error('School ID not found');
+    return schoolId;
+  };
+
   // Fetch parents from Supabase
   const { data: parentsData = [], isLoading, error, refetch } = useQuery({
     queryKey: ['parents'],
     queryFn: async () => {
-      const data = await db.getParents(1); // schoolId = 1, RLS will handle filtering
+      const schoolId = await getCurrentSchoolId();
+      const data = await db.getParents(schoolId);
       return data;
     },
     staleTime: 0,
@@ -72,11 +80,12 @@ export default function ParentsPage() {
   // Create parent mutation
   const createParentMutation = useMutation({
     mutationFn: async (parent: any) => {
+      const schoolId = await getCurrentSchoolId();
       const parentData = {
         ...parent,
         parentId: parent.parentId || `P${Date.now()}`,
         status: 'active',
-        schoolId: 1
+        schoolId
       };
       
       return await db.createParent(parentData);

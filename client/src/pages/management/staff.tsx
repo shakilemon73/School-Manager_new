@@ -34,6 +34,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/supabase';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { ProfileDetailsModal } from '@/components/profile-details-modal';
 import { Trash2, Edit, Plus, Users, CheckCircle, AlertCircle, Search, Download } from 'lucide-react';
 
@@ -58,13 +59,20 @@ export default function StaffPage() {
     salary: '',
   });
 
+  const getCurrentSchoolId = async (): Promise<number> => {
+    const schoolId = await userProfile.getCurrentUserSchoolId();
+    if (!schoolId) throw new Error('School ID not found');
+    return schoolId;
+  };
+
   // Fetch staff from Supabase
   const { data: staffData = [], isLoading, error, refetch } = useQuery({
     queryKey: ['staff'],
     queryFn: async () => {
-      console.log('🔍 Fetching staff data for school ID:', 1);
+      const schoolId = await getCurrentSchoolId();
+      console.log('🔍 Fetching staff data for school ID:', schoolId);
       try {
-        const data = await db.getStaff(1); // schoolId = 1, RLS will handle filtering
+        const data = await db.getStaff(schoolId);
         console.log('✅ Staff data received:', data);
         return data;
       } catch (error) {
@@ -79,13 +87,14 @@ export default function StaffPage() {
   // Create staff mutation
   const createStaffMutation = useMutation({
     mutationFn: async (staff: any) => {
+      const schoolId = await getCurrentSchoolId();
       const staffData = {
         ...staff,
         staffId: staff.staffId || `STF${Date.now()}`,
         salary: parseInt(staff.salary) || 0,
         joinDate: staff.joinDate || new Date().toISOString().split('T')[0],
         status: 'active',
-        schoolId: 1
+        schoolId
       };
       
       return await db.createStaff(staffData);

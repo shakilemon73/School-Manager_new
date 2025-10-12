@@ -141,10 +141,12 @@ export default function DocumentsDashboardUX() {
 
   // Generate document with credit deduction using Supabase
   const generateDocumentMutation = useMutation({
-    mutationFn: async (data: { templateId: number; documentType: string; studentIds: number[] }) => {
+    mutationFn: async (data: { templateId: number; documentType: string; studentIds: number[]; schoolId?: number }) => {
+      const { userProfile } = await import('@/hooks/use-supabase-direct-auth');
+      const schoolId = data.schoolId || await userProfile.getCurrentUserSchoolId();
       return await db.generateDocument({
         ...data,
-        schoolId: 1 // School ID 1
+        schoolId: schoolId
       });
     },
     onSuccess: (data) => {

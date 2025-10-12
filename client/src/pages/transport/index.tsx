@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/lib/supabase';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { 
   Search, 
   Bus, 
@@ -79,6 +80,7 @@ type StudentTransportFormData = z.infer<typeof studentTransportSchema>;
 export default function TransportPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { schoolId } = useSupabaseDirectAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -134,31 +136,51 @@ export default function TransportPage() {
 
   // Real-time data queries
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery({
-    queryKey: ['transport-vehicles'],
-    queryFn: async () => await db.getTransportVehicles(1),
+    queryKey: ['transport-vehicles', schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
+      return await db.getTransportVehicles(schoolId);
+    },
+    enabled: !!schoolId,
     refetchInterval: 30000,
   });
 
   const { data: routes = [], isLoading: routesLoading } = useQuery({
-    queryKey: ['transport-routes'],
-    queryFn: async () => await db.getTransportRoutes(1),
+    queryKey: ['transport-routes', schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
+      return await db.getTransportRoutes(schoolId);
+    },
+    enabled: !!schoolId,
     refetchInterval: 30000,
   });
 
   const { data: transportStats = {} } = useQuery({
-    queryKey: ['transport-stats'],
-    queryFn: async () => await db.getTransportStats(1),
+    queryKey: ['transport-stats', schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
+      return await db.getTransportStats(schoolId);
+    },
+    enabled: !!schoolId,
     refetchInterval: 60000,
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['students'],
-    queryFn: async () => await db.getStudents(1),
+    queryKey: ['students', schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
+      return await db.getStudents(schoolId);
+    },
+    enabled: !!schoolId,
   });
 
   const { data: studentTransport = [] } = useQuery({
-    queryKey: ['transport-students'],
-    queryFn: async () => await db.getTransportAssignments(1),
+    queryKey: ['transport-students', schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
+      return await db.getTransportAssignments(schoolId);
+    },
+    enabled: !!schoolId,
     refetchInterval: 30000,
   });
 
@@ -198,7 +220,8 @@ export default function TransportPage() {
   // Mutations for CRUD operations
   const addVehicleMutation = useMutation({
     mutationFn: (data: VehicleFormData) => {
-      const vehicleData = { ...data, school_id: 1 };
+      if (!schoolId) throw new Error('School ID not found');
+      const vehicleData = { ...data, school_id: schoolId };
       if (vehicleData.routeId === 'none') {
         vehicleData.routeId = '';
       }
@@ -224,7 +247,10 @@ export default function TransportPage() {
   });
 
   const addRouteMutation = useMutation({
-    mutationFn: (data: RouteFormData) => db.createTransportRoute({ ...data, school_id: 1 }),
+    mutationFn: (data: RouteFormData) => {
+      if (!schoolId) throw new Error('School ID not found');
+      return db.createTransportRoute({ ...data, school_id: schoolId });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-routes'] });
       setIsAddRouteOpen(false);
@@ -244,7 +270,10 @@ export default function TransportPage() {
   });
 
   const assignStudentMutation = useMutation({
-    mutationFn: (data: StudentTransportFormData) => db.createTransportAssignment({ ...data, school_id: 1 }),
+    mutationFn: (data: StudentTransportFormData) => {
+      if (!schoolId) throw new Error('School ID not found');
+      return db.createTransportAssignment({ ...data, school_id: schoolId });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-students'] });
       queryClient.invalidateQueries({ queryKey: ['transport-stats'] });
@@ -267,7 +296,8 @@ export default function TransportPage() {
   // Edit vehicle mutation
   const editVehicleMutation = useMutation({
     mutationFn: (data: VehicleFormData) => {
-      const vehicleData = { ...data, school_id: 1 };
+      if (!schoolId) throw new Error('School ID not found');
+      const vehicleData = { ...data, school_id: schoolId };
       if (vehicleData.routeId === 'none') {
         vehicleData.routeId = '';
       }
@@ -295,8 +325,10 @@ export default function TransportPage() {
 
   // Edit route mutation
   const editRouteMutation = useMutation({
-    mutationFn: (data: RouteFormData) => 
-      db.updateTransportRoute(editingRoute?.id, { ...data, school_id: 1 }),
+    mutationFn: (data: RouteFormData) => {
+      if (!schoolId) throw new Error('School ID not found');
+      return db.updateTransportRoute(editingRoute?.id, { ...data, school_id: schoolId });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transport-routes'] });
       queryClient.invalidateQueries({ queryKey: ['transport-stats'] });

@@ -52,6 +52,9 @@ export function registerIdCardRoutes(app: Express) {
         where: eq(students.studentId, data.studentId)
       });
       
+      // Get school ID from authenticated user
+      const schoolId = (req as any).user?.user_metadata?.school_id || (req as any).user?.school_id || 1;
+      
       if (!student) {
         const [newStudent] = await db.insert(students).values({
           name: data.studentName,
@@ -67,7 +70,7 @@ export function registerIdCardRoutes(app: Express) {
           guardianPhone: data.guardianPhone,
           presentAddress: data.address,
           photo: data.photo,
-          schoolId: 1
+          schoolId: schoolId
         }).returning();
         
         student = newStudent;
@@ -94,7 +97,7 @@ export function registerIdCardRoutes(app: Express) {
         schoolAddress: data.schoolAddress,
         eiin: data.eiin,
         validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        schoolId: 1,
+        schoolId: schoolId,
         generatedBy: 1
       }).returning();
       

@@ -41,6 +41,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Users, Plus, Pencil, Trash2, Wand2, Filter } from "lucide-react";
+import { userProfile } from "@/hooks/use-supabase-direct-auth";
 
 const seatingArrangementSchema = z.object({
   examId: z.number().min(1, "Exam is required"),
@@ -126,15 +127,18 @@ export default function SeatingArrangements() {
 
   const form = useForm<SeatingArrangementForm>({
     resolver: zodResolver(seatingArrangementSchema),
-    defaultValues: {
-      examId: 0,
-      studentId: 0,
-      roomNumber: "",
-      seatNumber: "",
-      rowNumber: 1,
-      columnNumber: 1,
-      instructions: "",
-      schoolId: 1,
+    defaultValues: async () => {
+      const schoolId = await userProfile.getCurrentUserSchoolId();
+      return {
+        examId: 0,
+        studentId: 0,
+        roomNumber: "",
+        seatNumber: "",
+        rowNumber: 1,
+        columnNumber: 1,
+        instructions: "",
+        schoolId: schoolId,
+      };
     },
   });
 
@@ -227,6 +231,7 @@ export default function SeatingArrangements() {
 
       if (studentsError) throw studentsError;
 
+      const schoolId = await userProfile.getCurrentUserSchoolId();
       const arrangements = examStudents.map((student, index) => ({
         exam_id: examId,
         student_id: student.id,
@@ -234,7 +239,7 @@ export default function SeatingArrangements() {
         seat_number: `S${index + 1}`,
         row_number: Math.floor(index / columns) + 1,
         column_number: (index % columns) + 1,
-        school_id: 1,
+        school_id: schoolId,
       }));
 
       const { error } = await supabase

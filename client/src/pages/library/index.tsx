@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/lib/supabase';
+import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { 
   Search, 
   BookOpen, 
@@ -73,6 +74,12 @@ export default function LibraryPage() {
   const [isBorrowBookOpen, setIsBorrowBookOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<any>(null);
 
+  const getCurrentSchoolId = async (): Promise<number> => {
+    const schoolId = await userProfile.getCurrentUserSchoolId();
+    if (!schoolId) throw new Error('School ID not found');
+    return schoolId;
+  };
+
   // Enhanced form handling following Luke Wroblewski's principles
   const bookForm = useForm<BookFormData>({
     resolver: zodResolver(bookSchema),
@@ -104,9 +111,10 @@ export default function LibraryPage() {
   const { data: books = [], isLoading: booksLoading } = useQuery({
     queryKey: ['library-books'],
     queryFn: async () => {
-      console.log('🔍 Fetching library books for school ID:', 1);
+      const schoolId = await getCurrentSchoolId();
+      console.log('🔍 Fetching library books for school ID:', schoolId);
       try {
-        const data = await db.getLibraryBooks(1); // schoolId = 1, RLS will handle filtering
+        const data = await db.getLibraryBooks(schoolId);
         console.log('✅ Library books received:', data);
         return data || [];
       } catch (error) {
@@ -121,9 +129,10 @@ export default function LibraryPage() {
   const { data: borrowedBooks = [], isLoading: borrowedLoading } = useQuery({
     queryKey: ['library-borrowed'],
     queryFn: async () => {
-      console.log('🔍 Fetching borrowed books for school ID:', 1);
+      const schoolId = await getCurrentSchoolId();
+      console.log('🔍 Fetching borrowed books for school ID:', schoolId);
       try {
-        const data = await db.getBorrowedBooks(1);
+        const data = await db.getBorrowedBooks(schoolId);
         console.log('✅ Borrowed books received:', data);
         return data || [];
       } catch (error) {
@@ -138,9 +147,10 @@ export default function LibraryPage() {
   const { data: libraryStats = {}, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['library-stats'],
     queryFn: async () => {
-      console.log('🔍 Fetching library stats for school ID:', 1);
+      const schoolId = await getCurrentSchoolId();
+      console.log('🔍 Fetching library stats for school ID:', schoolId);
       try {
-        const data = await db.getLibraryStats(1);
+        const data = await db.getLibraryStats(schoolId);
         console.log('✅ Library stats received:', data);
         return data || { totalBooks: 0, borrowedBooks: 0, availableBooks: 0 };
       } catch (error) {
@@ -155,9 +165,10 @@ export default function LibraryPage() {
   const { data: students = [] } = useQuery({
     queryKey: ['students'],
     queryFn: async () => {
-      console.log('🔍 Fetching students for school ID:', 1);
+      const schoolId = await getCurrentSchoolId();
+      console.log('🔍 Fetching students for school ID:', schoolId);
       try {
-        const data = await db.getStudents(1);
+        const data = await db.getStudents(schoolId);
         console.log('✅ Students received:', data);
         return data || [];
       } catch (error) {
@@ -172,13 +183,14 @@ export default function LibraryPage() {
   // Mutations for CRUD operations with direct Supabase
   const addBookMutation = useMutation({
     mutationFn: async (data: BookFormData) => {
+      const schoolId = await getCurrentSchoolId();
       const bookData = {
         ...data,
         title_bn: data.titleBn,
         publish_year: data.publishYear,
         total_copies: data.totalCopies,
         available_copies: data.totalCopies,
-        school_id: 1
+        school_id: schoolId
       };
       
       return await db.createLibraryBook(bookData);
@@ -205,7 +217,8 @@ export default function LibraryPage() {
   const borrowBookMutation = useMutation({
     mutationFn: async (data: BorrowFormData) => {
       console.log('🔄 Borrowing book via Supabase...', data);
-      const result = await db.borrowBook(parseInt(data.bookId), parseInt(data.studentId), 1);
+      const schoolId = await getCurrentSchoolId();
+      const result = await db.borrowBook(parseInt(data.bookId), parseInt(data.studentId), schoolId);
       console.log('✅ Book borrowed via Supabase:', result);
       return result;
     },

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { userProfile } from "@/hooks/use-supabase-direct-auth";
 
 interface AttendanceRecord {
   id: number;
@@ -102,12 +103,13 @@ export function RealtimeAttendance() {
     setIsLoading(true);
 
     try {
+      const schoolId = await userProfile.getCurrentUserSchoolId();
       const attendanceData = {
         studentId: parseInt(selectedStudent),
         classId: 1, // Default class
         date: new Date().toISOString().split('T')[0],
         status: selectedStatus,
-        schoolId: 1,
+        schoolId: schoolId,
         updatedBy: 1
       };
 
