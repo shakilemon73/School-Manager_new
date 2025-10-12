@@ -84,8 +84,9 @@ export default function BuyCreditsClean() {
         paymentMethod: "cash",
       });
     } else {
-      // Paid package - direct redirect to payment page
-      window.location.href = `/credits/payment/${pkg.id}`;
+      // Paid package - navigate to payment page using wouter
+      console.log("Navigating to payment page for package:", pkg.id);
+      setLocation(`/credits/payment/${pkg.id}`);
     }
   };
 

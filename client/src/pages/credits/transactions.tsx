@@ -106,40 +106,40 @@ export default function TransactionsPage() {
                           .map((transaction) => {
                             const paymentMethod = transaction.payment_method || transaction.paymentMethod || '';
                             return (
-                            <Card key={transaction.id} className="border-l-4 border-l-primary/20">
-                              <CardContent className="p-4">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <p className="font-medium">{transaction.description}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {new Date(transaction.created_at || transaction.createdAt).toLocaleDateString('bn-BD')} • 
-                                      {transaction.type === "purchase" ? 
-                                        ` ${paymentMethod === "bkash" ? "বিকাশ" : 
-                                          paymentMethod === "nagad" ? "নগদ" : 
-                                          paymentMethod === "rocket" ? "রকেট" :
-                                          paymentMethod === "bank" ? "ব্যাংক" : "অন্যান্য"}` : 
-                                        " ক্রেডিট ব্যবহার"
-                                      }
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className={`font-semibold ${transaction.type === "purchase" ? "text-green-600" : "text-red-500"}`}>
-                                      {transaction.type === "purchase" ? "+" : "-"}{transaction.credits || 0} ক্রেডিট
-                                    </p>
-                                    <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                                      transaction.status === "completed" ? "bg-green-100 text-green-800" :
-                                      transaction.status === "pending" ? "bg-yellow-100 text-yellow-800" :
-                                      "bg-red-100 text-red-800"
-                                    }`}>
-                                      {transaction.status === "completed" ? "সম্পন্ন" :
-                                       transaction.status === "pending" ? "অপেক্ষমান" : "ব্যর্থ"}
+                              <Card key={transaction.id} className="border-l-4 border-l-primary/20">
+                                <CardContent className="p-4">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <p className="font-medium">{transaction.description}</p>
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {new Date(transaction.created_at || transaction.createdAt).toLocaleDateString('bn-BD')} • 
+                                        {transaction.type === "purchase" ? 
+                                          ` ${paymentMethod === "bkash" ? "বিকাশ" : 
+                                            paymentMethod === "nagad" ? "নগদ" : 
+                                            paymentMethod === "rocket" ? "রকেট" :
+                                            paymentMethod === "bank" ? "ব্যাংক" : "অন্যান্য"}` : 
+                                          " ক্রেডিট ব্যবহার"
+                                        }
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className={`font-semibold ${transaction.type === "purchase" ? "text-green-600" : "text-red-500"}`}>
+                                        {transaction.type === "purchase" ? "+" : "-"}{transaction.credits || 0} ক্রেডিট
+                                      </p>
+                                      <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                                        transaction.status === "completed" ? "bg-green-100 text-green-800" :
+                                        transaction.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                                        "bg-red-100 text-red-800"
+                                      }`}>
+                                        {transaction.status === "completed" ? "সম্পন্ন" :
+                                         transaction.status === "pending" ? "অপেক্ষমান" : "ব্যর্থ"}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
                       </div>
                     ))}
                 </div>
@@ -161,39 +161,39 @@ export default function TransactionsPage() {
                         {transactions.map((transaction: Transaction) => {
                           const paymentMethod = transaction.payment_method || transaction.paymentMethod || '';
                           return (
-                          <tr key={transaction.id} className="hover:bg-muted/30">
-                            <td className="whitespace-nowrap px-4 py-3 text-sm">
-                              {new Date(transaction.created_at || transaction.createdAt).toLocaleDateString('bn-BD')}
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              {transaction.description}
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              {transaction.type === "purchase" ? 
-                                `ক্রেডিট ক্রয় (${paymentMethod === "bkash" ? "বিকাশ" : 
-                                  paymentMethod === "nagad" ? "নগদ" : 
-                                  paymentMethod === "rocket" ? "রকেট" :
-                                  paymentMethod === "bank" ? "ব্যাংক" : "অন্যান্য"})` : 
-                                "ক্রেডিট ব্যবহার"
-                              }
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right">
-                              <span className={`font-semibold ${transaction.type === "purchase" ? "text-green-600" : "text-red-500"}`}>
-                                {transaction.type === "purchase" ? "+" : "-"}{transaction.credits || 0}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                transaction.status === "completed" ? "bg-green-100 text-green-800" :
-                                transaction.status === "pending" ? "bg-yellow-100 text-yellow-800" :
-                                "bg-red-100 text-red-800"
-                              }`}>
-                                {transaction.status === "completed" ? "সম্পন্ন" :
-                                 transaction.status === "pending" ? "অপেক্ষমান" : "ব্যর্থ"}
-                              </div>
-                            </td>
-                          </tr>
-                        );
+                            <tr key={transaction.id} className="hover:bg-muted/30">
+                              <td className="whitespace-nowrap px-4 py-3 text-sm">
+                                {new Date(transaction.created_at || transaction.createdAt).toLocaleDateString('bn-BD')}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {transaction.description}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {transaction.type === "purchase" ? 
+                                  `ক্রেডিট ক্রয় (${paymentMethod === "bkash" ? "বিকাশ" : 
+                                    paymentMethod === "nagad" ? "নগদ" : 
+                                    paymentMethod === "rocket" ? "রকেট" :
+                                    paymentMethod === "bank" ? "ব্যাংক" : "অন্যান্য"})` : 
+                                  "ক্রেডিট ব্যবহার"
+                                }
+                              </td>
+                              <td className="px-4 py-3 text-sm text-right">
+                                <span className={`font-semibold ${transaction.type === "purchase" ? "text-green-600" : "text-red-500"}`}>
+                                  {transaction.type === "purchase" ? "+" : "-"}{transaction.credits || 0}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                  transaction.status === "completed" ? "bg-green-100 text-green-800" :
+                                  transaction.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                                  "bg-red-100 text-red-800"
+                                }`}>
+                                  {transaction.status === "completed" ? "সম্পন্ন" :
+                                   transaction.status === "pending" ? "অপেক্ষমান" : "ব্যর্থ"}
+                                </div>
+                              </td>
+                            </tr>
+                          );
                         })}
                       </tbody>
                     </table>
