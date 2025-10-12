@@ -46,6 +46,7 @@ export default defineConfig({
       ".replit.dev",
       ".repl.co",
       "34071b04-b6c8-46fb-850f-ff86046b4b89-00-3mpu0scgfalgf.riker.replit.dev",
+      "school-manager-new.onrender.com",
       // Add any other Replit domains as needed
     ],
   },
