@@ -41,11 +41,12 @@ async function routeSupabaseMutation(method: string, path: string, body: any): P
   const pathParts = cleanPath.split('/').filter(p => p);
   const resourceId = pathParts.length > 2 ? pathParts[pathParts.length - 1] : null;
   
-  // Helper to convert resourceId to number if it's numeric, otherwise keep as string
+  // Helper to parse resourceId - returns number if numeric, string otherwise (for UUIDs, etc.)
   const parseResourceId = (id: string | null): number | string | null => {
-    if (!id) return null;
+    if (!id || id.trim() === '') return null;
     const num = Number(id);
-    return !isNaN(num) && id.trim() !== '' ? num : id;
+    // Return number if it's a valid numeric ID, otherwise keep as string (for UUIDs, file paths, etc.)
+    return !isNaN(num) && !id.includes('-') && !id.includes('/') ? num : id;
   };
   
   try {
@@ -53,50 +54,74 @@ async function routeSupabaseMutation(method: string, path: string, body: any): P
       // Students - POST exact, then SPECIFIC nested routes, then GENERIC
       case method === 'POST' && path === '/api/students':
         return await supabaseDb.createStudent({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/students/') && resourceId:
-        return await supabaseDb.updateStudent(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/students/') && resourceId:
-        return await supabaseDb.deleteStudent(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/students/'):
+        const updateStudentId = parseResourceId(resourceId);
+        if (!updateStudentId) return null;
+        return await supabaseDb.updateStudent(updateStudentId as number, body);
+      case method === 'DELETE' && path.startsWith('/api/students/'):
+        const deleteStudentId = parseResourceId(resourceId);
+        if (!deleteStudentId) return null;
+        return await supabaseDb.deleteStudent(deleteStudentId as number);
         
       // Teachers
       case method === 'POST' && path === '/api/teachers':
         return await supabaseDb.createTeacher({ ...body, school_id: schoolId });
-      case method === 'PUT' && path.startsWith('/api/teachers/') && resourceId:
-        return await supabaseDb.updateTeacher(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/teachers/') && resourceId:
-        return await supabaseDb.deleteTeacher(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/teachers/'):
+        const updateTeacherId = parseResourceId(resourceId) as number;
+        if (!updateTeacherId) return null;
+        return await supabaseDb.updateTeacher(updateTeacherId, body);
+      case method === 'DELETE' && path.startsWith('/api/teachers/'):
+        const deleteTeacherId = parseResourceId(resourceId) as number;
+        if (!deleteTeacherId) return null;
+        return await supabaseDb.deleteTeacher(deleteTeacherId);
         
       // Staff
       case method === 'POST' && path === '/api/staff':
         return await supabaseDb.createStaff({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/staff/') && resourceId:
-        return await supabaseDb.updateStaff(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/staff/') && resourceId:
-        return await supabaseDb.deleteStaff(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/staff/'):
+        const updateStaffId = parseResourceId(resourceId) as number;
+        if (!updateStaffId) return null;
+        return await supabaseDb.updateStaff(updateStaffId, body);
+      case method === 'DELETE' && path.startsWith('/api/staff/'):
+        const deleteStaffId = parseResourceId(resourceId) as number;
+        if (!deleteStaffId) return null;
+        return await supabaseDb.deleteStaff(deleteStaffId);
         
       // Parents
       case method === 'POST' && path === '/api/parents':
         return await supabaseDb.createParent({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/parents/') && resourceId:
-        return await supabaseDb.updateParent(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/parents/') && resourceId:
-        return await supabaseDb.deleteParent(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/parents/'):
+        const updateParentId = parseResourceId(resourceId) as number;
+        if (!updateParentId) return null;
+        return await supabaseDb.updateParent(updateParentId, body);
+      case method === 'DELETE' && path.startsWith('/api/parents/'):
+        const deleteParentId = parseResourceId(resourceId) as number;
+        if (!deleteParentId) return null;
+        return await supabaseDb.deleteParent(deleteParentId);
         
       // Library
       case method === 'POST' && path === '/api/library/books':
         return await supabaseDb.createLibraryBook({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/library/books/') && resourceId:
-        return await supabaseDb.updateLibraryBook(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/library/books/') && resourceId:
-        return await supabaseDb.deleteLibraryBook(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/library/books/'):
+        const updateLibraryId = parseResourceId(resourceId) as number;
+        if (!updateLibraryId) return null;
+        return await supabaseDb.updateLibraryBook(updateLibraryId, body);
+      case method === 'DELETE' && path.startsWith('/api/library/books/'):
+        const deleteLibraryId = parseResourceId(resourceId) as number;
+        if (!deleteLibraryId) return null;
+        return await supabaseDb.deleteLibraryBook(deleteLibraryId);
         
       // Inventory
       case method === 'POST' && path === '/api/inventory/items':
         return await supabaseDb.createInventoryItem({ ...body, school_id: schoolId });
-      case method === 'PUT' && path.startsWith('/api/inventory/items/') && resourceId:
-        return await supabaseDb.updateInventoryItem(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/inventory/items/') && resourceId:
-        return await supabaseDb.deleteInventoryItem(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/inventory/items/'):
+        const updateInventoryId = parseResourceId(resourceId) as number;
+        if (!updateInventoryId) return null;
+        return await supabaseDb.updateInventoryItem(updateInventoryId, body);
+      case method === 'DELETE' && path.startsWith('/api/inventory/items/'):
+        const deleteInventoryId = parseResourceId(resourceId) as number;
+        if (!deleteInventoryId) return null;
+        return await supabaseDb.deleteInventoryItem(deleteInventoryId);
       case method === 'POST' && path === '/api/inventory/movements':
         return await supabaseDb.createInventoryMovement({ ...body, school_id: schoolId });
         
@@ -108,32 +133,48 @@ async function routeSupabaseMutation(method: string, path: string, body: any): P
       case method === 'POST' && path === '/api/document-templates':
       case method === 'POST' && path === '/api/documents/templates':
         return await supabaseDb.createDocumentTemplate({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/document-templates/') && resourceId:
-      case method === 'PUT' && path.startsWith('/api/documents/templates/') && resourceId:
-        return await supabaseDb.updateDocumentTemplate(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/document-templates/') && resourceId:
-      case method === 'DELETE' && path.startsWith('/api/documents/templates/') && resourceId:
-        return await supabaseDb.deleteDocumentTemplate(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/document-templates/'):
+      case method === 'PUT' && path.startsWith('/api/documents/templates/'):
+        const updateTemplateId = parseResourceId(resourceId) as number;
+        if (!updateTemplateId) return null;
+        return await supabaseDb.updateDocumentTemplate(updateTemplateId, body);
+      case method === 'DELETE' && path.startsWith('/api/document-templates/'):
+      case method === 'DELETE' && path.startsWith('/api/documents/templates/'):
+        const deleteTemplateId = parseResourceId(resourceId) as number;
+        if (!deleteTemplateId) return null;
+        return await supabaseDb.deleteDocumentTemplate(deleteTemplateId);
         
       // Transport
       case method === 'POST' && path === '/api/transport/routes':
         return await supabaseDb.createTransportRoute({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/transport/routes/') && resourceId:
-        return await supabaseDb.updateTransportRoute(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/transport/routes/') && resourceId:
-        return await supabaseDb.deleteTransportRoute(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/transport/routes/'):
+        const updateRouteId = parseResourceId(resourceId) as number;
+        if (!updateRouteId) return null;
+        return await supabaseDb.updateTransportRoute(updateRouteId, body);
+      case method === 'DELETE' && path.startsWith('/api/transport/routes/'):
+        const deleteRouteId = parseResourceId(resourceId) as number;
+        if (!deleteRouteId) return null;
+        return await supabaseDb.deleteTransportRoute(deleteRouteId);
       case method === 'POST' && path === '/api/transport/vehicles':
         return await supabaseDb.createTransportVehicle({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/transport/vehicles/') && resourceId:
-        return await supabaseDb.updateTransportVehicle(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/transport/vehicles/') && resourceId:
-        return await supabaseDb.deleteTransportVehicle(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/transport/vehicles/'):
+        const updateVehicleId = parseResourceId(resourceId) as number;
+        if (!updateVehicleId) return null;
+        return await supabaseDb.updateTransportVehicle(updateVehicleId, body);
+      case method === 'DELETE' && path.startsWith('/api/transport/vehicles/'):
+        const deleteVehicleId = parseResourceId(resourceId) as number;
+        if (!deleteVehicleId) return null;
+        return await supabaseDb.deleteTransportVehicle(deleteVehicleId);
       case method === 'POST' && path === '/api/transport/assignments':
         return await supabaseDb.createTransportAssignment({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/transport/assignments/') && resourceId:
-        return await supabaseDb.updateTransportAssignment(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/transport/assignments/') && resourceId:
-        return await supabaseDb.deleteTransportAssignment(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/transport/assignments/'):
+        const updateAssignmentId = parseResourceId(resourceId) as number;
+        if (!updateAssignmentId) return null;
+        return await supabaseDb.updateTransportAssignment(updateAssignmentId, body);
+      case method === 'DELETE' && path.startsWith('/api/transport/assignments/'):
+        const deleteAssignmentId = parseResourceId(resourceId) as number;
+        if (!deleteAssignmentId) return null;
+        return await supabaseDb.deleteTransportAssignment(deleteAssignmentId);
         
       // Admit Cards
       case method === 'POST' && path === '/api/admit-cards/templates':
@@ -144,28 +185,35 @@ async function routeSupabaseMutation(method: string, path: string, body: any): P
         return await supabaseDb.createFinancialTransaction({ ...body, school_id: schoolId });
       case method === 'POST' && path === '/api/fee-receipts':
         return await supabaseDb.createFeeReceipt(body, body.feeItems || []);
-      case method === 'PUT' && path.startsWith('/api/fee-receipts/') && resourceId:
-        return await supabaseDb.updateFeeReceipt(parseResourceId(resourceId), body);
-      case method === 'DELETE' && path.startsWith('/api/fee-receipts/') && resourceId:
-        return await supabaseDb.deleteFeeReceipt(parseResourceId(resourceId));
+      case method === 'PUT' && path.startsWith('/api/fee-receipts/'):
+        const updateFeeReceiptId = parseResourceId(resourceId) as number;
+        if (!updateFeeReceiptId) return null;
+        return await supabaseDb.updateFeeReceipt(updateFeeReceiptId, body);
+      case method === 'DELETE' && path.startsWith('/api/fee-receipts/'):
+        const deleteFeeReceiptId = parseResourceId(resourceId) as number;
+        if (!deleteFeeReceiptId) return null;
+        return await supabaseDb.deleteFeeReceipt(deleteFeeReceiptId);
         
       // Meetings
       case method === 'POST' && path === '/api/meetings':
         return await supabaseDb.createMeeting({ ...body, school_id: schoolId });
       case method === 'PUT' && path.startsWith('/api/meetings/') && path.includes('/status'):
-        // Extract ID from pathParts[2] since last segment is the static "status" keyword
-        const meetingId = parseResourceId(pathParts[2]);
-        return await supabaseDb.updateMeetingStatus(meetingId, body.status);
+        const meetingStatusId = parseResourceId(pathParts[2]) as number;
+        if (!meetingStatusId) return null;
+        return await supabaseDb.updateMeetingStatus(meetingStatusId, body.status);
         
       // Users
       case method === 'POST' && path === '/api/users':
         return await supabaseDb.createUser({ ...body, schoolId });
       case method === 'PUT' && path.startsWith('/api/users/') && path.includes('/status'):
-        // Extract ID from pathParts[2] since last segment is the static "status" keyword
-        const userId = parseResourceId(pathParts[2]);
-        return await supabaseDb.updateUserStatus(userId, body.status);
-      case method === 'DELETE' && path.startsWith('/api/users/') && resourceId:
-        return await supabaseDb.deleteUser(parseResourceId(resourceId));
+        // User ID can be numeric or string (UUID)
+        const userStatusId = parseResourceId(pathParts[2]);
+        if (!userStatusId) return null;
+        return await supabaseDb.updateUserStatus(userStatusId, body.status);
+      case method === 'DELETE' && path.startsWith('/api/users/'):
+        const deleteUserId = parseResourceId(resourceId) as number;
+        if (!deleteUserId) return null;
+        return await supabaseDb.deleteUser(deleteUserId);
         
       // School Settings - SPECIFIC nested routes FIRST (using path.includes), then GENERIC
       case method === 'PUT' && path === '/api/school-settings':
@@ -173,12 +221,14 @@ async function routeSupabaseMutation(method: string, path: string, body: any): P
       case method === 'POST' && path === '/api/schools':
         return await supabaseDb.createSchool(body);
       case method === 'PUT' && path.startsWith('/api/schools/') && path.includes('/supabase-config'):
-        const configSchoolId = parseResourceId(pathParts[2]); // Extract from position 2, NOT resourceId!
+        const configSchoolId = parseResourceId(pathParts[2]) as number;
+        if (!configSchoolId) return null;
         return await supabaseDb.updateSchoolSupabaseConfig(configSchoolId, body);
         
-      // File Operations
+      // File Operations (file paths are strings, not numbers)
       case method === 'DELETE' && path.startsWith('/api/files/'):
         const filePath = pathParts.slice(2).join('/');
+        if (!filePath) return null;
         return await supabaseDb.deleteFile(filePath);
         
       default:
