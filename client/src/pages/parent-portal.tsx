@@ -1,4 +1,4 @@
-import { useAuth } from "@/hooks/use-auth";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +38,7 @@ interface NotificationData {
 }
 
 export default function ParentPortal() {
-  const { user } = useAuth();
+  const { user, schoolId } = useSupabaseDirectAuth();
 
 
   // Fetch parent's children
@@ -60,7 +60,7 @@ export default function ParentPortal() {
     enabled: !!selectedChildId,
   });
 
-  if (!user || user.role !== 'parent') {
+  if (!user || user.user_metadata?.role !== 'parent') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-md">
@@ -89,7 +89,7 @@ export default function ParentPortal() {
             "parent_portal"
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            "welcome_back", {user.full_name}
+            "welcome_back", {user.user_metadata?.full_name || user.email}
           </p>
         </div>
         <div className="flex items-center gap-4">
