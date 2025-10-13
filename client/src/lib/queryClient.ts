@@ -104,49 +104,202 @@ export const getQueryFn: <T>(options: {
 
 // Route API calls to direct Supabase functions (no Express server needed!)
 async function routeSupabaseCall(path: string, queryKey: readonly any[]): Promise<any> {
-  const { db: supabaseDb } = await import('./supabase');
+  const { db: supabaseDb, userProfile } = await import('./supabase');
   
-  // Extract schoolId from queryKey if available
-  const schoolId = queryKey[1]?.schoolId || 1;
+  // Extract schoolId from queryKey - try multiple locations
+  let schoolId: number = 1; // default
+  
+  // Try to get schoolId from queryKey
+  if (queryKey[1]) {
+    if (typeof queryKey[1] === 'object' && queryKey[1].schoolId) {
+      schoolId = queryKey[1].schoolId;
+    } else if (typeof queryKey[1] === 'number') {
+      schoolId = queryKey[1];
+    }
+  }
+  
+  // If no schoolId in queryKey, try to get from current user
+  if (!schoolId || schoolId === 1) {
+    try {
+      schoolId = await userProfile.getCurrentUserSchoolId();
+    } catch (e) {
+      console.warn('Could not get user school ID, using default:', schoolId);
+    }
+  }
   
   try {
+    // Parse path parameters
+    const pathParts = path.split('/').filter(p => p);
+    const resourceId = pathParts.length > 2 ? parseInt(pathParts[pathParts.length - 1]) : null;
+    
     switch (true) {
+      // Dashboard
       case path === '/api/dashboard/stats':
         return await supabaseDb.getDashboardStats(schoolId);
+      case path === '/api/dashboard/activities':
+        return await supabaseDb.getDashboardActivities(schoolId);
+      case path === '/api/dashboard/recent-documents':
+        return await supabaseDb.getRecentDocuments(schoolId);
         
+      // Students
       case path === '/api/students':
         return await supabaseDb.getStudents(schoolId);
+      case path.startsWith('/api/students/') && resourceId:
+        return await supabaseDb.getStudentById(resourceId);
         
+      // Teachers
       case path === '/api/teachers':
         return await supabaseDb.getTeachers(schoolId);
+      case path === '/api/teachers/stats':
+        return await supabaseDb.getTeacherStats(schoolId);
+      case path.startsWith('/api/teachers/') && resourceId:
+        return await supabaseDb.getTeacherById(resourceId);
         
-      case path === '/api/library/books':
-        return await supabaseDb.getLibraryBooks(schoolId);
+      // Staff
+      case path === '/api/staff':
+        return await supabaseDb.getStaff(schoolId);
         
-      case path === '/api/inventory/items':
-        return await supabaseDb.getInventoryItems(schoolId);
-        
-      case path === '/api/notifications':
+      // Parents
+      case path === '/api/parents':
+        return await supabaseDb.getParents(schoolId);
+      case path === '/api/parent/children':
+        // For parent portal - get children for current parent
+        return await supabaseDb.getStudents(schoolId); // TODO: Filter by parent
+      case path.startsWith('/api/parent/progress'):
+        return []; // TODO: Implement progress data
+      case path === '/api/parent/notifications':
         return await supabaseDb.getNotifications(schoolId);
         
+      // Library
+      case path === '/api/library/books':
+        return await supabaseDb.getLibraryBooks(schoolId);
+      case path === '/api/library/borrowed':
+        return await supabaseDb.getBorrowedBooks(schoolId);
+      case path === '/api/library/stats':
+        return await supabaseDb.getLibraryStats(schoolId);
+        
+      // Inventory
+      case path === '/api/inventory/items':
+        return await supabaseDb.getInventoryItems(schoolId);
+      case path === '/api/inventory/movements':
+        return await supabaseDb.getInventoryMovements(schoolId);
+      case path === '/api/inventory/stats':
+        return await supabaseDb.getInventoryStats(schoolId);
+        
+      // Notifications
+      case path === '/api/notifications':
+        return await supabaseDb.getNotifications(schoolId);
+      case path === '/api/notifications/unread-count':
+        return await supabaseDb.getUnreadNotificationsCount(schoolId);
+        
+      // Calendar & Events
       case path === '/api/calendar/events':
         return await supabaseDb.getCalendarEvents(schoolId);
         
-      case path.startsWith('/api/students/'):
-        const studentId = parseInt(path.split('/')[3]);
-        return await supabaseDb.getStudentById(studentId);
+      // Documents & Templates
+      case path === '/api/documents/templates':
+      case path === '/api/document-templates':
+        const category = queryKey[1]?.category;
+        return await supabaseDb.getDocumentTemplates(schoolId, category);
+      case path.startsWith('/api/documents/templates/') && resourceId:
+      case path.startsWith('/api/document-templates/') && resourceId:
+        return await supabaseDb.getDocumentTemplateById(resourceId);
         
-      case path.startsWith('/api/teachers/'):
-        const teacherId = parseInt(path.split('/')[3]);
-        return await supabaseDb.getTeacherById(teacherId);
+      // Transport
+      case path === '/api/transport/routes':
+        return await supabaseDb.getTransportRoutes(schoolId);
+      case path === '/api/transport/vehicles':
+        return await supabaseDb.getTransportVehicles(schoolId);
+      case path === '/api/transport/assignments':
+        return await supabaseDb.getTransportAssignments(schoolId);
+      case path === '/api/transport/stats':
+        return await supabaseDb.getTransportStats(schoolId);
+      case path === '/api/transport/routes/public':
+        return await supabaseDb.getPublicTransportRoutes();
+        
+      // Academic
+      case path === '/api/academic-years':
+        return await supabaseDb.getAcademicYears(schoolId);
+      case path === '/api/academic-years/current':
+        return await supabaseDb.getCurrentAcademicYear(schoolId);
+      case path === '/api/exams':
+        return await supabaseDb.getExams(schoolId);
+      case path.startsWith('/api/exams/') && resourceId:
+        return await supabaseDb.getExamSchedules(resourceId);
+      case path === '/api/class-routines':
+        return await supabaseDb.getClassRoutines(schoolId);
+        
+      // Admit Cards
+      case path === '/api/admit-cards':
+        return await supabaseDb.getAdmitCards(schoolId);
+      case path === '/api/admit-cards/templates':
+        return await supabaseDb.getAdmitCardTemplates(schoolId);
+      case path === '/api/admit-cards/stats':
+        return await supabaseDb.getAdmitCardStats(schoolId);
+      case path === '/api/admit-cards/history':
+        return await supabaseDb.getAdmitCardHistory(schoolId);
+        
+      // ID Cards
+      case path === '/api/id-cards/stats':
+        return await supabaseDb.getIdCardStats(schoolId);
+      case path === '/api/id-cards/recent':
+        const limit = queryKey[1]?.limit || 10;
+        return await supabaseDb.getRecentIdCards(schoolId, limit);
+        
+      // Financial
+      case path === '/api/financial/transactions':
+        return await supabaseDb.getFinancialTransactions(schoolId);
+      case path === '/api/financial/stats':
+        return await supabaseDb.getFinancialStats(schoolId);
+      case path === '/api/fee-receipts':
+        return await supabaseDb.getFeeReceipts(schoolId);
+      case path.startsWith('/api/fee-receipts/') && resourceId:
+        return await supabaseDb.getFeeReceiptById(resourceId);
+      case path.startsWith('/api/fee-items'):
+        const receiptId = queryKey[1]?.receiptId;
+        return await supabaseDb.getFeeItems(receiptId);
+        
+      // Meetings
+      case path === '/api/meetings':
+        return await supabaseDb.getMeetings(schoolId);
+      case path === '/api/meetings/stats':
+        return await supabaseDb.getMeetingStats(schoolId);
+        
+      // Users & Admin
+      case path === '/api/users':
+        return await supabaseDb.getUsers(schoolId);
+      case path === '/api/users/stats':
+        return await supabaseDb.getUserStats();
+      case path === '/api/school-settings':
+        return await supabaseDb.getSchoolSettings(schoolId);
+      case path === '/api/admin/stats':
+        return await supabaseDb.getAdminStats(schoolId);
+      case path === '/api/admin/overview':
+        return await supabaseDb.getAdminOverview();
+      case path === '/api/system-health':
+        return await supabaseDb.getSystemHealthStatus();
+        
+      // Schools
+      case path === '/api/schools':
+        return await supabaseDb.getSchools();
+      case path.startsWith('/api/schools/') && resourceId:
+        return await supabaseDb.getSchoolById(resourceId);
+      case path.startsWith('/api/schools/') && path.includes('/supabase-config'):
+        const configSchoolId = parseInt(pathParts[2]);
+        return await supabaseDb.getSchoolSupabaseConfig(configSchoolId);
+        
+      // Student Files
+      case path.startsWith('/api/students/') && path.includes('/files'):
+        const studentFileId = pathParts[2];
+        return await supabaseDb.getStudentFiles(studentFileId);
         
       // Fallback for routes not yet implemented
       default:
-        console.warn(`Supabase route not implemented: ${path}, falling back to HTTP`);
+        console.warn(`⚠️ Supabase route not implemented: ${path}, falling back to HTTP`);
         return await makeHttpRequest(path);
     }
   } catch (error) {
-    console.error(`Supabase call failed for ${path}:`, error);
+    console.error(`❌ Supabase call failed for ${path}:`, error);
     throw error;
   }
 }
