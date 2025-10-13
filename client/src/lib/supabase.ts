@@ -4025,3 +4025,58 @@ function getEstimatedTime(type: string): string {
   };
   return times[type] || '২-৩ মিনিট';
 }
+
+// User profile utilities
+export const userProfile = {
+  async getCurrentUserSchoolId(): Promise<number> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return 1; // Default school ID
+      
+      // Try to get from user metadata
+      const schoolId = user.user_metadata?.school_id || user.app_metadata?.school_id;
+      if (schoolId) return Number(schoolId);
+      
+      // Try to get from user_school_memberships table
+      const { data } = await supabase
+        .from('user_school_memberships')
+        .select('school_id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      return data?.school_id || 1;
+    } catch (error) {
+      console.warn('Failed to get user school ID, using default:', error);
+      return 1;
+    }
+  },
+
+  async getCurrentUser() {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
+  },
+
+  async getUserSchools() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      const { data } = await supabase
+        .from('user_school_memberships')
+        .select(`
+          *,
+          schools(*)
+        `)
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+      
+      return data || [];
+    } catch (error) {
+      console.error('Failed to get user schools:', error);
+      return [];
+    }
+  }
+};
