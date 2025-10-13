@@ -36,59 +36,67 @@ async function routeSupabaseMutation(method: string, path: string, body: any): P
     }
   }
   
-  const pathParts = path.split('/').filter(p => p);
-  const lastPart = pathParts[pathParts.length - 1];
-  const resourceId = (pathParts.length > 2 && !isNaN(Number(lastPart))) ? parseInt(lastPart) : null;
+  // Remove query string from path first
+  const cleanPath = path.split('?')[0];
+  const pathParts = cleanPath.split('/').filter(p => p);
+  const resourceId = pathParts.length > 2 ? pathParts[pathParts.length - 1] : null;
+  
+  // Helper to convert resourceId to number if it's numeric, otherwise keep as string
+  const parseResourceId = (id: string | null): number | string | null => {
+    if (!id) return null;
+    const num = Number(id);
+    return !isNaN(num) && id.trim() !== '' ? num : id;
+  };
   
   try {
     switch (true) {
-      // Students
+      // Students - POST exact, then SPECIFIC nested routes, then GENERIC
       case method === 'POST' && path === '/api/students':
         return await supabaseDb.createStudent({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/students/') && resourceId !== null:
-        return await supabaseDb.updateStudent(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/students/') && resourceId !== null:
-        return await supabaseDb.deleteStudent(resourceId);
+      case method === 'PUT' && path.startsWith('/api/students/') && resourceId:
+        return await supabaseDb.updateStudent(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/students/') && resourceId:
+        return await supabaseDb.deleteStudent(parseResourceId(resourceId));
         
       // Teachers
       case method === 'POST' && path === '/api/teachers':
         return await supabaseDb.createTeacher({ ...body, school_id: schoolId });
-      case method === 'PUT' && path.startsWith('/api/teachers/') && resourceId !== null:
-        return await supabaseDb.updateTeacher(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/teachers/') && resourceId !== null:
-        return await supabaseDb.deleteTeacher(resourceId);
+      case method === 'PUT' && path.startsWith('/api/teachers/') && resourceId:
+        return await supabaseDb.updateTeacher(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/teachers/') && resourceId:
+        return await supabaseDb.deleteTeacher(parseResourceId(resourceId));
         
       // Staff
       case method === 'POST' && path === '/api/staff':
         return await supabaseDb.createStaff({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/staff/') && resourceId !== null:
-        return await supabaseDb.updateStaff(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/staff/') && resourceId !== null:
-        return await supabaseDb.deleteStaff(resourceId);
+      case method === 'PUT' && path.startsWith('/api/staff/') && resourceId:
+        return await supabaseDb.updateStaff(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/staff/') && resourceId:
+        return await supabaseDb.deleteStaff(parseResourceId(resourceId));
         
       // Parents
       case method === 'POST' && path === '/api/parents':
         return await supabaseDb.createParent({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/parents/') && resourceId !== null:
-        return await supabaseDb.updateParent(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/parents/') && resourceId !== null:
-        return await supabaseDb.deleteParent(resourceId);
+      case method === 'PUT' && path.startsWith('/api/parents/') && resourceId:
+        return await supabaseDb.updateParent(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/parents/') && resourceId:
+        return await supabaseDb.deleteParent(parseResourceId(resourceId));
         
       // Library
       case method === 'POST' && path === '/api/library/books':
         return await supabaseDb.createLibraryBook({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/library/books/') && resourceId !== null:
-        return await supabaseDb.updateLibraryBook(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/library/books/') && resourceId !== null:
-        return await supabaseDb.deleteLibraryBook(resourceId);
+      case method === 'PUT' && path.startsWith('/api/library/books/') && resourceId:
+        return await supabaseDb.updateLibraryBook(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/library/books/') && resourceId:
+        return await supabaseDb.deleteLibraryBook(parseResourceId(resourceId));
         
       // Inventory
       case method === 'POST' && path === '/api/inventory/items':
         return await supabaseDb.createInventoryItem({ ...body, school_id: schoolId });
-      case method === 'PUT' && path.startsWith('/api/inventory/items/') && resourceId !== null:
-        return await supabaseDb.updateInventoryItem(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/inventory/items/') && resourceId !== null:
-        return await supabaseDb.deleteInventoryItem(resourceId);
+      case method === 'PUT' && path.startsWith('/api/inventory/items/') && resourceId:
+        return await supabaseDb.updateInventoryItem(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/inventory/items/') && resourceId:
+        return await supabaseDb.deleteInventoryItem(parseResourceId(resourceId));
       case method === 'POST' && path === '/api/inventory/movements':
         return await supabaseDb.createInventoryMovement({ ...body, school_id: schoolId });
         
@@ -100,32 +108,32 @@ async function routeSupabaseMutation(method: string, path: string, body: any): P
       case method === 'POST' && path === '/api/document-templates':
       case method === 'POST' && path === '/api/documents/templates':
         return await supabaseDb.createDocumentTemplate({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/document-templates/') && resourceId !== null:
-      case method === 'PUT' && path.startsWith('/api/documents/templates/') && resourceId !== null:
-        return await supabaseDb.updateDocumentTemplate(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/document-templates/') && resourceId !== null:
-      case method === 'DELETE' && path.startsWith('/api/documents/templates/') && resourceId !== null:
-        return await supabaseDb.deleteDocumentTemplate(resourceId);
+      case method === 'PUT' && path.startsWith('/api/document-templates/') && resourceId:
+      case method === 'PUT' && path.startsWith('/api/documents/templates/') && resourceId:
+        return await supabaseDb.updateDocumentTemplate(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/document-templates/') && resourceId:
+      case method === 'DELETE' && path.startsWith('/api/documents/templates/') && resourceId:
+        return await supabaseDb.deleteDocumentTemplate(parseResourceId(resourceId));
         
       // Transport
       case method === 'POST' && path === '/api/transport/routes':
         return await supabaseDb.createTransportRoute({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/transport/routes/') && resourceId !== null:
-        return await supabaseDb.updateTransportRoute(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/transport/routes/') && resourceId !== null:
-        return await supabaseDb.deleteTransportRoute(resourceId);
+      case method === 'PUT' && path.startsWith('/api/transport/routes/') && resourceId:
+        return await supabaseDb.updateTransportRoute(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/transport/routes/') && resourceId:
+        return await supabaseDb.deleteTransportRoute(parseResourceId(resourceId));
       case method === 'POST' && path === '/api/transport/vehicles':
         return await supabaseDb.createTransportVehicle({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/transport/vehicles/') && resourceId !== null:
-        return await supabaseDb.updateTransportVehicle(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/transport/vehicles/') && resourceId !== null:
-        return await supabaseDb.deleteTransportVehicle(resourceId);
+      case method === 'PUT' && path.startsWith('/api/transport/vehicles/') && resourceId:
+        return await supabaseDb.updateTransportVehicle(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/transport/vehicles/') && resourceId:
+        return await supabaseDb.deleteTransportVehicle(parseResourceId(resourceId));
       case method === 'POST' && path === '/api/transport/assignments':
         return await supabaseDb.createTransportAssignment({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/transport/assignments/') && resourceId !== null:
-        return await supabaseDb.updateTransportAssignment(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/transport/assignments/') && resourceId !== null:
-        return await supabaseDb.deleteTransportAssignment(resourceId);
+      case method === 'PUT' && path.startsWith('/api/transport/assignments/') && resourceId:
+        return await supabaseDb.updateTransportAssignment(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/transport/assignments/') && resourceId:
+        return await supabaseDb.deleteTransportAssignment(parseResourceId(resourceId));
         
       // Admit Cards
       case method === 'POST' && path === '/api/admit-cards/templates':
@@ -136,32 +144,37 @@ async function routeSupabaseMutation(method: string, path: string, body: any): P
         return await supabaseDb.createFinancialTransaction({ ...body, school_id: schoolId });
       case method === 'POST' && path === '/api/fee-receipts':
         return await supabaseDb.createFeeReceipt(body, body.feeItems || []);
-      case method === 'PUT' && path.startsWith('/api/fee-receipts/') && resourceId !== null:
-        return await supabaseDb.updateFeeReceipt(resourceId, body);
-      case method === 'DELETE' && path.startsWith('/api/fee-receipts/') && resourceId !== null:
-        return await supabaseDb.deleteFeeReceipt(resourceId);
+      case method === 'PUT' && path.startsWith('/api/fee-receipts/') && resourceId:
+        return await supabaseDb.updateFeeReceipt(parseResourceId(resourceId), body);
+      case method === 'DELETE' && path.startsWith('/api/fee-receipts/') && resourceId:
+        return await supabaseDb.deleteFeeReceipt(parseResourceId(resourceId));
         
       // Meetings
       case method === 'POST' && path === '/api/meetings':
         return await supabaseDb.createMeeting({ ...body, school_id: schoolId });
-      case method === 'PUT' && path.startsWith('/api/meetings/') && resourceId !== null && path.includes('/status'):
-        return await supabaseDb.updateMeetingStatus(resourceId, body.status);
+      case method === 'PUT' && path.startsWith('/api/meetings/') && path.includes('/status'):
+        // Extract ID from pathParts[2] since last segment is the static "status" keyword
+        const meetingId = parseResourceId(pathParts[2]);
+        return await supabaseDb.updateMeetingStatus(meetingId, body.status);
         
       // Users
       case method === 'POST' && path === '/api/users':
         return await supabaseDb.createUser({ ...body, schoolId });
-      case method === 'PUT' && path.startsWith('/api/users/') && resourceId !== null && path.includes('/status'):
-        return await supabaseDb.updateUserStatus(resourceId, body.status);
-      case method === 'DELETE' && path.startsWith('/api/users/') && resourceId !== null:
-        return await supabaseDb.deleteUser(resourceId);
+      case method === 'PUT' && path.startsWith('/api/users/') && path.includes('/status'):
+        // Extract ID from pathParts[2] since last segment is the static "status" keyword
+        const userId = parseResourceId(pathParts[2]);
+        return await supabaseDb.updateUserStatus(userId, body.status);
+      case method === 'DELETE' && path.startsWith('/api/users/') && resourceId:
+        return await supabaseDb.deleteUser(parseResourceId(resourceId));
         
-      // School Settings
+      // School Settings - SPECIFIC nested routes FIRST (using path.includes), then GENERIC
       case method === 'PUT' && path === '/api/school-settings':
         return await supabaseDb.updateSchoolSettings(schoolId, body);
       case method === 'POST' && path === '/api/schools':
         return await supabaseDb.createSchool(body);
-      case method === 'PUT' && path.startsWith('/api/schools/') && resourceId !== null && path.includes('/supabase-config'):
-        return await supabaseDb.updateSchoolSupabaseConfig(resourceId, body);
+      case method === 'PUT' && path.startsWith('/api/schools/') && path.includes('/supabase-config'):
+        const configSchoolId = parseResourceId(pathParts[2]); // Extract from position 2, NOT resourceId!
+        return await supabaseDb.updateSchoolSupabaseConfig(configSchoolId, body);
         
       // File Operations
       case method === 'DELETE' && path.startsWith('/api/files/'):
@@ -169,7 +182,13 @@ async function routeSupabaseMutation(method: string, path: string, body: any): P
         return await supabaseDb.deleteFile(filePath);
         
       default:
-        console.warn(`⚠️ Supabase mutation not implemented for ${method} ${path}, falling back to HTTP`);
+        console.warn(`⚠️ [HTTP FALLBACK] Supabase mutation not implemented for ${method} ${path}`, {
+          method,
+          path,
+          hasResourceId: !!resourceId,
+          resourceId: resourceId || 'none',
+          timestamp: new Date().toISOString()
+        });
         return null; // Return null to trigger HTTP fallback
     }
   } catch (error) {
@@ -302,9 +321,17 @@ async function routeSupabaseCall(path: string, queryKey: readonly any[]): Promis
   }
   
   try {
-    // Parse path parameters
-    const pathParts = path.split('/').filter(p => p);
-    const resourceId = pathParts.length > 2 ? parseInt(pathParts[pathParts.length - 1]) : null;
+    // Remove query string from path first
+    const cleanPath = path.split('?')[0];
+    const pathParts = cleanPath.split('/').filter(p => p);
+    const resourceId = pathParts.length > 2 ? pathParts[pathParts.length - 1] : null;
+    
+    // Helper to convert resourceId to number if it's numeric, otherwise keep as string
+    const parseResourceId = (id: string | null): number | string | null => {
+      if (!id) return null;
+      const num = Number(id);
+      return !isNaN(num) && id.trim() !== '' ? num : id;
+    };
     
     switch (true) {
       // Dashboard
@@ -315,19 +342,22 @@ async function routeSupabaseCall(path: string, queryKey: readonly any[]): Promis
       case path === '/api/dashboard/recent-documents':
         return await supabaseDb.getRecentDocuments(schoolId);
         
-      // Students
+      // Students - SPECIFIC routes FIRST, then generic
       case path === '/api/students':
         return await supabaseDb.getStudents(schoolId);
-      case path.startsWith('/api/students/') && resourceId !== null:
-        return await supabaseDb.getStudentById(resourceId);
+      case path.startsWith('/api/students/') && path.includes('/files'):
+        const fileStudentId = parseResourceId(pathParts[2]);
+        return await supabaseDb.getStudentFiles(fileStudentId);
+      case path.startsWith('/api/students/') && resourceId:
+        return await supabaseDb.getStudentById(parseResourceId(resourceId));
         
-      // Teachers
+      // Teachers - SPECIFIC routes FIRST, then generic
       case path === '/api/teachers':
         return await supabaseDb.getTeachers(schoolId);
       case path === '/api/teachers/stats':
         return await supabaseDb.getTeacherStats(schoolId);
-      case path.startsWith('/api/teachers/') && resourceId !== null:
-        return await supabaseDb.getTeacherById(resourceId);
+      case path.startsWith('/api/teachers/') && resourceId:
+        return await supabaseDb.getTeacherById(parseResourceId(resourceId));
         
       // Staff
       case path === '/api/staff':
@@ -375,9 +405,9 @@ async function routeSupabaseCall(path: string, queryKey: readonly any[]): Promis
       case path === '/api/document-templates':
         const category = queryKey[1]?.category;
         return await supabaseDb.getDocumentTemplates(schoolId, category);
-      case path.startsWith('/api/documents/templates/') && resourceId !== null:
-      case path.startsWith('/api/document-templates/') && resourceId !== null:
-        return await supabaseDb.getDocumentTemplateById(resourceId);
+      case path.startsWith('/api/documents/templates/') && resourceId:
+      case path.startsWith('/api/document-templates/') && resourceId:
+        return await supabaseDb.getDocumentTemplateById(parseResourceId(resourceId));
         
       // Transport
       case path === '/api/transport/routes':
@@ -398,8 +428,8 @@ async function routeSupabaseCall(path: string, queryKey: readonly any[]): Promis
         return await supabaseDb.getCurrentAcademicYear(schoolId);
       case path === '/api/exams':
         return await supabaseDb.getExams(schoolId);
-      case path.startsWith('/api/exams/') && resourceId !== null:
-        return await supabaseDb.getExamSchedules(resourceId);
+      case path.startsWith('/api/exams/') && resourceId:
+        return await supabaseDb.getExamSchedules(parseResourceId(resourceId));
       case path === '/api/class-routines':
         return await supabaseDb.getClassRoutines(schoolId);
         
@@ -427,8 +457,8 @@ async function routeSupabaseCall(path: string, queryKey: readonly any[]): Promis
         return await supabaseDb.getFinancialStats(schoolId);
       case path === '/api/fee-receipts':
         return await supabaseDb.getFeeReceipts(schoolId);
-      case path.startsWith('/api/fee-receipts/') && resourceId !== null:
-        return await supabaseDb.getFeeReceiptById(resourceId);
+      case path.startsWith('/api/fee-receipts/') && resourceId:
+        return await supabaseDb.getFeeReceiptById(parseResourceId(resourceId));
       case path.startsWith('/api/fee-items'):
         const receiptId = queryKey[1]?.receiptId;
         return await supabaseDb.getFeeItems(receiptId);
@@ -453,23 +483,24 @@ async function routeSupabaseCall(path: string, queryKey: readonly any[]): Promis
       case path === '/api/system-health':
         return await supabaseDb.getSystemHealthStatus();
         
-      // Schools
+      // Schools - SPECIFIC routes FIRST, then generic
       case path === '/api/schools':
         return await supabaseDb.getSchools();
-      case path.startsWith('/api/schools/') && resourceId !== null:
-        return await supabaseDb.getSchoolById(resourceId);
       case path.startsWith('/api/schools/') && path.includes('/supabase-config'):
-        const configSchoolId = parseInt(pathParts[2]);
+        const configSchoolId = parseResourceId(pathParts[2]) as number;
         return await supabaseDb.getSchoolSupabaseConfig(configSchoolId);
-        
-      // Student Files
-      case path.startsWith('/api/students/') && path.includes('/files'):
-        const studentFileId = pathParts[2];
-        return await supabaseDb.getStudentFiles(studentFileId);
+      case path.startsWith('/api/schools/') && resourceId:
+        return await supabaseDb.getSchoolById(parseResourceId(resourceId));
         
       // Fallback for routes not yet implemented
       default:
-        console.warn(`⚠️ Supabase route not implemented: ${path}, falling back to HTTP`);
+        console.warn(`⚠️ [HTTP FALLBACK] Supabase route not implemented: ${path}`, {
+          path,
+          hasResourceId: !!resourceId,
+          resourceId: resourceId || 'none',
+          schoolId,
+          timestamp: new Date().toISOString()
+        });
         return await makeHttpRequest(path);
     }
   } catch (error) {
