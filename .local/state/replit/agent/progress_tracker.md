@@ -455,3 +455,148 @@ Key Confirmations:
 All migration tasks have been successfully completed and verified. The School Management System is fully operational and ready for use.
 
 **Session completed on October 15, 2025 at 6:17 AM**
+
+---
+
+## 📋 ACTUAL EXPRESS API ENDPOINTS STILL IN USE (NOT MIGRATED)
+
+### Analysis Date: October 15, 2025
+Based on comprehensive codebase search of actual `fetch('/api/')` and `apiRequest('/api/')` usage:
+
+### 🔐 **Authentication & User Management** (9 endpoints)
+1. `POST /api/auth/register` - User registration (use-supabase-auth.tsx, auth-fallback.tsx)
+2. `POST /api/auth/login` - User login (auth-fallback.tsx, use-auth.tsx)
+3. `POST /api/auth/logout` - User logout (auth-fallback.tsx, use-auth.tsx)
+4. `POST /api/teacher/login` - Teacher login (teacher-portal-new.tsx)
+5. `POST /api/register` - Admin registration (register-admin.tsx)
+6. `GET /api/admin/stats` - Admin statistics (admin-control.tsx)
+7. `GET /api/users` - Get all users (admin-control.tsx)
+8. `POST /api/users` - Create user (admin-control.tsx)
+9. `GET /api/schools` - Get all schools (admin-control.tsx)
+
+### 💳 **Payment & Financial** (2 endpoints) - KEEP FOR SECURITY
+10. `POST /api/payment/initiate` - SSLCommerz payment gateway (payment-options.tsx)
+11. `POST /api/payments/process` - Process payment (financial/index.tsx, payment-gateway.tsx)
+
+### 🎫 **Admit Cards** (10 endpoints)
+12. `GET /api/admit-cards/templates` - Get admit card templates (multiple files)
+13. `GET /api/admit-cards/stats` - Get admit card statistics (2 files)
+14. `GET /api/admit-cards/recent` - Get recent admit cards (2 files)
+15. `POST /api/admit-cards/generate-single` - Generate single admit card (3 files)
+16. `POST /api/admit-cards/generate-batch` - Generate batch admit cards (2 files)
+17. `POST /api/admit-cards/templates` - Create admit card template (create-template.tsx)
+18. `GET /api/admit-card-templates` - Get templates (admit-card-manager.tsx)
+19. `GET /api/admit-cards/enhanced-stats` - Enhanced statistics (bangladesh-enhanced-dashboard.tsx)
+20. `GET /api/bangladesh-boards` - Get Bangladesh boards (bangladesh-enhanced-dashboard.tsx)
+21. `GET /api/students/import-history` - Import history (student-import.tsx)
+22. `POST /api/students/import-excel` - Import Excel (student-import.tsx)
+
+### 🆔 **ID Cards** (3 endpoints)
+23. `POST /api/id-cards/generate` - Generate ID card (3 files: create-single.tsx, id-cards-simple.tsx, id-cards-create.tsx)
+24. `GET /api/id-cards/stats` - ID card statistics (id-cards-dashboard.tsx)
+25. `GET /api/id-cards/recent` - Recent ID cards (id-cards-dashboard.tsx)
+
+### 📄 **Documents & Templates** (4 endpoints)
+26. `GET /api/documents/templates` - Get document templates (document-generator.tsx)
+27. `POST /api/document-generate` - Generate document (2 files)
+28. `GET /api/simple-credit-stats/:id` - Get credit stats (document-generator.tsx)
+29. `GET /api/class-routines` - Get class routines (class-routines.tsx)
+30. `GET /api/class-routines/stats` - Routine statistics (class-routines.tsx)
+31. `POST /api/class-routines` - Create class routine (class-routines.tsx)
+
+### 🏫 **Admin & Super Admin** (12 endpoints)
+32. `GET /api/admin/document-templates` - Get admin document templates (document-permissions.tsx)
+33. `GET /api/admin/users` - Get admin users (document-permissions.tsx, admin-old.tsx)
+34. `GET /api/admin/schools` - Get admin schools (document-permissions.tsx)
+35. `POST /api/admin/document-permissions` - Create document permission (document-permissions.tsx)
+36. `POST /api/admin/document-permissions/bulk` - Bulk permissions (document-permissions.tsx)
+37. `GET /api/super-admin/stats` - Super admin statistics (super admin files)
+38. `GET /api/super-admin/schools` - Get all schools (2 files)
+39. `GET /api/super-admin/user-analytics` - User analytics (simple-control-panel.ts)
+40. `POST /api/super-admin/schools/create` - Create school (simple-control-panel.ts)
+41. `POST /api/super-admin/schools/:id/action` - School action (2 files)
+42. `GET /api/super-admin/document-types` - Document types (SuperAdminDocumentControl.tsx)
+43. `GET /api/super-admin/schools/permissions` - School permissions (SuperAdminDocumentControl.tsx)
+
+### 🏫 **School Admin** (8 endpoints)
+44. `GET /api/school-admin/dashboard` - School admin dashboard (use-school-admin.ts)
+45. `GET /api/school-admin/settings/basic` - Basic settings (use-school-admin.ts)
+46. `GET /api/school-admin/statistics` - Statistics (use-school-admin.ts)
+47. `GET /api/school-admin/permissions` - Permissions (use-school-admin.ts)
+48. `POST /api/school-admin/settings/basic` - Update basic settings (use-school-admin.ts)
+49. `POST /api/school-admin/settings/branding` - Update branding (use-school-admin.ts)
+50. `POST /api/school-admin/settings/system` - Update system settings (use-school-admin.ts)
+51. `POST /api/school-admin/backup` - Create backup (use-school-admin.ts)
+52. `POST /api/school-admin/restore` - Restore backup (use-school-admin.ts)
+
+### 👨‍🏫 **Teacher Portal** (8 endpoints)
+53. `GET /api/teacher/assignments` - Get teacher assignments (assignment-management.tsx)
+54. `GET /api/teacher/subjects` - Get teacher subjects (assignment-management.tsx)
+55. `GET /api/teacher/classes` - Get teacher classes (assignment-management.tsx, attendance-management.tsx)
+56. `POST /api/teacher/assignments` - Create assignment (assignment-management.tsx)
+57. `GET /api/attendance` - Get attendance (attendance-management.tsx)
+58. `POST /api/attendance/save` - Save attendance (attendance-management.tsx)
+59. `GET /api/attendance/stats` - Attendance statistics (attendance-management.tsx)
+60. `GET /api/lesson-plans` - Get lesson plans (lesson-planning.tsx)
+61. `POST /api/lesson-plans` - Create lesson plan (lesson-planning.tsx)
+62. `PATCH /api/lesson-plans/:id` - Update lesson plan (lesson-planning.tsx)
+63. `DELETE /api/lesson-plans/:id` - Delete lesson plan (lesson-planning.tsx)
+
+### 📚 **Library (DUPLICATE - Delete File)** (5 endpoints in old file)
+64. `POST /api/library/books` - Create book (library/index-new.tsx) ⚠️ **DELETE THIS FILE**
+65. `POST /api/library/borrow` - Borrow book (library/index-new.tsx) ⚠️ **DELETE THIS FILE**
+66. `POST /api/library/return` - Return book (library/index-new.tsx) ⚠️ **DELETE THIS FILE**
+
+### 🌐 **Public Pages** (2 endpoints)
+67. `POST /api/public/contact-messages` - Contact form (contact-page.tsx)
+68. `POST /api/public/admission-applications` - Public admission form (admissions-page.tsx)
+
+### 🎥 **Video Conferencing & Tools** (2 endpoints)
+69. `GET /api/meetings` - Get meetings (video-conferencing.tsx)
+70. `POST /api/meetings` - Create meeting (video-conferencing.tsx)
+71. `POST /api/tools` - Create tool (tools/index.tsx)
+
+### 🔧 **Portal & System** (8 endpoints)
+72. `GET /api/portal/admins` - Get portal admins (portal/user-management.tsx)
+73. `POST /api/portal/admins` - Create portal admin (portal/user-management.tsx)
+74. `GET /api/portal/templates` - Get portal templates (portal/template-management.tsx)
+75. `POST /api/portal/templates` - Create portal template (portal/template-management.tsx)
+76. `GET /api/portal/system/health` - System health (portal/system-monitoring.tsx)
+77. `GET /api/portal/system/database` - Database status (portal/system-monitoring.tsx)
+78. `GET /api/portal/system/server` - Server status (portal/system-monitoring.tsx)
+79. `GET /api/portal/analytics/detailed` - Detailed analytics (portal/advanced-analytics.tsx)
+
+### 🧪 **Realtime & Testing** (6 endpoints) - Can be removed
+80. `GET /api/attendance/realtime` - Realtime attendance (RealtimeAttendance.tsx)
+81. `GET /api/realtime/school-stats/:id` - School stats (realtime-test.tsx)
+82. `GET /api/students` - Get students (realtime-test.tsx, RealtimeAttendance.tsx)
+83. `GET /api/teachers` - Get teachers (realtime-test.tsx)
+84. `GET /api/realtime/attendance/:id` - Realtime attendance (realtime-test.tsx)
+85. `GET /api/realtime/exam-results/:id` - Realtime exam results (realtime-test.tsx)
+
+### ⚙️ **Admin Settings (Old/Deprecated)** (4 endpoints)
+86. `GET /api/supabase/admin/settings/:userId` - Get admin settings (admin-old.tsx)
+87. `POST /api/supabase/admin/settings/1` - Update admin settings (admin-old.tsx)
+88. `POST /api/admin/users` - Create admin user (admin-old.tsx)
+89. `POST /api/admin/pricing-plans` - Create pricing plan (admin-old.tsx)
+
+### 💳 **Credits & Billing** (3 endpoints)
+90. `GET /api/simple-credit-balance/:userId` - Get credit balance (credit-status-card.tsx)
+91. `GET /api/credit-usage` - Get credit usage (credit-status-card.tsx)
+92. `GET /api/credit-packages` - Get credit packages (credit-status-card.tsx)
+
+### 🏥 **Student Welfare** (using queryKey but actual implementation unclear) (9 endpoints)
+93. `GET /api/health-records` - Health records (health-records.tsx)
+94. `GET /api/medical-checkups` - Medical checkups (medical-checkups.tsx)
+95. `GET /api/vaccinations` - Vaccinations (vaccinations.tsx)
+
+### 📊 **Total: ~95 Express API endpoints still in active use**
+
+### 🚨 **CRITICAL ACTIONS NEEDED:**
+1. **DELETE** `client/src/pages/library/index-new.tsx` - This is a duplicate using Express API
+2. **KEEP** Payment gateway endpoints for PCI compliance security
+3. **MIGRATE** Authentication to Supabase Auth (9 endpoints)
+4. **MIGRATE** Public forms to direct Supabase (2 endpoints)
+5. **EVALUATE** Document generation - may need Edge Functions or keep in Express
+
+**Analysis completed on October 15, 2025 at 6:30 AM**
