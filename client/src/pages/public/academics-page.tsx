@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 interface SchoolInfo {
   schoolName: string;
@@ -55,8 +56,35 @@ interface AcademicProgram {
 }
 
 export default function AcademicsPage() {
+  // Migrate to direct Supabase: School info
   const { data: schoolInfo, isLoading } = useQuery<SchoolInfo>({
     queryKey: ["/api/public/school-info"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('school_settings')
+        .select('school_name, school_name_bn, address, address_bn, email, phone, website, principal_name, establishment_year, description, description_bn, motto, motto_bn, logo')
+        .limit(1)
+        .single();
+      
+      if (error) throw error;
+      
+      return {
+        schoolName: data?.school_name || "মডেল স্কুল অ্যান্ড কলেজ",
+        schoolNameBn: data?.school_name_bn || "মডেল স্কুল অ্যান্ড কলেজ",
+        address: data?.address || "ঢাকা, বাংলাদেশ",
+        addressBn: data?.address_bn || "ঢাকা, বাংলাদেশ",
+        email: data?.email || "info@modelschool.edu.bd",
+        phone: data?.phone || "০১৭১২-৩৪৫৬৭৮",
+        website: data?.website,
+        principalName: data?.principal_name || "প্রধান শিক্ষক",
+        establishmentYear: data?.establishment_year || 1985,
+        description: data?.description,
+        descriptionBn: data?.description_bn,
+        motto: data?.motto,
+        mottoBn: data?.motto_bn,
+        logo: data?.logo
+      };
+    }
   });
 
   const academicPrograms: AcademicProgram[] = [

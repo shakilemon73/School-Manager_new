@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 interface SchoolInfo {
   schoolName: string;
@@ -43,20 +44,85 @@ interface SchoolStats {
 }
 
 export default function PublicHomePage() {
+  // Migrate to direct Supabase: School info
   const { data: schoolInfo, isLoading: infoLoading } = useQuery<SchoolInfo>({
     queryKey: ["/api/public/school-info"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('school_settings')
+        .select('school_name, school_name_bn, address, address_bn, email, phone, website, principal_name, establishment_year, description, description_bn, motto, motto_bn, logo')
+        .limit(1)
+        .single();
+      
+      if (error) throw error;
+      
+      return {
+        schoolName: data?.school_name || "মডেল স্কুল অ্যান্ড কলেজ",
+        schoolNameBn: data?.school_name_bn || "মডেল স্কুল অ্যান্ড কলেজ",
+        address: data?.address || "ঢাকা, বাংলাদেশ",
+        addressBn: data?.address_bn || "ঢাকা, বাংলাদেশ",
+        email: data?.email || "info@modelschool.edu.bd",
+        phone: data?.phone || "০১৭১২-৩৪৫৬৭৮",
+        website: data?.website,
+        principalName: data?.principal_name || "প্রধান শিক্ষক",
+        establishmentYear: data?.establishment_year || 1985,
+        description: data?.description,
+        descriptionBn: data?.description_bn,
+        motto: data?.motto,
+        mottoBn: data?.motto_bn,
+        logo: data?.logo
+      };
+    }
   });
 
+  // Migrate to direct Supabase: School stats
   const { data: stats, isLoading: statsLoading } = useQuery<SchoolStats>({
     queryKey: ["/api/public/school-stats"],
+    queryFn: async () => {
+      const [studentsCount, teachersCount, schoolData] = await Promise.all([
+        supabase.from('students').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('school_settings').select('establishment_year').limit(1).single()
+      ]);
+      
+      return {
+        totalStudents: studentsCount.count || 0,
+        totalTeachers: teachersCount.count || 0,
+        totalClasses: 10,
+        establishmentYear: schoolData.data?.establishment_year || 1985
+      };
+    }
   });
 
+  // Migrate to direct Supabase: Upcoming events
   const { data: events } = useQuery({
     queryKey: ["/api/public/upcoming-events"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('id, title, description, start_date, end_date, type')
+        .order('start_date', { ascending: true })
+        .limit(5);
+      
+      if (error) return [];
+      return data || [];
+    }
   });
 
+  // Migrate to direct Supabase: Latest news
   const { data: news } = useQuery({
     queryKey: ["/api/public/latest-news"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id, title, title_bn, message, message_bn, type, created_at')
+        .eq('is_live', true)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) return [];
+      return data || [];
+    }
   });
 
   if (infoLoading || statsLoading) {

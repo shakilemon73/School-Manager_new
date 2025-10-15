@@ -1,15 +1,15 @@
 # Active Express Server API Endpoints
 
 **Total Active Endpoints: 241**  
-**Migrated to Supabase Direct: 10 ✅** (Updated: Oct 15, 2025)
+**Migrated to Supabase Direct: 15 ✅** (Updated: Oct 15, 2025)
 
 This document lists all active Express API endpoints currently used in the School Management System.
 
 ## 🎯 Migration Progress
 - ✅ **Authentication (8 endpoints)**: Using direct Supabase Auth with proper session management
-- ✅ **Public Forms (2 endpoints)**: Direct Supabase INSERT with RLS policies for public access
-- 🔄 **In Progress**: Teacher Portal, School Admin, Document Generation
-- 📝 **Next**: Super Admin, Video Conferencing, System Utilities
+- ✅ **Public Website (7 endpoints)**: Direct Supabase with RLS policies for public forms and read-only data
+- 🔄 **In Progress**: Notifications, Calendar Events, Simple CRUD operations
+- 📝 **Next**: Teacher Portal, School Admin, Document Generation, Super Admin
 
 ---
 
@@ -422,6 +422,13 @@ This document lists all active Express API endpoints currently used in the Schoo
 ### Public Website Forms (NEW - Direct Supabase with RLS)
 - ✅ `POST /api/public/contact-messages` - Submit contact form (MIGRATED: Direct Supabase with public INSERT RLS)
 - ✅ `POST /api/public/admission-applications` - Submit admission application (MIGRATED: Direct Supabase with public INSERT RLS)
+
+### Public Website Read Endpoints (NEW - Direct Supabase)
+- ✅ `GET /api/public/school-info` - Get school basic information (MIGRATED: Direct Supabase from school_settings)
+- ✅ `GET /api/public/school-stats` - Get school statistics (MIGRATED: Direct Supabase with aggregations)
+- ✅ `GET /api/public/upcoming-events` - Get upcoming calendar events (MIGRATED: Direct Supabase from calendar_events)
+- ✅ `GET /api/public/latest-news` - Get latest news/notifications (MIGRATED: Direct Supabase from notifications)
+- ✅ `GET /api/public/faculty` - Get faculty information (MIGRATED: Direct Supabase from teachers)
 
 ### Admission Forms
 - `GET /api/admission-forms` - Get admission forms
