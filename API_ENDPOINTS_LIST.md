@@ -1,15 +1,17 @@
 # Active Express Server API Endpoints
 
 **Total Active Endpoints: 241**  
-**Migrated to Supabase Direct: 15 ✅** (Updated: Oct 15, 2025)
+**Migrated to Supabase Direct: 35 ✅** (Updated: Oct 15, 2025)
 
 This document lists all active Express API endpoints currently used in the School Management System.
 
 ## 🎯 Migration Progress
 - ✅ **Authentication (8 endpoints)**: Using direct Supabase Auth with proper session management
 - ✅ **Public Website (7 endpoints)**: Direct Supabase with RLS policies for public forms and read-only data
-- 🔄 **In Progress**: Notifications, Calendar Events, Simple CRUD operations
-- 📝 **Next**: Teacher Portal, School Admin, Document Generation, Super Admin
+- ✅ **Academic Management (10 endpoints)**: Classes (1), Academic Years (5), Subjects (4) migrated to direct Supabase
+- ✅ **Attendance & Students (10 endpoints)**: Attendance CRUD (3), Student GET queries (7) migrated to direct Supabase
+- 🔄 **In Progress**: Teacher Portal, Assignments, Exams, Notifications
+- 📝 **Next**: School Admin, Document Generation, Parent Portal, Super Admin
 
 ---
 

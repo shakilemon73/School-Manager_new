@@ -100,8 +100,9 @@ export default function MedicalCheckupsPage() {
     }
   };
 
+  // Migrated to direct Supabase: Students GET
   const { data: students = [] } = useQuery({
-    queryKey: ['/api/students'],
+    queryKey: ['students'],
     queryFn: async () => {
       const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase

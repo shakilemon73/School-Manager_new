@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,16 +41,36 @@ export default function Reports() {
   const [selectedReportType, setSelectedReportType] = useState("overview");
   const [selectedGrade, setSelectedGrade] = useState<string>("all");
 
+  // Migrated to direct Supabase: Students GET
   const { data: students = [] } = useQuery<StudentWithDetails[]>({
-    queryKey: ["/api/students"],
+    queryKey: ['students'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data as StudentWithDetails[];
+    }
   });
 
   const { data: teachers = [] } = useQuery<TeacherWithDetails[]>({
     queryKey: ["/api/teachers"],
   });
 
-  const { data: classes = [] } = useQuery<ClassWithDetails[]>({
+  // Migrated to direct Supabase: Classes CRUD
+  const { data: classes = [] } = useQuery({
     queryKey: ["/api/classes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("*")
+        .order("name");
+
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   const { data: attendance = [] } = useQuery<AttendanceWithDetails[]>({

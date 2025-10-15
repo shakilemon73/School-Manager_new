@@ -98,8 +98,9 @@ export default function HostelAttendancePage() {
     }
   };
 
+  // Migrated to direct Supabase: Students GET
   const { data: students = [] } = useQuery({
-    queryKey: ['/api/students'],
+    queryKey: ['students'],
     queryFn: async () => {
       const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase

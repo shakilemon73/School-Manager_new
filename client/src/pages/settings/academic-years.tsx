@@ -157,7 +157,7 @@ export default function AcademicYearsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Real database integration for academic years with direct Supabase calls
+  // Migrated to direct Supabase: Academic Years
   const { data: academicYears = [], isLoading: yearsLoading } = useQuery({
     queryKey: ['academic-years'],
     queryFn: async () => {
@@ -376,8 +376,8 @@ export default function AcademicYearsPage() {
       return { success: true };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years-stats'] });
       toast({
         title: "শিক্ষাবর্ষ মুছে ফেলা হয়েছে",
         description: "শিক্ষাবর্ষ সফলভাবে মুছে ফেলা হয়েছে",
@@ -419,8 +419,8 @@ export default function AcademicYearsPage() {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years-stats'] });
       toast({
         title: "শিক্ষাবর্ষ আপডেট হয়েছে",
         description: "শিক্ষাবর্ষ সফলভাবে আপডেট করা হয়েছে",
@@ -454,8 +454,8 @@ export default function AcademicYearsPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years-stats'] });
       toast({
         title: "স্ট্যাটাস আপডেট হয়েছে",
         description: "শিক্ষাবর্ষের স্ট্যাটাস সফলভাবে আপডেট করা হয়েছে",
@@ -488,8 +488,8 @@ export default function AcademicYearsPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years-stats'] });
       toast({
         title: "বর্তমান শিক্ষাবর্ষ সেট করা হয়েছে",
         description: "নতুন বর্তমান শিক্ষাবর্ষ সফলভাবে সেট করা হয়েছে",
@@ -514,8 +514,8 @@ export default function AcademicYearsPage() {
       return { success: true };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/enhanced-academic-terms'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-terms'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years-stats'] });
       toast({
         title: "টার্ম মুছে ফেলা হয়েছে",
         description: "একাডেমিক টার্ম সফলভাবে মুছে ফেলা হয়েছে",
@@ -557,8 +557,8 @@ export default function AcademicYearsPage() {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/enhanced-academic-terms'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-terms'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years-stats'] });
       toast({
         title: "টার্ম আপডেট হয়েছে",
         description: "একাডেমিক টার্ম সফলভাবে আপডেট করা হয়েছে",
@@ -591,8 +591,8 @@ export default function AcademicYearsPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/enhanced-academic-terms'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/academic-years/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-terms'] });
+      queryClient.invalidateQueries({ queryKey: ['academic-years-stats'] });
       toast({
         title: "টার্মের স্ট্যাটাস আপডেট হয়েছে",
         description: "একাডেমিক টার্মের স্ট্যাটাস সফলভাবে আপডেট করা হয়েছে",

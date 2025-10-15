@@ -2557,6 +2557,9 @@ export const subjects = pgTable("subjects", {
   nameBn: text("name_bn").notNull(),
   code: text("code").unique(),
   description: text("description"),
+  creditHours: integer("credit_hours").default(3),
+  isCompulsory: boolean("is_compulsory").default(false),
+  department: text("department"),
   schoolId: integer("school_id").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

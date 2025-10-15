@@ -100,6 +100,7 @@ export default function ExamScheduling() {
     },
   });
 
+  // Migrated to direct Supabase: Classes CRUD
   const { data: classes } = useQuery({
     queryKey: ["/api/classes"],
     queryFn: async () => {

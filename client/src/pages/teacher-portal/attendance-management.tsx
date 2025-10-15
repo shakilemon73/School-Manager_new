@@ -17,6 +17,8 @@ import { useDesignSystem } from '@/hooks/use-design-system';
 import { designClasses } from '@/lib/design-utils';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { supabase } from '@/lib/supabase';
+import type { Student, Class, Subject } from '@shared/schema';
 import {
   Users,
   UserCheck,
@@ -51,7 +53,7 @@ const UXCard = ({ children, interactive = false, ...props }: any) => {
 };
 
 const UXButton = ({ children, variant = "primary", size = "default", ...props }: any) => {
-  const variantClass = designClasses.button[variant] || designClasses.button.primary;
+  const variantClass = (designClasses.button as Record<string, string>)[variant] || designClasses.button.primary;
   const sizeClasses = size === "sm" ? "px-3 py-2 text-sm min-h-[40px]" : "px-4 py-2.5 min-h-[44px]";
   
   return (
@@ -98,64 +100,163 @@ export default function AttendanceManagement() {
   useDesignSystem();
 
   // Fetch classes for teacher
-  const { data: classes = [] } = useQuery({
+  const { data: classes = [] } = useQuery<Class[]>({
     queryKey: ['/api/teachers/classes'],
     staleTime: 300000,
   });
 
   // Fetch subjects for teacher
-  const { data: subjects = [] } = useQuery({
+  const { data: subjects = [] } = useQuery<Subject[]>({
     queryKey: ['/api/teachers/subjects'],
     staleTime: 300000,
   });
 
   // Fetch students for selected class
-  const { data: students = [], isLoading: studentsLoading } = useQuery({
+  const { data: students = [], isLoading: studentsLoading } = useQuery<Student[]>({
     queryKey: ['/api/students', { class: selectedClass }],
     enabled: !!selectedClass,
     staleTime: 60000,
   });
 
+  // Migrated to direct Supabase: Attendance CRUD
   // Fetch attendance data
   const { data: existingAttendance = [] } = useQuery({
-    queryKey: ['/api/attendance', { 
+    queryKey: ['attendance', { 
       date: format(selectedDate, 'yyyy-MM-dd'),
       class: selectedClass,
       subject: selectedSubject
     }],
+    queryFn: async () => {
+      let query = supabase.from('attendance').select('*');
+      
+      if (selectedDate) {
+        query = query.eq('date', format(selectedDate, 'yyyy-MM-dd'));
+      }
+      
+      // Get student IDs for the selected class if class is selected
+      if (selectedClass) {
+        const { data: classStudents } = await supabase
+          .from('students')
+          .select('id')
+          .eq('class', selectedClass);
+        
+        if (classStudents && classStudents.length > 0) {
+          const studentIds = classStudents.map(s => s.id);
+          query = query.in('student_id', studentIds);
+        }
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Convert snake_case to camelCase for UI
+      return (data || []).map((record: any) => ({
+        id: record.id,
+        studentId: record.student_id,
+        classId: record.class_id,
+        date: record.date,
+        status: record.status,
+        remarks: record.remarks,
+        schoolId: record.school_id,
+        createdAt: record.created_at
+      }));
+    },
     enabled: !!selectedClass && !!selectedSubject,
     staleTime: 30000,
   });
 
   // Fetch attendance statistics
   const { data: stats } = useQuery({
-    queryKey: ['/api/attendance/stats', { class: selectedClass }],
+    queryKey: ['attendance-stats', { class: selectedClass }],
+    queryFn: async () => {
+      if (!selectedClass) return null;
+      
+      // Get student IDs for the selected class
+      const { data: classStudents } = await supabase
+        .from('students')
+        .select('id')
+        .eq('class', selectedClass);
+      
+      if (!classStudents || classStudents.length === 0) {
+        return { total: 0, present: 0, absent: 0, late: 0, percentage: 0 };
+      }
+      
+      const studentIds = classStudents.map(s => s.id);
+      
+      // Get all attendance records for these students
+      const { data: attendanceRecords, error } = await supabase
+        .from('attendance')
+        .select('*')
+        .in('student_id', studentIds);
+      
+      if (error) throw error;
+      
+      const records = attendanceRecords || [];
+      const present = records.filter(r => r.status === 'present').length;
+      const absent = records.filter(r => r.status === 'absent').length;
+      const late = records.filter(r => r.status === 'late').length;
+      const total = records.length;
+      const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+      
+      return { total, present, absent, late, percentage };
+    },
     enabled: !!selectedClass,
     staleTime: 60000,
   });
 
   // Save attendance mutation
   const saveAttendance = useMutation({
-    mutationFn: (attendanceData: any) => 
-      apiRequest('/api/attendance/save', {
-        method: 'POST',
-        body: JSON.stringify({
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          class: selectedClass,
-          subject: selectedSubject,
-          attendance: attendanceData
-        }),
-      }),
+    mutationFn: async (attendanceData: any) => {
+      // Get class ID from class name
+      const { data: classData } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('name', selectedClass)
+        .single();
+      
+      const classId = classData?.id || null;
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      
+      // Get student IDs from attendance data
+      const studentIds = attendanceData.map((record: any) => record.studentId);
+      
+      // Delete existing attendance records for these students on this date
+      await supabase
+        .from('attendance')
+        .delete()
+        .eq('date', dateStr)
+        .in('student_id', studentIds);
+      
+      // Transform attendance data to database format (snake_case)
+      const attendanceRecords = attendanceData.map((record: any) => ({
+        student_id: record.studentId,
+        class_id: classId,
+        date: dateStr,
+        status: record.status,
+        remarks: record.remarks || null,
+        school_id: 1, // Default school ID
+      }));
+      
+      // Insert new attendance records
+      const { data, error } = await supabase
+        .from('attendance')
+        .insert(attendanceRecords)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/attendance/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-stats'] });
       toast({
         title: "সফল হয়েছে!",
         description: "উপস্থিতি সংরক্ষিত হয়েছে",
       });
       setIsModified(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Attendance save error:', error);
       toast({
         title: "ত্রুটি!",
         description: "উপস্থিতি সংরক্ষণে সমস্যা হয়েছে",

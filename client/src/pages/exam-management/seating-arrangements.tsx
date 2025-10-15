@@ -111,8 +111,9 @@ export default function SeatingArrangements() {
     },
   });
 
+  // Migrated to direct Supabase: Students GET
   const { data: students } = useQuery({
-    queryKey: ["/api/students"],
+    queryKey: ["students"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
