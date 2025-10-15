@@ -53,8 +53,27 @@ export default function AdmissionsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Migrate to direct Supabase: School info
   const { data: schoolInfo, isLoading } = useQuery<SchoolInfo>({
     queryKey: ["/api/public/school-info"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('school_settings')
+        .select('school_name, school_name_bn, address, email, phone, principal_name')
+        .limit(1)
+        .single();
+      
+      if (error) throw error;
+      
+      return {
+        schoolName: data?.school_name || "মডেল স্কুল অ্যান্ড কলেজ",
+        schoolNameBn: data?.school_name_bn || "মডেল স্কুল অ্যান্ড কলেজ",
+        address: data?.address || "ঢাকা, বাংলাদেশ",
+        email: data?.email || "info@modelschool.edu.bd",
+        phone: data?.phone || "০১৭১২-৩৪৫৬৭৮",
+        principalName: data?.principal_name || "প্রধান শিক্ষক"
+      };
+    }
   });
 
   const form = useForm<AdmissionFormData>({
