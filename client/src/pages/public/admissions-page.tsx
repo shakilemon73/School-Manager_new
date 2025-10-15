@@ -22,7 +22,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 
 const admissionFormSchema = z.object({
   studentName: z.string().min(2, "শিক্ষার্থীর নাম কমপক্ষে ২ অক্ষরের হতে হবে"),
@@ -75,11 +75,28 @@ export default function AdmissionsPage() {
   });
 
   const submitAdmissionMutation = useMutation({
-    mutationFn: (data: AdmissionFormData) => 
-      apiRequest("/api/public/admission-applications", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: AdmissionFormData) => {
+      const { error } = await supabase
+        .from("admission_applications")
+        .insert([{
+          student_name: data.studentName,
+          student_name_bn: data.studentNameBn,
+          date_of_birth: data.dateOfBirth,
+          gender: data.gender,
+          class: data.class,
+          father_name: data.fatherName,
+          mother_name: data.motherName,
+          guardian_phone: data.guardianPhone,
+          address: data.address,
+          previous_school: data.previousSchool || null,
+          email: data.email || null,
+          school_id: 1,
+          status: "pending",
+        }]);
+      
+      if (error) throw error;
+      return { success: true };
+    },
     onSuccess: () => {
       toast({
         title: "আবেদন সফল!",

@@ -22,7 +22,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 
 const contactFormSchema = z.object({
   name: z.string().min(2, "নাম কমপক্ষে ২ অক্ষরের হতে হবে"),
@@ -71,11 +71,22 @@ export default function ContactPage() {
   });
 
   const submitContactMutation = useMutation({
-    mutationFn: (data: ContactFormData) => 
-      apiRequest("/api/public/contact-messages", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: ContactFormData) => {
+      const { error } = await supabase
+        .from("contact_messages")
+        .insert([{
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          subject: data.subject,
+          message: data.message,
+          school_id: 1,
+          status: "pending",
+        }]);
+      
+      if (error) throw error;
+      return { success: true };
+    },
     onSuccess: () => {
       toast({
         title: "বার্তা পাঠানো হয়েছে!",

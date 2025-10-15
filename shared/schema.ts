@@ -428,6 +428,63 @@ export const notificationsInsertSchema = createInsertSchema(notifications);
 export type InsertNotification = z.infer<typeof notificationsInsertSchema>;
 export type Notification = typeof notifications.$inferSelect;
 
+// Contact Messages table (Public website form submissions)
+export const contactMessages = pgTable("contact_messages", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  status: text("status").default("pending").notNull(), // pending, read, responded, archived
+  schoolId: integer("school_id").default(1).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  respondedAt: timestamp("responded_at"),
+  respondedBy: integer("responded_by"),
+});
+
+export const contactMessagesInsertSchema = createInsertSchema(contactMessages).omit({
+  id: true,
+  createdAt: true,
+  respondedAt: true,
+  respondedBy: true,
+});
+export type InsertContactMessage = z.infer<typeof contactMessagesInsertSchema>;
+export type ContactMessage = typeof contactMessages.$inferSelect;
+
+// Admission Applications table (Public website admission submissions)
+export const admissionApplications = pgTable("admission_applications", {
+  id: serial("id").primaryKey(),
+  studentName: text("student_name").notNull(),
+  studentNameBn: text("student_name_bn").notNull(),
+  dateOfBirth: text("date_of_birth").notNull(),
+  gender: text("gender").notNull(),
+  class: text("class").notNull(),
+  fatherName: text("father_name").notNull(),
+  motherName: text("mother_name").notNull(),
+  guardianPhone: text("guardian_phone").notNull(),
+  address: text("address").notNull(),
+  previousSchool: text("previous_school"),
+  email: text("email"),
+  status: text("status").default("pending").notNull(), // pending, reviewed, approved, rejected, enrolled
+  applicationNumber: text("application_number").unique(),
+  schoolId: integer("school_id").default(1).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: integer("reviewed_by"),
+  notes: text("notes"),
+});
+
+export const admissionApplicationsInsertSchema = createInsertSchema(admissionApplications).omit({
+  id: true,
+  createdAt: true,
+  reviewedAt: true,
+  reviewedBy: true,
+  applicationNumber: true,
+});
+export type InsertAdmissionApplication = z.infer<typeof admissionApplicationsInsertSchema>;
+export type AdmissionApplication = typeof admissionApplications.$inferSelect;
+
 
 
 // Classes table
