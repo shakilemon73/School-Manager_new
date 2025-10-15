@@ -1,8 +1,15 @@
 # Active Express Server API Endpoints
 
-**Total Active Endpoints: 241**
+**Total Active Endpoints: 241**  
+**Migrated to Supabase Direct: 10 ✅** (Updated: Oct 15, 2025)
 
 This document lists all active Express API endpoints currently used in the School Management System.
+
+## 🎯 Migration Progress
+- ✅ **Authentication (8 endpoints)**: Using direct Supabase Auth with proper session management
+- ✅ **Public Forms (2 endpoints)**: Direct Supabase INSERT with RLS policies for public access
+- 🔄 **In Progress**: Teacher Portal, School Admin, Document Generation
+- 📝 **Next**: Super Admin, Video Conferencing, System Utilities
 
 ---
 
@@ -29,11 +36,11 @@ This document lists all active Express API endpoints currently used in the Schoo
 ## 👥 User Management & Authentication
 
 ### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/resend-confirmation` - Resend confirmation email
-- `POST /api/teacher/login` - Teacher login
-- `POST /api/teacher/logout` - Teacher logout
+- ✅ `POST /api/auth/login` - User login (MIGRATED: Direct Supabase Auth)
+- ✅ `POST /api/auth/register` - User registration (MIGRATED: Direct Supabase Auth)
+- ✅ `POST /api/auth/resend-confirmation` - Resend confirmation email (MIGRATED: Supabase)
+- ✅ `POST /api/teacher/login` - Teacher login (MIGRATED: Direct Supabase Auth)
+- ✅ `POST /api/teacher/logout` - Teacher logout (MIGRATED: Direct Supabase Auth)
 
 ### User CRUD Operations
 - `GET /api/users` - Get all users
@@ -43,9 +50,9 @@ This document lists all active Express API endpoints currently used in the Schoo
 - `PATCH /api/users/:id/status` - Update user status
 
 ### Auth User Management
-- `GET /api/auth/users` - Get authenticated users
-- `GET /api/auth/users/:id` - Get specific auth user
-- `PATCH /api/auth/users/:id/status` - Update auth user status
+- ✅ `GET /api/auth/users` - Get authenticated users (MIGRATED: Supabase Admin API)
+- ✅ `GET /api/auth/users/:id` - Get specific auth user (MIGRATED: Supabase Admin API)
+- ✅ `PATCH /api/auth/users/:id/status` - Update auth user status (MIGRATED: Supabase Admin API)
 
 ### Admin Users
 - `GET /api/admin/users` - Get admin users
@@ -411,6 +418,10 @@ This document lists all active Express API endpoints currently used in the Schoo
 - `POST /api/testimonials` - Create testimonial
 - `PUT /api/testimonials/:id` - Update testimonial
 - `DELETE /api/testimonials/:id` - Delete testimonial
+
+### Public Website Forms (NEW - Direct Supabase with RLS)
+- ✅ `POST /api/public/contact-messages` - Submit contact form (MIGRATED: Direct Supabase with public INSERT RLS)
+- ✅ `POST /api/public/admission-applications` - Submit admission application (MIGRATED: Direct Supabase with public INSERT RLS)
 
 ### Admission Forms
 - `GET /api/admission-forms` - Get admission forms
