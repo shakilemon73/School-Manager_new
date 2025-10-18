@@ -272,7 +272,6 @@ export const userProfile = {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.warn('🏫 No authenticated user - cannot get school ID');
         return null;
       }
 

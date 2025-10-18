@@ -8,7 +8,7 @@ export function useSupabaseSettings() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user, schoolId } = useSupabaseDirectAuth();
-  const userSchoolId = schoolId || 1; // Fallback for development
+  const userSchoolId = schoolId;
 
   // GET school settings from Supabase with user context
   const {
@@ -37,7 +37,7 @@ export function useSupabaseSettings() {
       
       return { data };
     },
-    enabled: !!userSchoolId
+    enabled: !!user && !!userSchoolId
   });
 
   const schoolSettings = settingsResponse?.data;
@@ -325,7 +325,7 @@ export function useSupabaseSettings() {
           database: {
             size: '50 MB',
             tables: 25,
-            records: studentsResult.count + teachersResult.count || 0,
+            records: (studentsResult.count || 0) + (teachersResult.count || 0),
             lastBackup: new Date().toISOString(),
             status: 'healthy'
           },
@@ -337,7 +337,7 @@ export function useSupabaseSettings() {
         }
       };
     },
-    enabled: !!userSchoolId,
+    enabled: !!user && !!userSchoolId,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
