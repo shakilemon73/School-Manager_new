@@ -1,11 +1,47 @@
 import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
-import { Loader2, AlertCircle, School } from "lucide-react";
-import { Redirect, Route } from "wouter";
+import { Loader2, AlertCircle, School, LogOut } from "lucide-react";
+import { Redirect, Route, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 function NoSchoolAssigned() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const handleBackToLogin = async () => {
+    try {
+      // Sign out the user first
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Sign out error:', error);
+        toast({
+          title: "সাইন আউট ব্যর্থ",
+          description: "দয়া করে আবার চেষ্টা করুন",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Navigate to login page
+      setLocation('/auth');
+    } catch (err) {
+      console.error('Error during sign out:', err);
+      toast({
+        title: "ত্রুটি",
+        description: "সাইন আউট করতে সমস্যা হয়েছে",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEnrollSchool = () => {
+    setLocation('/school-enrollment');
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
       <Card className="max-w-md w-full shadow-xl">
@@ -32,7 +68,7 @@ function NoSchoolAssigned() {
             </p>
             <Button 
               className="w-full bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700" 
-              onClick={() => window.location.href = '/school-enrollment'}
+              onClick={handleEnrollSchool}
               data-testid="button-enroll-school"
             >
               <School className="mr-2 h-4 w-4" />
@@ -46,10 +82,11 @@ function NoSchoolAssigned() {
             <Button 
               variant="outline" 
               className="w-full mt-4" 
-              onClick={() => window.location.href = '/auth'}
+              onClick={handleBackToLogin}
               data-testid="button-back-login"
             >
-              লগইন পৃষ্ঠায় ফিরে যান
+              <LogOut className="mr-2 h-4 w-4" />
+              সাইন আউট এবং লগইন পৃষ্ঠায় ফিরে যান
             </Button>
           </div>
         </CardContent>

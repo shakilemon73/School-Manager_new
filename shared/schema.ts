@@ -48,6 +48,7 @@ export type User = typeof users.$inferSelect;
 export const schools = pgTable("schools", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  type: text("type"), // primary, secondary, high_school, college, university, other
   address: text("address"),
   phone: text("phone"),
   email: text("email"),
