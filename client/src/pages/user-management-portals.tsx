@@ -110,6 +110,18 @@ export default function UserManagementPortals() {
     passwordsDoNotMatch: language === 'bn' ? 'পাসওয়ার্ড মিলছে না' : 'Passwords do not match',
     weakPassword: language === 'bn' ? 'দুর্বল পাসওয়ার্ড' : 'Weak Password',
     passwordMinLength: language === 'bn' ? 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে' : 'Password must be at least 6 characters',
+    createAuthDialogTitle: language === 'bn' ? 'প্রমাণীকরণ অ্যাকাউন্ট তৈরি করুন' : 'Create Authentication Account',
+    createAuthFor: language === 'bn' ? 'এর জন্য লগইন অ্যাকাউন্ট তৈরি করুন' : 'Create a login account for',
+    password: language === 'bn' ? 'পাসওয়ার্ড' : 'Password',
+    confirmPassword: language === 'bn' ? 'পাসওয়ার্ড নিশ্চিত করুন' : 'Confirm Password',
+    enterPassword: language === 'bn' ? 'পাসওয়ার্ড লিখুন (কমপক্ষে ৬ অক্ষর)' : 'Enter password (min 6 characters)',
+    confirmPasswordPlaceholder: language === 'bn' ? 'পাসওয়ার্ড নিশ্চিত করুন' : 'Confirm password',
+    cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
+    createAuthAccount: language === 'bn' ? 'প্রমাণীকরণ অ্যাকাউন্ট তৈরি করুন' : 'Create Auth Account',
+    creating: language === 'bn' ? 'তৈরি হচ্ছে...' : 'Creating...',
+    reset: language === 'bn' ? 'রিসেট' : 'Reset',
+    enterNewPassword: language === 'bn' ? 'নতুন পাসওয়ার্ড লিখুন (কমপক্ষে ৬ অক্ষর):' : 'Enter new password (min 6 characters):',
+    removeAuthFor: language === 'bn' ? 'এর প্রমাণীকরণ সরাতে চান?' : 'Remove auth for',
   };
 
   // Get current school ID
@@ -309,12 +321,12 @@ export default function UserManagementPortals() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center">
                 <Users className="h-4 w-4 mr-2 text-blue-600" />
-                Total Users
+                {t.totalUsers}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{portalUsers.length}</div>
-              <p className="text-xs text-gray-500 mt-1">All portal users</p>
+              <p className="text-xs text-gray-500 mt-1">{t.allPortalUsers}</p>
             </CardContent>
           </Card>
 
@@ -322,12 +334,12 @@ export default function UserManagementPortals() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center">
                 <UserCheck className="h-4 w-4 mr-2 text-green-600" />
-                With Auth
+                {t.withAuth}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{usersWithAuth.length}</div>
-              <p className="text-xs text-gray-500 mt-1">Can login to portals</p>
+              <p className="text-xs text-gray-500 mt-1">{t.canLogin}</p>
             </CardContent>
           </Card>
 
@@ -335,12 +347,12 @@ export default function UserManagementPortals() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center">
                 <UserX className="h-4 w-4 mr-2 text-red-600" />
-                Without Auth
+                {t.withoutAuth}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">{usersWithoutAuth.length}</div>
-              <p className="text-xs text-gray-500 mt-1">Need auth setup</p>
+              <p className="text-xs text-gray-500 mt-1">{t.needAuthSetup}</p>
             </CardContent>
           </Card>
         </div>
@@ -349,8 +361,7 @@ export default function UserManagementPortals() {
         {usersWithoutAuth.length > 0 && (
           <Alert>
             <AlertDescription>
-              <strong>{usersWithoutAuth.length} users</strong> don't have authentication set up. 
-              Create auth accounts for them to allow portal access.
+              <strong>{usersWithoutAuth.length} {t.users}</strong> {t.noAuthSetup}
             </AlertDescription>
           </Alert>
         )}
@@ -358,11 +369,11 @@ export default function UserManagementPortals() {
         {/* Tabs for filtering */}
         <Tabs defaultValue="all" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="all">All Users ({portalUsers.length})</TabsTrigger>
-            <TabsTrigger value="students">Students</TabsTrigger>
-            <TabsTrigger value="parents">Parents</TabsTrigger>
-            <TabsTrigger value="teachers">Teachers</TabsTrigger>
-            <TabsTrigger value="no-auth">Without Auth ({usersWithoutAuth.length})</TabsTrigger>
+            <TabsTrigger value="all">{t.allUsers} ({portalUsers.length})</TabsTrigger>
+            <TabsTrigger value="students">{t.students}</TabsTrigger>
+            <TabsTrigger value="parents">{t.parents}</TabsTrigger>
+            <TabsTrigger value="teachers">{t.teachers}</TabsTrigger>
+            <TabsTrigger value="no-auth">{t.withoutAuthTab} ({usersWithoutAuth.length})</TabsTrigger>
           </TabsList>
 
           {['all', 'students', 'parents', 'teachers', 'no-auth'].map(tab => (
@@ -370,16 +381,16 @@ export default function UserManagementPortals() {
               <Card>
                 <CardHeader>
                   <CardTitle>
-                    {tab === 'all' && 'All Portal Users'}
-                    {tab === 'students' && 'Students'}
-                    {tab === 'parents' && 'Parents'}
-                    {tab === 'teachers' && 'Teachers'}
-                    {tab === 'no-auth' && 'Users Without Authentication'}
+                    {tab === 'all' && t.allPortalUsersTitle}
+                    {tab === 'students' && t.students}
+                    {tab === 'parents' && t.parents}
+                    {tab === 'teachers' && t.teachers}
+                    {tab === 'no-auth' && t.usersWithoutAuth}
                   </CardTitle>
                   <CardDescription>
                     {tab === 'no-auth' 
-                      ? 'Create authentication accounts for these users'
-                      : 'Manage authentication and access for portal users'
+                      ? t.createAuthAccounts
+                      : t.manageAuthAccess
                     }
                   </CardDescription>
                 </CardHeader>
@@ -387,12 +398,12 @@ export default function UserManagementPortals() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Auth Status</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>{t.name}</TableHead>
+                        <TableHead>{t.email}</TableHead>
+                        <TableHead>{t.role}</TableHead>
+                        <TableHead>{t.id}</TableHead>
+                        <TableHead>{t.authStatus}</TableHead>
+                        <TableHead>{t.actions}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -405,14 +416,14 @@ export default function UserManagementPortals() {
                         .map(user => (
                           <TableRow key={`${user.role}-${user.id}`}>
                             <TableCell className="font-medium">{user.name}</TableCell>
-                            <TableCell>{user.email || <span className="text-gray-400">No email</span>}</TableCell>
+                            <TableCell>{user.email || <span className="text-gray-400">{t.noEmail}</span>}</TableCell>
                             <TableCell>
                               <Badge variant={
                                 user.role === 'student' ? 'default' : 
                                 user.role === 'parent' ? 'secondary' : 
                                 'outline'
                               }>
-                                {user.role}
+                                {user.role === 'student' ? t.student : user.role === 'parent' ? t.parent : t.teacher}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-sm text-gray-500">
@@ -422,12 +433,12 @@ export default function UserManagementPortals() {
                               {user.has_auth ? (
                                 <Badge className="bg-green-100 text-green-800">
                                   <UserCheck className="h-3 w-3 mr-1" />
-                                  Active
+                                  {t.enabled}
                                 </Badge>
                               ) : (
                                 <Badge variant="destructive">
                                   <UserX className="h-3 w-3 mr-1" />
-                                  No Auth
+                                  {t.notSetup}
                                 </Badge>
                               )}
                             </TableCell>
@@ -441,7 +452,7 @@ export default function UserManagementPortals() {
                                     data-testid={`button-create-auth-${user.id}`}
                                   >
                                     <Plus className="h-4 w-4 mr-1" />
-                                    Create Auth
+                                    {t.createAuth}
                                   </Button>
                                 ) : (
                                   <>
@@ -449,7 +460,7 @@ export default function UserManagementPortals() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => {
-                                        const newPass = prompt('Enter new password (min 6 characters):');
+                                        const newPass = prompt(t.enterNewPassword);
                                         if (newPass && newPass.length >= 6 && user.user_id) {
                                           resetPasswordMutation.mutate({ userId: user.user_id, newPassword: newPass });
                                         }
@@ -457,13 +468,13 @@ export default function UserManagementPortals() {
                                       data-testid={`button-reset-password-${user.id}`}
                                     >
                                       <Key className="h-4 w-4 mr-1" />
-                                      Reset
+                                      {t.reset}
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant="destructive"
                                       onClick={() => {
-                                        if (confirm(`Remove auth for ${user.name}?`) && user.user_id) {
+                                        if (confirm(`${t.removeAuthFor} ${user.name}?`) && user.user_id) {
                                           deleteAuthUserMutation.mutate(user.user_id);
                                         }
                                       }}
@@ -489,38 +500,38 @@ export default function UserManagementPortals() {
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Authentication Account</DialogTitle>
+              <DialogTitle>{t.createAuthDialogTitle}</DialogTitle>
               <DialogDescription>
-                Create a login account for {selectedUser?.name} ({selectedUser?.email})
+                {t.createAuthFor} {selectedUser?.name} ({selectedUser?.email})
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
               <div>
-                <Label>Role</Label>
+                <Label>{t.role}</Label>
                 <Input value={selectedUser?.role || ''} disabled />
               </div>
 
               <div>
-                <Label>Email</Label>
+                <Label>{t.email}</Label>
                 <Input value={selectedUser?.email || ''} disabled />
               </div>
 
               <div>
-                <Label>Password *</Label>
+                <Label>{t.password} *</Label>
                 <Input
                   type="password"
-                  placeholder="Enter password (min 6 characters)"
+                  placeholder={t.enterPassword}
                   value={newUserData.password}
                   onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
                 />
               </div>
 
               <div>
-                <Label>Confirm Password *</Label>
+                <Label>{t.confirmPassword} *</Label>
                 <Input
                   type="password"
-                  placeholder="Confirm password"
+                  placeholder={t.confirmPasswordPlaceholder}
                   value={newUserData.confirmPassword}
                   onChange={(e) => setNewUserData({ ...newUserData, confirmPassword: e.target.value })}
                 />
@@ -529,13 +540,13 @@ export default function UserManagementPortals() {
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
+                {t.cancel}
               </Button>
               <Button 
                 onClick={handleSubmitAuthCreation}
                 disabled={createAuthUserMutation.isPending}
               >
-                {createAuthUserMutation.isPending ? 'Creating...' : 'Create Auth Account'}
+                {createAuthUserMutation.isPending ? t.creating : t.createAuthAccount}
               </Button>
             </DialogFooter>
           </DialogContent>
