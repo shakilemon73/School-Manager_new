@@ -55,19 +55,20 @@ export default function ContactPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Migrate to direct Supabase: School info
-  const { data: schoolInfo, isLoading } = useQuery<SchoolInfo>({
+  // Migrate to direct Supabase: School info (PUBLIC PAGE - gets first active school)
+  const { data: schoolInfo, isLoading } = useQuery<SchoolInfo & { id: number }>({
     queryKey: ["/api/public/school-info"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('school_settings')
-        .select('school_name, school_name_bn, address, address_bn, email, phone, website, principal_name, establishment_year, description, description_bn, motto, motto_bn, logo')
+        .select('id, school_id, school_name, school_name_bn, address, address_bn, email, phone, website, principal_name, establishment_year, description, description_bn, motto, motto_bn, logo')
         .limit(1)
         .single();
       
       if (error) throw error;
       
       return {
+        id: data?.school_id || data?.id || 1,
         schoolName: data?.school_name || "মডেল স্কুল অ্যান্ড কলেজ",
         schoolNameBn: data?.school_name_bn || "মডেল স্কুল অ্যান্ড কলেজ",
         address: data?.address || "ঢাকা, বাংলাদেশ",
@@ -99,6 +100,9 @@ export default function ContactPage() {
 
   const submitContactMutation = useMutation({
     mutationFn: async (data: ContactFormData) => {
+      // ✅ SECURITY: Use school ID from school settings (PUBLIC PAGE)
+      const currentSchoolId = schoolInfo?.id || 1;
+      
       const { error } = await supabase
         .from("contact_messages")
         .insert([{
@@ -107,7 +111,7 @@ export default function ContactPage() {
           phone: data.phone,
           subject: data.subject,
           message: data.message,
-          school_id: 1,
+          school_id: currentSchoolId,
           status: "pending",
         }]);
       

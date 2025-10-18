@@ -47,25 +47,27 @@ interface SchoolInfo {
   email: string;
   phone: string;
   principalName: string;
+  logo?: string;
 }
 
 export default function AdmissionsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Migrate to direct Supabase: School info
-  const { data: schoolInfo, isLoading } = useQuery<SchoolInfo>({
+  // Migrate to direct Supabase: School info (PUBLIC PAGE - gets first active school)
+  const { data: schoolInfo, isLoading } = useQuery<SchoolInfo & { id: number }>({
     queryKey: ["/api/public/school-info"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('school_settings')
-        .select('school_name, school_name_bn, address, email, phone, principal_name')
+        .select('id, school_id, school_name, school_name_bn, address, email, phone, principal_name')
         .limit(1)
         .single();
       
       if (error) throw error;
       
       return {
+        id: data?.school_id || data?.id || 1,
         schoolName: data?.school_name || "মডেল স্কুল অ্যান্ড কলেজ",
         schoolNameBn: data?.school_name_bn || "মডেল স্কুল অ্যান্ড কলেজ",
         address: data?.address || "ঢাকা, বাংলাদেশ",
@@ -95,6 +97,9 @@ export default function AdmissionsPage() {
 
   const submitAdmissionMutation = useMutation({
     mutationFn: async (data: AdmissionFormData) => {
+      // ✅ SECURITY: Use school ID from school settings (PUBLIC PAGE)
+      const currentSchoolId = schoolInfo?.id || 1;
+      
       const { error } = await supabase
         .from("admission_applications")
         .insert([{
@@ -109,7 +114,7 @@ export default function AdmissionsPage() {
           address: data.address,
           previous_school: data.previousSchool || null,
           email: data.email || null,
-          school_id: 1,
+          school_id: currentSchoolId,
           status: "pending",
         }]);
       

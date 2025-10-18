@@ -27,11 +27,17 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
 
-      // Extract school ID from user metadata
+      // Extract school ID from user metadata - NO FALLBACK for security
       if (session?.user) {
-        const userSchoolId = session.user.user_metadata?.school_id || session.user.user_metadata?.schoolId || 1;
-        setSchoolId(typeof userSchoolId === 'number' ? userSchoolId : parseInt(userSchoolId) || 1);
-        console.log('🏫 Initial user school ID:', userSchoolId);
+        const userSchoolId = session.user.user_metadata?.school_id || session.user.user_metadata?.schoolId;
+        
+        if (!userSchoolId) {
+          console.error('🚨 SECURITY WARNING: User has no school_id in metadata!', session.user.email);
+          setSchoolId(null);
+        } else {
+          setSchoolId(typeof userSchoolId === 'number' ? userSchoolId : parseInt(userSchoolId));
+          console.log('🏫 Initial user school ID:', userSchoolId);
+        }
       } else {
         setSchoolId(null);
       }
@@ -45,11 +51,17 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         console.log('Auth state change:', event, session?.user?.email || null);
         setUser(session?.user ?? null);
 
-        // Extract school ID from user metadata
+        // Extract school ID from user metadata - NO FALLBACK for security
         if (session?.user) {
-          const userSchoolId = session.user.user_metadata?.school_id || session.user.user_metadata?.schoolId || 1;
-          setSchoolId(typeof userSchoolId === 'number' ? userSchoolId : parseInt(userSchoolId) || 1);
-          console.log('🏫 User school ID:', userSchoolId);
+          const userSchoolId = session.user.user_metadata?.school_id || session.user.user_metadata?.schoolId;
+          
+          if (!userSchoolId) {
+            console.error('🚨 SECURITY WARNING: User has no school_id in metadata!', session.user.email);
+            setSchoolId(null);
+          } else {
+            setSchoolId(typeof userSchoolId === 'number' ? userSchoolId : parseInt(userSchoolId));
+            console.log('🏫 User school ID:', userSchoolId);
+          }
         } else {
           setSchoolId(null);
         }
@@ -201,9 +213,9 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       return typeof schoolId === 'number' ? schoolId : parseInt(schoolId) || null;
     }
 
-    // Fallback to default school for development
-    console.warn('⚠️ No school ID found in user metadata, using fallback school ID: 1');
-    return 1;
+    // 🚨 SECURITY: No fallback - force users to have proper school_id
+    console.error('🚨 CRITICAL: No school ID found in user metadata for:', user.email);
+    return null;
   };
 
   const value: AuthContextType = {
@@ -256,23 +268,27 @@ export const userProfile = {
   },
 
   // Get current user's school ID
-  async getCurrentUserSchoolId(): Promise<number> {
+  async getCurrentUserSchoolId(): Promise<number | null> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.log('🏫 No authenticated user, using default school ID: 1');
-        return 1; // Default for development
+        console.warn('🏫 No authenticated user - cannot get school ID');
+        return null;
       }
 
-      // Get school ID from user metadata or default to 1
-      const schoolId = user.user_metadata?.school_id || 1;
+      // Get school ID from user metadata - NO FALLBACK
+      const schoolId = user.user_metadata?.school_id || user.user_metadata?.schoolId;
+      
+      if (!schoolId) {
+        console.error('🚨 CRITICAL: User has no school_id in metadata:', user.email);
+        return null;
+      }
+      
       console.log('🏫 User school ID:', schoolId);
-      return schoolId;
+      return typeof schoolId === 'number' ? schoolId : parseInt(schoolId);
     } catch (error) {
       console.error('Error getting user school ID:', error);
-      // Return default school ID for development
-      console.log('🏫 Fallback to default school ID: 1');
-      return 1;
+      return null;
     }
   },
 

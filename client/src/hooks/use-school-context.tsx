@@ -52,6 +52,9 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     const getSchoolId = async () => {
       try {
         const id = await userProfile.getCurrentUserSchoolId();
+        if (id === null) {
+          console.error('🚨 SECURITY: User has no school_id - cannot load school data');
+        }
         setSchoolId(id);
       } catch (error) {
         console.error('Failed to get school ID:', error);
