@@ -1010,12 +1010,16 @@ export const db = {
       .slice(0, 8);
   },
 
-  // Students (RLS automatically filters by user's school access)
+  // Students - SECURITY: Defense-in-depth with both RLS and client-side filtering
   async getStudents(schoolId?: number) {
-    // schoolId parameter kept for backward compatibility but RLS handles filtering
+    if (!schoolId) {
+      throw new Error('School ID is required to fetch students - security isolation');
+    }
+    
     const { data, error } = await supabase
       .from('students')
       .select('*')
+      .eq('school_id', schoolId) // SECURITY: Client-side filter for defense-in-depth
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -1083,12 +1087,16 @@ export const db = {
     return true;
   },
 
-  // Teachers (RLS automatically filters by user's school access)
+  // Teachers - SECURITY: Defense-in-depth with both RLS and client-side filtering
   async getTeachers(schoolId?: number) {
-    // schoolId parameter kept for backward compatibility but RLS handles filtering
+    if (!schoolId) {
+      throw new Error('School ID is required to fetch teachers - security isolation');
+    }
+    
     const { data, error } = await supabase
       .from('teachers')
       .select('id, teacher_id, name, qualification, subject, date_of_birth, gender, address, phone, email, school_id, status, created_at')
+      .eq('school_id', schoolId) // SECURITY: Client-side filter for defense-in-depth
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -1156,12 +1164,16 @@ export const db = {
     };
   },
 
-  // Library Books (RLS automatically filters by user's school access)
+  // Library Books - SECURITY: Defense-in-depth with both RLS and client-side filtering
   async getLibraryBooks(schoolId?: number) {
-    // schoolId parameter kept for backward compatibility but RLS handles filtering
+    if (!schoolId) {
+      throw new Error('School ID is required to fetch library books - security isolation');
+    }
+    
     const { data, error } = await supabase
       .from('library_books')
       .select('id, title, title_bn, author, isbn, category, publisher, publish_year, total_copies, available_copies, location, description, school_id, created_at')
+      .eq('school_id', schoolId) // SECURITY: Client-side filter for defense-in-depth
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -1203,8 +1215,12 @@ export const db = {
     return data ? fromDbLibrary(data) : null;
   },
 
-  // Borrowed Books functions
+  // Borrowed Books functions - SECURITY: Defense-in-depth
   async getBorrowedBooks(schoolId?: number) {
+    if (!schoolId) {
+      throw new Error('School ID is required to fetch borrowed books - security isolation');
+    }
+    
     const { data, error } = await supabase
       .from('library_borrowed_books')
       .select(`
@@ -1212,20 +1228,26 @@ export const db = {
         students!inner(name, student_id, class, section),
         library_books!inner(title, author, isbn)
       `)
-      .order('created_at', { ascending: false });
+      .eq('school_id', schoolId) // SECURITY: Client-side filter for defense-in-depth
+      .order('created_at', { ascending: false});
     
     if (error) throw error;
     return data;
   },
 
   async getLibraryStats(schoolId?: number) {
+    if (!schoolId) {
+      throw new Error('School ID is required to fetch library stats - security isolation');
+    }
+    
+    // SECURITY: All queries filtered by school_id for defense-in-depth
     const [totalBooks, borrowedBooks] = await Promise.all([
-      supabase.from('library_books').select('total_copies', { count: 'exact', head: true }),
-      supabase.from('library_borrowed_books').select('id', { count: 'exact', head: true }).eq('status', 'borrowed')
+      supabase.from('library_books').select('total_copies', { count: 'exact', head: true }).eq('school_id', schoolId),
+      supabase.from('library_borrowed_books').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'borrowed')
     ]);
 
-    const totalCopies = await supabase.from('library_books').select('total_copies');
-    const availableCopies = await supabase.from('library_books').select('available_copies');
+    const totalCopies = await supabase.from('library_books').select('total_copies').eq('school_id', schoolId);
+    const availableCopies = await supabase.from('library_books').select('available_copies').eq('school_id', schoolId);
 
     const totalBooksCount = totalCopies.data?.reduce((sum, book) => sum + (book.total_copies || 0), 0) || 0;
     const availableBooksCount = availableCopies.data?.reduce((sum, book) => sum + (book.available_copies || 0), 0) || 0;
@@ -1238,12 +1260,16 @@ export const db = {
     };
   },
 
-  // Inventory Items (RLS automatically filters by user's school access)
+  // Inventory Items - SECURITY: Defense-in-depth with both RLS and client-side filtering
   async getInventoryItems(schoolId?: number) {
-    // schoolId parameter kept for backward compatibility but RLS handles filtering
+    if (!schoolId) {
+      throw new Error('School ID is required to fetch inventory items - security isolation');
+    }
+    
     const { data, error } = await supabase
       .from('inventory_items')
       .select('id, name, name_bn, category, subcategory, brand, model, serial_number, unit_price, current_quantity, minimum_threshold, unit, supplier, location, condition, description, school_id, created_at, updated_at')
+      .eq('school_id', schoolId) // SECURITY: Client-side filter for defense-in-depth
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -1285,11 +1311,16 @@ export const db = {
     return data;
   },
 
-  // Staff functions
+  // Staff functions - SECURITY: Defense-in-depth with both RLS and client-side filtering
   async getStaff(schoolId?: number) {
+    if (!schoolId) {
+      throw new Error('School ID is required to fetch staff - security isolation');
+    }
+    
     const { data, error } = await supabase
       .from('staff')
       .select('*')
+      .eq('school_id', schoolId) // SECURITY: Client-side filter for defense-in-depth
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -1341,14 +1372,18 @@ export const db = {
     return true;
   },
 
-  // Calendar Events (RLS automatically filters by user's school access)
+  // Calendar Events - SECURITY: Defense-in-depth with both RLS and client-side filtering
   async getCalendarEvents(schoolId?: number) {
-    // schoolId parameter kept for backward compatibility but RLS handles filtering
+    if (!schoolId) {
+      throw new Error('School ID is required to fetch calendar events - security isolation');
+    }
+    
     const { data, error } = await supabase
       .from('calendar_events')
       .select('id, title, title_bn, description, description_bn, start_date, end_date, start_time, end_time, type, is_active, is_public, location, organizer, school_id, created_at')
+      .eq('school_id', schoolId) // SECURITY: Client-side filter for defense-in-depth
       .eq('is_active', true)
-      .order('start_date', { ascending: true });
+      .order('start_date', { ascending: true});
     
     if (error) throw error;
     return data;
@@ -2215,22 +2250,32 @@ export const db = {
     };
   },
 
-  // User Management (replacing 7 Express routes)
+  // User Management - SECURITY: Defense-in-depth with school_id filtering
   async getUsers(schoolId?: number) {
+    if (!schoolId) {
+      throw new Error('School ID is required to fetch users - security isolation');
+    }
+    
     const { data, error } = await supabase
       .from('users')
       .select('*')
+      .eq('school_id', schoolId) // SECURITY: Client-side filter for defense-in-depth
       .order('created_at', { ascending: false });
     
     if (error) throw error;
     return data;
   },
 
-  async getUserStats() {
+  async getUserStats(schoolId?: number) {
+    if (!schoolId) {
+      throw new Error('School ID is required to fetch user stats - security isolation');
+    }
+    
+    // SECURITY: All queries filtered by school_id for defense-in-depth
     const [total, active, inactive] = await Promise.all([
-      supabase.from('users').select('id', { count: 'exact', head: true }),
-      supabase.from('users').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('users').select('id', { count: 'exact', head: true }).eq('status', 'inactive')
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'inactive')
     ]);
     
     return {

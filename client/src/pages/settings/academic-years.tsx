@@ -272,7 +272,7 @@ export default function AcademicYearsPage() {
   // Enhanced mutations
   const createYearMutation = useMutation({
     mutationFn: async (data: z.infer<typeof academicYearSchema>) => {
-      console.log('Creating academic year with data:', data);
+      console.log('Creating academic year with data:', data, 'for school:', schoolId);
       
       const { data: result, error } = await supabase
         .from('academic_years')
@@ -284,7 +284,8 @@ export default function AcademicYearsPage() {
           description: data.description,
           description_bn: data.descriptionBn,
           is_active: data.isActive,
-          status: 'draft'
+          status: 'draft',
+          school_id: schoolId // SECURITY: Include school_id for multi-tenant isolation
         })
         .select()
         .single();
@@ -318,7 +319,7 @@ export default function AcademicYearsPage() {
 
   const createTermMutation = useMutation({
     mutationFn: async (data: z.infer<typeof academicTermSchema>) => {
-      console.log('Creating academic term with data:', data);
+      console.log('Creating academic term with data:', data, 'for school:', schoolId);
       
       const { data: result, error } = await supabase
         .from('academic_terms')
@@ -331,7 +332,8 @@ export default function AcademicYearsPage() {
           description: data.description,
           description_bn: data.descriptionBn,
           is_active: true,
-          status: 'upcoming'
+          status: 'upcoming',
+          school_id: schoolId // SECURITY: Include school_id for multi-tenant isolation
         })
         .select()
         .single();
