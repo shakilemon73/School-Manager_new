@@ -250,7 +250,15 @@ export default function PublicHomePage() {
 
             {/* Enhanced Call-to-Action Buttons */}
             <div className="flex flex-col sm:flex-row justify-center gap-6">
-              <Link href="/admissions" className="group relative overflow-hidden bg-gradient-to-r from-emerald-600 to-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105">
+              <Link href="/student-portal" className="group relative overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105" data-testid="link-student-portal">
+                <span className="relative z-10 flex items-center justify-center">
+                  <Award className="mr-3 h-6 w-6" />
+                  ছাত্র পোর্টাল
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-700 to-pink-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </Link>
+              
+              <Link href="/admissions" className="group relative overflow-hidden bg-gradient-to-r from-emerald-600 to-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105" data-testid="link-admissions">
                 <span className="relative z-10 flex items-center justify-center">
                   <GraduationCap className="mr-3 h-6 w-6" />
                   ভর্তির আবেদন করুন
@@ -258,7 +266,7 @@ export default function PublicHomePage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </Link>
               
-              <Link href="/about" className="group relative overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-md text-slate-700 dark:text-slate-200 px-8 py-4 rounded-2xl font-bold text-lg border-2 border-emerald-200 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-slate-500 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+              <Link href="/about" className="group relative overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-md text-slate-700 dark:text-slate-200 px-8 py-4 rounded-2xl font-bold text-lg border-2 border-emerald-200 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-slate-500 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105" data-testid="link-about">
                 <span className="relative z-10 flex items-center justify-center">
                   <BookOpen className="mr-3 h-6 w-6" />
                   আরও জানুন

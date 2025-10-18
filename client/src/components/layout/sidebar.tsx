@@ -50,7 +50,8 @@ import {
   UserCog,
   Truck,
   ShoppingCart,
-  Award
+  Award,
+  Globe
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -155,7 +156,8 @@ export function Sidebar() {
       items: [
         { path: "/exam-management/scheduling", icon: Calendar, textEn: "Exam Scheduling", textBn: "পরীক্ষার সময়সূচী", textAr: "جدولة الامتحانات", badge: null },
         { path: "/exam-management/seating-arrangements", icon: Users, textEn: "Seating Arrangements", textBn: "আসন বিন্যাস", textAr: "ترتيب المقاعد", badge: null },
-        { path: "/exam-management/invigilation-duties", icon: ShieldCheck, textEn: "Invigilation Duties", textBn: "তত্ত্বাবধান দায়িত্ব", textAr: "واجبات المراقبة", badge: null }
+        { path: "/exam-management/invigilation-duties", icon: ShieldCheck, textEn: "Invigilation Duties", textBn: "তত্ত্বাবধান দায়িত্ব", textAr: "واجبات المراقبة", badge: null },
+        { path: "/exam-management/public-portal-settings", icon: Globe, textEn: "Public Portal Settings", textBn: "পাবলিক পোর্টাল সেটিংস", textAr: "إعدادات البوابة العامة", badge: null }
       ]
     },
     {

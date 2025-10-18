@@ -39,6 +39,11 @@ import AboutPage from "@/pages/public/about-page";
 import AcademicsPage from "@/pages/public/academics-page";
 import AdmissionsPage from "@/pages/public/admissions-page";
 import ContactPage from "@/pages/public/contact-page";
+
+// Public Student Portal Pages (No Auth Required)
+import PublicStudentPortal from "@/pages/public/student-portal";
+import PublicResultsPage from "@/pages/public/student-results-public";
+import PublicFeesPage from "@/pages/public/student-fees-public";
 import FeeReceiptsMainPage from "@/pages/documents/fee-receipts";
 import AdmitCardDashboard from "@/pages/admit-card/admit-card-dashboard";
 import AdmitCardDashboardEnhanced from "@/pages/admit-card/admit-card-dashboard-enhanced";
@@ -156,6 +161,7 @@ import Vaccinations from "@/pages/student-welfare/vaccinations";
 import ExamScheduling from "@/pages/exam-management/exam-scheduling";
 import SeatingArrangements from "@/pages/exam-management/seating-arrangements";
 import InvigilationDuties from "@/pages/exam-management/invigilation-duties";
+import PublicPortalSettings from "@/pages/exam-management/public-portal-settings";
 
 // HR Additional Pages
 import PerformanceAppraisal from "@/pages/hr/performance-appraisal";
@@ -208,6 +214,11 @@ function AppRoutes() {
       <Route path="/academics" component={AcademicsPage} />
       <Route path="/admissions" component={AdmissionsPage} />
       <Route path="/contact" component={ContactPage} />
+      
+      {/* Public Student Portal - No Authentication Required */}
+      <Route path="/student-portal" component={PublicStudentPortal} />
+      <Route path="/results" component={PublicResultsPage} />
+      <Route path="/fees" component={PublicFeesPage} />
       
       <Route path="/auth" component={AuthPage} />
 
@@ -396,6 +407,7 @@ function AppRoutes() {
       {/* Exam Management Routes */}
       <ProtectedRoute path="/exam-management/scheduling" component={ExamScheduling} />
       <ProtectedRoute path="/exam-management/seating-arrangements" component={SeatingArrangements} />
+      <ProtectedRoute path="/exam-management/public-portal-settings" component={PublicPortalSettings} />
       <ProtectedRoute path="/exam-management/invigilation-duties" component={InvigilationDuties} />
 
       {/* Public website route */}

@@ -1072,6 +1072,9 @@ export const exams = pgTable("exams", {
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   isActive: boolean("is_active").default(true),
+  isPubliclyAvailable: boolean("is_publicly_available").default(false),
+  publicationDate: timestamp("publication_date"),
+  publishedBy: integer("published_by"),
   schoolId: integer("school_id").references(() => schools.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -1112,6 +1115,27 @@ export const examResults = pgTable("exam_results", {
 export const examResultInsertSchema = createInsertSchema(examResults);
 export type InsertExamResult = z.infer<typeof examResultInsertSchema>;
 export type ExamResult = typeof examResults.$inferSelect;
+
+// Public Access Tokens table - for temporary public portal access
+export const publicAccessTokens = pgTable("public_access_tokens", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").references(() => students.id).notNull(),
+  token: text("token").unique().notNull(),
+  purpose: text("purpose").notNull(), // 'results', 'fees', 'documents', 'public_portal'
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  schoolId: integer("school_id").references(() => schools.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const publicAccessTokensInsertSchema = createInsertSchema(publicAccessTokens).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPublicAccessToken = z.infer<typeof publicAccessTokensInsertSchema>;
+export type PublicAccessToken = typeof publicAccessTokens.$inferSelect;
 
 // Books table (library books alternative name)
 export const books = pgTable("books", {
