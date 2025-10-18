@@ -67,7 +67,7 @@ export default function AdmissionsPage() {
       if (error) throw error;
       
       return {
-        id: data?.school_id || data?.id || 1,
+        id: data?.school_id || data?.id,
         schoolName: data?.school_name || "মডেল স্কুল অ্যান্ড কলেজ",
         schoolNameBn: data?.school_name_bn || "মডেল স্কুল অ্যান্ড কলেজ",
         address: data?.address || "ঢাকা, বাংলাদেশ",
@@ -97,8 +97,10 @@ export default function AdmissionsPage() {
 
   const submitAdmissionMutation = useMutation({
     mutationFn: async (data: AdmissionFormData) => {
-      // ✅ SECURITY: Use school ID from school settings (PUBLIC PAGE)
-      const currentSchoolId = schoolInfo?.id || 1;
+      // ✅ SECURITY: Require valid school ID - NO FALLBACK to school_id: 1
+      if (!schoolInfo?.id) {
+        throw new Error('School configuration not found. Please contact the administrator.');
+      }
       
       const { error } = await supabase
         .from("admission_applications")
@@ -114,7 +116,7 @@ export default function AdmissionsPage() {
           address: data.address,
           previous_school: data.previousSchool || null,
           email: data.email || null,
-          school_id: currentSchoolId,
+          school_id: schoolInfo.id,
           status: "pending",
         }]);
       

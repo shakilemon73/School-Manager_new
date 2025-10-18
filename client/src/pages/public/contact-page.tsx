@@ -68,7 +68,7 @@ export default function ContactPage() {
       if (error) throw error;
       
       return {
-        id: data?.school_id || data?.id || 1,
+        id: data?.school_id || data?.id,
         schoolName: data?.school_name || "মডেল স্কুল অ্যান্ড কলেজ",
         schoolNameBn: data?.school_name_bn || "মডেল স্কুল অ্যান্ড কলেজ",
         address: data?.address || "ঢাকা, বাংলাদেশ",
@@ -100,8 +100,10 @@ export default function ContactPage() {
 
   const submitContactMutation = useMutation({
     mutationFn: async (data: ContactFormData) => {
-      // ✅ SECURITY: Use school ID from school settings (PUBLIC PAGE)
-      const currentSchoolId = schoolInfo?.id || 1;
+      // ✅ SECURITY: Require valid school ID - NO FALLBACK to school_id: 1
+      if (!schoolInfo?.id) {
+        throw new Error('School configuration not found. Please contact the administrator.');
+      }
       
       const { error } = await supabase
         .from("contact_messages")
@@ -111,7 +113,7 @@ export default function ContactPage() {
           phone: data.phone,
           subject: data.subject,
           message: data.message,
-          school_id: currentSchoolId,
+          school_id: schoolInfo.id,
           status: "pending",
         }]);
       
