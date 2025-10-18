@@ -49,7 +49,8 @@ import {
   ClipboardList,
   UserCog,
   Truck,
-  ShoppingCart
+  ShoppingCart,
+  Award
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -137,6 +138,8 @@ export function Sidebar() {
       items: [
         { path: "/academic/subjects", icon: BookOpen, textEn: "Subjects", textBn: "বিষয়সমূহ", textAr: "المواد", badge: null },
         { path: "/academic/gradebook", icon: ClipboardList, textEn: "Gradebook", textBn: "গ্রেডবুক", textAr: "سجل الدرجات", badge: null },
+        { path: "/academic/results-management", icon: Award, textEn: "Results Management", textBn: "ফলাফল ব্যবস্থাপনা", textAr: "إدارة النتائج", badge: null },
+        { path: "/academic/attendance-management", icon: UserCheck, textEn: "Attendance Management", textBn: "উপস্থিতি ব্যবস্থাপনা", textAr: "إدارة الحضور", badge: null },
         { path: "/academic/assignments", icon: FileText, textEn: "Assignments", textBn: "অ্যাসাইনমেন্ট", textAr: "الواجبات", badge: null },
         { path: "/academic/timetable", icon: Calendar, textEn: "Timetable", textBn: "সময়সূচী", textAr: "الجدول", badge: null }
       ]

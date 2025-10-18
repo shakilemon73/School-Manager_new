@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { supabase } from '@/lib/supabase';
 import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { Users, Key, UserCheck, UserX, Plus, Edit, Trash2, RefreshCw } from 'lucide-react';
@@ -43,6 +44,7 @@ interface PortalUser {
 
 export default function UserManagementPortals() {
   const { toast } = useToast();
+  const { language } = useLanguage();
   const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<PortalUser | null>(null);
@@ -52,6 +54,63 @@ export default function UserManagementPortals() {
     password: '',
     confirmPassword: '',
   });
+
+  // Translations
+  const t = {
+    title: language === 'bn' ? 'পোর্টাল ইউজার ব্যবস্থাপনা' : 'Portal User Management',
+    description: language === 'bn' 
+      ? 'শিক্ষার্থী, অভিভাবক এবং শিক্ষকদের জন্য প্রমাণীকরণ তৈরি এবং পরিচালনা করুন'
+      : 'Create and manage authentication for students, parents, and teachers',
+    totalUsers: language === 'bn' ? 'মোট ইউজার' : 'Total Users',
+    allPortalUsers: language === 'bn' ? 'সব পোর্টাল ইউজার' : 'All portal users',
+    withAuth: language === 'bn' ? 'প্রমাণীকরণ সহ' : 'With Auth',
+    canLogin: language === 'bn' ? 'পোর্টালে লগইন করতে পারে' : 'Can login to portals',
+    withoutAuth: language === 'bn' ? 'প্রমাণীকরণ ছাড়া' : 'Without Auth',
+    needAuthSetup: language === 'bn' ? 'প্রমাণীকরণ সেটআপ প্রয়োজন' : 'Need auth setup',
+    users: language === 'bn' ? 'ইউজার' : 'users',
+    noAuthSetup: language === 'bn' 
+      ? "প্রমাণীকরণ সেটআপ নেই। পোর্টাল অ্যাক্সেস অনুমতি দিতে তাদের জন্য প্রমাণীকরণ অ্যাকাউন্ট তৈরি করুন।"
+      : "don't have authentication set up. Create auth accounts for them to allow portal access.",
+    allUsers: language === 'bn' ? 'সব ইউজার' : 'All Users',
+    students: language === 'bn' ? 'শিক্ষার্থী' : 'Students',
+    parents: language === 'bn' ? 'অভিভাবক' : 'Parents',
+    teachers: language === 'bn' ? 'শিক্ষক' : 'Teachers',
+    withoutAuthTab: language === 'bn' ? 'প্রমাণীকরণ ছাড়া' : 'Without Auth',
+    allPortalUsersTitle: language === 'bn' ? 'সব পোর্টাল ইউজার' : 'All Portal Users',
+    usersWithoutAuth: language === 'bn' ? 'প্রমাণীকরণ ছাড়া ইউজার' : 'Users Without Authentication',
+    createAuthAccounts: language === 'bn' ? 'এই ইউজারদের জন্য প্রমাণীকরণ অ্যাকাউন্ট তৈরি করুন' : 'Create authentication accounts for these users',
+    manageAuthAccess: language === 'bn' ? 'পোর্টাল ইউজারদের জন্য প্রমাণীকরণ এবং অ্যাক্সেস পরিচালনা করুন' : 'Manage authentication and access for portal users',
+    name: language === 'bn' ? 'নাম' : 'Name',
+    email: language === 'bn' ? 'ইমেইল' : 'Email',
+    role: language === 'bn' ? 'ভূমিকা' : 'Role',
+    id: language === 'bn' ? 'আইডি' : 'ID',
+    authStatus: language === 'bn' ? 'প্রমাণীকরণ অবস্থা' : 'Auth Status',
+    actions: language === 'bn' ? 'কার্যক্রম' : 'Actions',
+    noEmail: language === 'bn' ? 'ইমেইল নেই' : 'No email',
+    student: language === 'bn' ? 'শিক্ষার্থী' : 'Student',
+    parent: language === 'bn' ? 'অভিভাবক' : 'Parent',
+    teacher: language === 'bn' ? 'শিক্ষক' : 'Teacher',
+    enabled: language === 'bn' ? 'সক্রিয়' : 'Enabled',
+    notSetup: language === 'bn' ? 'সেটআপ করা হয়নি' : 'Not Setup',
+    createAuth: language === 'bn' ? 'প্রমাণীকরণ তৈরি করুন' : 'Create Auth',
+    resetPassword: language === 'bn' ? 'পাসওয়ার্ড রিসেট করুন' : 'Reset Password',
+    deleteAuth: language === 'bn' ? 'প্রমাণীকরণ মুছুন' : 'Delete Auth',
+    noUsers: language === 'bn' ? 'কোন ইউজার পাওয়া যায়নি' : 'No users found',
+    loading: language === 'bn' ? 'লোড হচ্ছে...' : 'Loading...',
+    success: language === 'bn' ? 'সফল!' : 'Success!',
+    authCreatedFor: language === 'bn' ? 'এর জন্য প্রমাণীকরণ অ্যাকাউন্ট তৈরি হয়েছে' : 'Auth account created for',
+    failedToCreate: language === 'bn' ? 'প্রমাণীকরণ ইউজার তৈরি করতে ব্যর্থ' : 'Failed to create auth user',
+    passwordReset: language === 'bn' ? 'পাসওয়ার্ড রিসেট' : 'Password Reset',
+    passwordUpdated: language === 'bn' ? 'ইউজার পাসওয়ার্ড সফলভাবে আপডেট হয়েছে' : 'User password has been updated successfully',
+    failedToReset: language === 'bn' ? 'পাসওয়ার্ড রিসেট করতে ব্যর্থ' : 'Failed to reset password',
+    authUserDeleted: language === 'bn' ? 'প্রমাণীকরণ ইউজার মুছে ফেলা হয়েছে' : 'Auth User Deleted',
+    authRemoved: language === 'bn' ? 'ইউজার প্রমাণীকরণ সরানো হয়েছে' : 'User authentication has been removed',
+    failedToDelete: language === 'bn' ? 'ইউজার মুছতে ব্যর্থ' : 'Failed to delete user',
+    passwordMismatch: language === 'bn' ? 'পাসওয়ার্ড মিলছে না' : 'Password Mismatch',
+    passwordsDoNotMatch: language === 'bn' ? 'পাসওয়ার্ড মিলছে না' : 'Passwords do not match',
+    weakPassword: language === 'bn' ? 'দুর্বল পাসওয়ার্ড' : 'Weak Password',
+    passwordMinLength: language === 'bn' ? 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে' : 'Password must be at least 6 characters',
+  };
 
   // Get current school ID
   const getCurrentSchoolId = async (): Promise<number> => {
@@ -137,15 +196,15 @@ export default function UserManagementPortals() {
     },
     onSuccess: (_, { user }) => {
       toast({
-        title: "Success!",
-        description: `Auth account created for ${user.name}`,
+        title: t.success,
+        description: `${t.authCreatedFor} ${user.name}`,
       });
       queryClient.invalidateQueries({ queryKey: ['portal-users'] });
       setIsCreateDialogOpen(false);
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to create auth user",
+        title: t.failedToCreate,
         description: error.message,
         variant: "destructive",
       });
@@ -162,13 +221,13 @@ export default function UserManagementPortals() {
     },
     onSuccess: () => {
       toast({
-        title: "Password Reset",
-        description: "User password has been updated successfully",
+        title: t.passwordReset,
+        description: t.passwordUpdated,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to reset password",
+        title: t.failedToReset,
         description: error.message,
         variant: "destructive",
       });
@@ -183,14 +242,14 @@ export default function UserManagementPortals() {
     },
     onSuccess: () => {
       toast({
-        title: "Auth User Deleted",
-        description: "User authentication has been removed",
+        title: t.authUserDeleted,
+        description: t.authRemoved,
       });
       queryClient.invalidateQueries({ queryKey: ['portal-users'] });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to delete user",
+        title: t.failedToDelete,
         description: error.message,
         variant: "destructive",
       });
@@ -207,8 +266,8 @@ export default function UserManagementPortals() {
     
     if (newUserData.password !== newUserData.confirmPassword) {
       toast({
-        title: "Password Mismatch",
-        description: "Passwords do not match",
+        title: t.passwordMismatch,
+        description: t.passwordsDoNotMatch,
         variant: "destructive",
       });
       return;
@@ -216,8 +275,8 @@ export default function UserManagementPortals() {
 
     if (newUserData.password.length < 6) {
       toast({
-        title: "Weak Password",
-        description: "Password must be at least 6 characters",
+        title: t.weakPassword,
+        description: t.passwordMinLength,
         variant: "destructive",
       });
       return;
@@ -237,9 +296,9 @@ export default function UserManagementPortals() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Portal User Management</h1>
+            <h1 className="text-3xl font-bold">{t.title}</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Create and manage authentication for students, parents, and teachers
+              {t.description}
             </p>
           </div>
         </div>
