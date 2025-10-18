@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { ResponsivePageLayout } from '@/components/layout/responsive-page-layout';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { Button } from '@/components/ui/button';
 import { 
   Card, 
@@ -148,6 +149,7 @@ const academicTermSchema = z.object({
 export default function AcademicYearsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId(); // SECURITY: Get authenticated user's school ID
   const [activeTab, setActiveTab] = useState("years");
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -157,14 +159,15 @@ export default function AcademicYearsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Migrated to direct Supabase: Academic Years
+  // Migrated to direct Supabase: Academic Years - SCOPED BY SCHOOL_ID
   const { data: academicYears = [], isLoading: yearsLoading } = useQuery({
-    queryKey: ['academic-years'],
+    queryKey: ['academic-years', schoolId],
     queryFn: async () => {
-      console.log('📅 Fetching academic years with direct Supabase calls');
+      console.log('📅 Fetching academic years for school:', schoolId);
       const { data, error } = await supabase
         .from('academic_years')
         .select('*')
+        .eq('school_id', schoolId) // SECURITY: Filter by school_id
         .order('start_date', { ascending: false });
       
       if (error) {
@@ -177,15 +180,16 @@ export default function AcademicYearsPage() {
     }
   });
 
-  // Real database integration for academic terms with direct Supabase calls
+  // Real database integration for academic terms with direct Supabase calls - SCOPED BY SCHOOL_ID
   const { data: academicTerms = [], isLoading: termsLoading } = useQuery({
-    queryKey: ['academic-terms'],
+    queryKey: ['academic-terms', schoolId],
     queryFn: async () => {
-      console.log('📚 Fetching academic terms with direct Supabase calls');
+      console.log('📚 Fetching academic terms for school:', schoolId);
       const { data, error } = await supabase
         .from('academic_terms')
         .select('*')
-        .order('start_date', { ascending: false });
+        .eq('school_id', schoolId) // SECURITY: Filter by school_id
+        .order('start_date', { ascending: false});
       
       if (error) {
         console.error('Academic terms fetch error:', error);
@@ -197,16 +201,16 @@ export default function AcademicYearsPage() {
     }
   });
 
-  // Real database integration for statistics with direct calculation
+  // Real database integration for statistics with direct calculation - SCOPED BY SCHOOL_ID
   const { data: academicStats } = useQuery({
-    queryKey: ['academic-years-stats'],
+    queryKey: ['academic-years-stats', schoolId],
     queryFn: async () => {
-      console.log('📊 Calculating academic stats with direct Supabase calls');
+      console.log('📊 Calculating academic stats for school:', schoolId);
       
       const [yearsData, termsData, studentsData] = await Promise.all([
-        supabase.from('academic_years').select('*'),
-        supabase.from('academic_terms').select('*'),
-        supabase.from('students').select('id', { count: 'exact', head: true })
+        supabase.from('academic_years').select('*').eq('school_id', schoolId), // SECURITY: Filter by school_id
+        supabase.from('academic_terms').select('*').eq('school_id', schoolId), // SECURITY: Filter by school_id
+        supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId) // SECURITY: Filter by school_id
       ]);
       
       const stats = {
