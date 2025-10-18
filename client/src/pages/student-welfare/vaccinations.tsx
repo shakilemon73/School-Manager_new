@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { supabase } from '@/lib/supabase';
 import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { 
@@ -61,6 +62,7 @@ interface Vaccination {
 
 export default function VaccinationsPage() {
   const { toast } = useToast();
+  const { language } = useLanguage();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -79,6 +81,52 @@ export default function VaccinationsPage() {
     side_effects: '',
     notes: '',
   });
+
+  // Translations
+  const t = {
+    title: language === 'bn' ? 'টিকাকরণ ব্যবস্থাপনা' : 'Vaccinations Management',
+    totalVaccinations: language === 'bn' ? 'মোট টিকা' : 'Total Vaccinations',
+    students: language === 'bn' ? 'শিক্ষার্থী' : 'Vaccinated Students',
+    upcomingDoses: language === 'bn' ? 'আগামী ডোজ' : 'Upcoming Doses',
+    sideEffects: language === 'bn' ? 'পার্শ্বপ্রতিক্রিয়া' : 'With Side Effects',
+    addVaccination: language === 'bn' ? 'টিকা যোগ করুন' : 'Add Vaccination',
+    search: language === 'bn' ? 'অনুসন্ধান করুন' : 'Search',
+    searchPlaceholder: language === 'bn' ? 'শিক্ষার্থীর নাম, টিকা বা আইডি দিয়ে খুঁজুন...' : 'Search by student, vaccine or ID...',
+    filterByVaccine: language === 'bn' ? 'টিকা দিয়ে ফিল্টার করুন' : 'Filter by Vaccine',
+    all: language === 'bn' ? 'সব' : 'All',
+    student: language === 'bn' ? 'শিক্ষার্থী' : 'Student',
+    vaccine: language === 'bn' ? 'টিকা' : 'Vaccine',
+    dose: language === 'bn' ? 'ডোজ' : 'Dose',
+    date: language === 'bn' ? 'তারিখ' : 'Date',
+    nextDose: language === 'bn' ? 'পরবর্তী ডোজ' : 'Next Dose',
+    actions: language === 'bn' ? 'কার্যক্রম' : 'Actions',
+    overdue: language === 'bn' ? 'মেয়াদোত্তীর্ণ' : 'Overdue',
+    dueSoon: language === 'bn' ? 'শীঘ্রই প্রয়োজন' : 'Due Soon',
+    scheduled: language === 'bn' ? 'নির্ধারিত' : 'Scheduled',
+    edit: language === 'bn' ? 'সম্পাদনা' : 'Edit',
+    delete: language === 'bn' ? 'মুছুন' : 'Delete',
+    noRecords: language === 'bn' ? 'কোন টিকা রেকর্ড পাওয়া যায়নি' : 'No vaccination records found',
+    loading: language === 'bn' ? 'লোড হচ্ছে...' : 'Loading...',
+    success: language === 'bn' ? 'সফল' : 'Success',
+    error: language === 'bn' ? 'ত্রুটি' : 'Error',
+    vaccinationUpdated: language === 'bn' ? 'টিকা রেকর্ড আপডেট হয়েছে' : 'Vaccination record updated',
+    vaccinationAdded: language === 'bn' ? 'টিকা রেকর্ড যোগ করা হয়েছে' : 'Vaccination record added',
+    vaccinationDeleted: language === 'bn' ? 'টিকা রেকর্ড মুছে ফেলা হয়েছে' : 'Vaccination record deleted',
+    selectStudent: language === 'bn' ? 'শিক্ষার্থী নির্বাচন করুন' : 'Select Student',
+    vaccineName: language === 'bn' ? 'টিকার নাম' : 'Vaccine Name',
+    vaccineNameBn: language === 'bn' ? 'টিকার নাম (বাংলা)' : 'Vaccine Name (Bangla)',
+    doseNumber: language === 'bn' ? 'ডোজ নম্বর' : 'Dose Number',
+    vaccinationDate: language === 'bn' ? 'টিকার তারিখ' : 'Vaccination Date',
+    nextDoseDate: language === 'bn' ? 'পরবর্তী ডোজ তারিখ' : 'Next Dose Date',
+    batchNumber: language === 'bn' ? 'ব্যাচ নম্বর' : 'Batch Number',
+    administeredBy: language === 'bn' ? 'প্রদানকারী' : 'Administered By',
+    location: language === 'bn' ? 'স্থান' : 'Location',
+    notes: language === 'bn' ? 'নোট' : 'Notes',
+    cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
+    save: language === 'bn' ? 'সংরক্ষণ করুন' : 'Save',
+    editVaccination: language === 'bn' ? 'টিকা সম্পাদনা করুন' : 'Edit Vaccination',
+    confirmDelete: language === 'bn' ? 'এই টিকা রেকর্ড মুছে ফেলতে চান?' : 'Delete this vaccination record?',
+  };
 
   const getCurrentSchoolId = async (): Promise<number> => {
     try {
@@ -176,15 +224,15 @@ export default function VaccinationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/vaccinations'] });
       toast({ 
-        title: 'সফল', 
-        description: selectedVaccination ? 'টিকা রেকর্ড আপডেট হয়েছে' : 'টিকা রেকর্ড যোগ করা হয়েছে' 
+        title: t.success, 
+        description: selectedVaccination ? t.vaccinationUpdated : t.vaccinationAdded 
       });
       setIsDialogOpen(false);
       resetForm();
       setSelectedVaccination(null);
     },
     onError: (error: any) => {
-      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+      toast({ title: t.error, description: error.message, variant: 'destructive' });
     }
   });
 
@@ -199,10 +247,10 @@ export default function VaccinationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/vaccinations'] });
-      toast({ title: 'সফল', description: 'টিকা রেকর্ড মুছে ফেলা হয়েছে' });
+      toast({ title: t.success, description: t.vaccinationDeleted });
     },
     onError: (error: any) => {
-      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+      toast({ title: t.error, description: error.message, variant: 'destructive' });
     }
   });
 
@@ -252,11 +300,11 @@ export default function VaccinationsPage() {
     const daysUntil = Math.ceil((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysUntil < 0) {
-      return <Badge variant="destructive" data-testid="badge-overdue">Overdue</Badge>;
+      return <Badge variant="destructive" data-testid="badge-overdue">{t.overdue}</Badge>;
     } else if (daysUntil <= 7) {
-      return <Badge className="bg-orange-500" data-testid="badge-due-soon">Due Soon</Badge>;
+      return <Badge className="bg-orange-500" data-testid="badge-due-soon">{t.dueSoon}</Badge>;
     } else {
-      return <Badge className="bg-blue-500" data-testid="badge-scheduled">Scheduled</Badge>;
+      return <Badge className="bg-blue-500" data-testid="badge-scheduled">{t.scheduled}</Badge>;
     }
   };
 
@@ -294,55 +342,50 @@ export default function VaccinationsPage() {
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900" data-testid="heading-page-title">
-              টিকাকরণ ব্যবস্থাপনা
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100" data-testid="heading-page-title">
+              {t.title}
             </h1>
-            <p className="text-gray-600 mt-1">Vaccinations Management</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card data-testid="card-stat-total">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">মোট টিকা</CardTitle>
+              <CardTitle className="text-sm font-medium">{t.totalVaccinations}</CardTitle>
               <Syringe className="h-4 w-4 text-gray-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-total-vaccinations">{stats.totalVaccinations}</div>
-              <p className="text-xs text-gray-600">Total Vaccinations</p>
             </CardContent>
           </Card>
 
           <Card data-testid="card-stat-students">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">শিক্ষার্থী</CardTitle>
+              <CardTitle className="text-sm font-medium">{t.students}</CardTitle>
               <Shield className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-unique-students">{stats.uniqueStudents}</div>
-              <p className="text-xs text-gray-600">Vaccinated Students</p>
             </CardContent>
           </Card>
 
           <Card data-testid="card-stat-upcoming">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">আগামী ডোজ</CardTitle>
+              <CardTitle className="text-sm font-medium">{t.upcomingDoses}</CardTitle>
               <Clock className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-upcoming-doses">{stats.upcomingDoses}</div>
-              <p className="text-xs text-gray-600">Upcoming Doses</p>
             </CardContent>
           </Card>
 
           <Card data-testid="card-stat-side-effects">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">পার্শ্বপ্রতিক্রিয়া</CardTitle>
+              <CardTitle className="text-sm font-medium">{t.sideEffects}</CardTitle>
               <AlertCircle className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-with-side-effects">{stats.withSideEffects}</div>
-              <p className="text-xs text-gray-600">With Side Effects</p>
             </CardContent>
           </Card>
         </div>
@@ -350,7 +393,7 @@ export default function VaccinationsPage() {
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
-              <CardTitle>টিকাকরণ রেকর্ড (Vaccination Records)</CardTitle>
+              <CardTitle>{t.title}</CardTitle>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button data-testid="button-add-vaccination" onClick={() => {
@@ -358,25 +401,25 @@ export default function VaccinationsPage() {
                     setSelectedVaccination(null);
                   }}>
                     <Plus className="mr-2 h-4 w-4" />
-                    নতুন টিকা রেকর্ড
+                    {t.addVaccination}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
-                      {selectedVaccination ? 'টিকা রেকর্ড সম্পাদনা' : 'নতুন টিকা রেকর্ড'}
+                      {selectedVaccination ? t.editVaccination : t.addVaccination}
                     </DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <Label htmlFor="student_id">শিক্ষার্থী *</Label>
+                      <Label htmlFor="student_id">{t.student} *</Label>
                       <Select
                         value={formData.student_id}
                         onValueChange={(value) => setFormData({ ...formData, student_id: value })}
                         required
                       >
                         <SelectTrigger data-testid="select-student">
-                          <SelectValue placeholder="শিক্ষার্থী নির্বাচন করুন" />
+                          <SelectValue placeholder={t.selectStudent} />
                         </SelectTrigger>
                         <SelectContent>
                           {students.map((student) => (
@@ -390,30 +433,28 @@ export default function VaccinationsPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="vaccine_name">টিকার নাম *</Label>
+                        <Label htmlFor="vaccine_name">{t.vaccineName} *</Label>
                         <Input
                           id="vaccine_name"
                           data-testid="input-vaccine-name"
                           value={formData.vaccine_name}
                           onChange={(e) => setFormData({ ...formData, vaccine_name: e.target.value })}
-                          placeholder="যেমন: BCG, Measles"
                           required
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="vaccine_name_bn">টিকার নাম (বাংলা)</Label>
+                        <Label htmlFor="vaccine_name_bn">{t.vaccineNameBn}</Label>
                         <Input
                           id="vaccine_name_bn"
                           data-testid="input-vaccine-name-bn"
                           value={formData.vaccine_name_bn}
                           onChange={(e) => setFormData({ ...formData, vaccine_name_bn: e.target.value })}
-                          placeholder="যেমন: হাম"
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="dose_number">ডোজ নম্বর *</Label>
+                        <Label htmlFor="dose_number">{t.doseNumber} *</Label>
                         <Input
                           id="dose_number"
                           type="number"
@@ -426,7 +467,7 @@ export default function VaccinationsPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="vaccination_date">টিকার তারিখ *</Label>
+                        <Label htmlFor="vaccination_date">{t.vaccinationDate} *</Label>
                         <Input
                           id="vaccination_date"
                           type="date"
@@ -438,7 +479,7 @@ export default function VaccinationsPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="next_dose_date">পরবর্তী ডোজ তারিখ</Label>
+                        <Label htmlFor="next_dose_date">{t.nextDoseDate}</Label>
                         <Input
                           id="next_dose_date"
                           type="date"
@@ -449,59 +490,54 @@ export default function VaccinationsPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="batch_number">ব্যাচ নম্বর</Label>
+                        <Label htmlFor="batch_number">{t.batchNumber}</Label>
                         <Input
                           id="batch_number"
                           data-testid="input-batch-number"
                           value={formData.batch_number}
                           onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
-                          placeholder="ব্যাচ নম্বর"
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="administered_by">প্রদানকারী</Label>
+                        <Label htmlFor="administered_by">{t.administeredBy}</Label>
                         <Input
                           id="administered_by"
                           data-testid="input-administered-by"
                           value={formData.administered_by}
                           onChange={(e) => setFormData({ ...formData, administered_by: e.target.value })}
-                          placeholder="ডাক্তার/নার্সের নাম"
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="location">স্থান</Label>
+                        <Label htmlFor="location">{t.location}</Label>
                         <Input
                           id="location"
                           data-testid="input-location"
                           value={formData.location}
                           onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                          placeholder="টিকাদানের স্থান"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <Label htmlFor="side_effects">পার্শ্বপ্রতিক্রিয়া</Label>
+                      <Label htmlFor="side_effects">{t.sideEffects}</Label>
                       <Textarea
                         id="side_effects"
                         data-testid="input-side-effects"
                         value={formData.side_effects}
                         onChange={(e) => setFormData({ ...formData, side_effects: e.target.value })}
-                        placeholder="কোনো পার্শ্বপ্রতিক্রিয়া থাকলে লিখুন"
                         rows={2}
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="notes">নোট</Label>
+                      <Label htmlFor="notes">{t.notes}</Label>
                       <Textarea
                         id="notes"
                         data-testid="input-notes"
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        placeholder="অতিরিক্ত তথ্য"
                         rows={2}
                       />
                     </div>
@@ -513,14 +549,14 @@ export default function VaccinationsPage() {
                         onClick={() => setIsDialogOpen(false)}
                         data-testid="button-cancel"
                       >
-                        বাতিল
+                        {t.cancel}
                       </Button>
                       <Button 
                         type="submit" 
                         data-testid="button-submit"
                         disabled={createOrUpdateMutation.isPending}
                       >
-                        {createOrUpdateMutation.isPending ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
+                        {createOrUpdateMutation.isPending ? `${t.save}...` : t.save}
                       </Button>
                     </div>
                   </form>
@@ -533,7 +569,7 @@ export default function VaccinationsPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="শিক্ষার্থী বা টিকা খুঁজুন..."
+                  placeholder={t.searchPlaceholder}
                   data-testid="input-search"
                   className="pl-10"
                   value={searchText}
@@ -542,10 +578,10 @@ export default function VaccinationsPage() {
               </div>
               <Select value={filterVaccine} onValueChange={setFilterVaccine}>
                 <SelectTrigger className="w-48" data-testid="select-filter-vaccine">
-                  <SelectValue placeholder="টিকা ফিল্টার" />
+                  <SelectValue placeholder={t.filterByVaccine} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">সব টিকা</SelectItem>
+                  <SelectItem value="all">{t.all}</SelectItem>
                   {uniqueVaccines.map((vaccine) => (
                     <SelectItem key={vaccine} value={vaccine}>
                       {vaccine}
@@ -556,23 +592,23 @@ export default function VaccinationsPage() {
             </div>
 
             {isLoading ? (
-              <div className="text-center py-8" data-testid="loading-vaccinations">লোড হচ্ছে...</div>
+              <div className="text-center py-8" data-testid="loading-vaccinations">{t.loading}</div>
             ) : filteredVaccinations.length === 0 ? (
               <div className="text-center py-8 text-gray-500" data-testid="empty-state">
-                কোনো টিকা রেকর্ড পাওয়া যায়নি
+                {t.noRecords}
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>শিক্ষার্থী</TableHead>
-                    <TableHead>টিকা</TableHead>
-                    <TableHead>ডোজ</TableHead>
-                    <TableHead>তারিখ</TableHead>
-                    <TableHead>পরবর্তী ডোজ</TableHead>
-                    <TableHead>প্রদানকারী</TableHead>
-                    <TableHead>পার্শ্বপ্রতিক্রিয়া</TableHead>
-                    <TableHead>কার্যক্রম</TableHead>
+                    <TableHead>{t.student}</TableHead>
+                    <TableHead>{t.vaccine}</TableHead>
+                    <TableHead>{t.dose}</TableHead>
+                    <TableHead>{t.date}</TableHead>
+                    <TableHead>{t.nextDose}</TableHead>
+                    <TableHead>{t.administeredBy}</TableHead>
+                    <TableHead>{t.sideEffects}</TableHead>
+                    <TableHead>{t.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -632,7 +668,7 @@ export default function VaccinationsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              if (confirm('আপনি কি নিশ্চিত যে এই রেকর্ডটি মুছতে চান?')) {
+                              if (confirm(t.confirmDelete)) {
                                 deleteMutation.mutate(vaccination.id);
                               }
                             }}
