@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { Calendar, Clock, Plus, Edit2 } from 'lucide-react';
 import { TimetableSlot, Period, Subject } from '@/lib/new-features-types';
 
@@ -14,20 +14,14 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 
 export default function TimetablePage() {
   const { toast } = useToast();
+  const schoolId = useRequireSchoolId();
   const [selectedClass, setSelectedClass] = useState('Class 6');
   const [selectedSection, setSelectedSection] = useState('A');
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    const schoolId = await userProfile.getCurrentUserSchoolId();
-    if (!schoolId) throw new Error('School ID not found');
-    return schoolId;
-  };
-
   // Fetch periods
   const { data: periods } = useQuery({
-    queryKey: ['/api/periods'],
+    queryKey: ['/api/periods', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('periods')
         .select('*')
@@ -41,9 +35,8 @@ export default function TimetablePage() {
 
   // Fetch timetable slots
   const { data: slots, isLoading } = useQuery({
-    queryKey: ['/api/timetable', selectedClass, selectedSection],
+    queryKey: ['/api/timetable', schoolId, selectedClass, selectedSection],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('timetable_slots')
         .select(`
@@ -62,9 +55,8 @@ export default function TimetablePage() {
 
   // Fetch subjects for assignment
   const { data: subjects } = useQuery({
-    queryKey: ['/api/subjects'],
+    queryKey: ['/api/subjects', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('subjects')
         .select('*')

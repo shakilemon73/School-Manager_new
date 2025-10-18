@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,13 +35,13 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { ProfileDetailsModal } from '@/components/profile-details-modal';
 import { Trash2, Edit, Plus, Users, CheckCircle, AlertCircle, Search, Download } from 'lucide-react';
 
 export default function ParentsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -59,17 +60,10 @@ export default function ParentsPage() {
     emergencyContact: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    const schoolId = await userProfile.getCurrentUserSchoolId();
-    if (!schoolId) throw new Error('School ID not found');
-    return schoolId;
-  };
-
   // Fetch parents from Supabase
   const { data: parentsData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['parents'],
+    queryKey: ['parents', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const data = await db.getParents(schoolId);
       return data;
     },
@@ -80,7 +74,6 @@ export default function ParentsPage() {
   // Create parent mutation
   const createParentMutation = useMutation({
     mutationFn: async (parent: any) => {
-      const schoolId = await getCurrentSchoolId();
       const parentData = {
         ...parent,
         parentId: parent.parentId || `P${Date.now()}`,

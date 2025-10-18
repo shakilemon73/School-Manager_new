@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   Star,
@@ -77,6 +77,7 @@ interface Appraisal {
 export default function PerformanceAppraisalPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isAppraisalDialogOpen, setIsAppraisalDialogOpen] = useState(false);
   const [isCriteriaDialogOpen, setIsCriteriaDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -104,21 +105,9 @@ export default function PerformanceAppraisalPage() {
     is_active: true,
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   const { data: staffMembers = [] } = useQuery({
-    queryKey: ['/api/staff'],
+    queryKey: ['/api/staff', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('staff')
         .select('*')
@@ -132,9 +121,8 @@ export default function PerformanceAppraisalPage() {
   });
 
   const { data: criteriaList = [], isLoading: isLoadingCriteria } = useQuery({
-    queryKey: ['/api/appraisal-criteria'],
+    queryKey: ['/api/appraisal-criteria', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('appraisal_criteria')
         .select('*')
@@ -148,9 +136,8 @@ export default function PerformanceAppraisalPage() {
   });
 
   const { data: appraisals = [], isLoading: isLoadingAppraisals } = useQuery({
-    queryKey: ['/api/appraisals'],
+    queryKey: ['/api/appraisals', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('appraisals')
         .select(`
@@ -174,7 +161,6 @@ export default function PerformanceAppraisalPage() {
 
   const createCriteriaMutation = useMutation({
     mutationFn: async (newCriteria: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('appraisal_criteria')
         .insert([{ ...newCriteria, school_id: schoolId }])
@@ -197,8 +183,6 @@ export default function PerformanceAppraisalPage() {
 
   const createAppraisalMutation = useMutation({
     mutationFn: async (newAppraisal: any) => {
-      const schoolId = await getCurrentSchoolId();
-      
       const totalScore = Object.values(newAppraisal.scores).reduce(
         (sum: number, score: any) => sum + parseFloat(score || '0'), 
         0
@@ -227,6 +211,7 @@ export default function PerformanceAppraisalPage() {
           .from('appraisals')
           .update(appraisalRecord)
           .eq('id', selectedAppraisal.id)
+          .eq('school_id', schoolId)
           .select()
           .single();
         
@@ -263,7 +248,8 @@ export default function PerformanceAppraisalPage() {
       const { error } = await supabase
         .from('appraisal_criteria')
         .update({ is_active: false })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },
@@ -281,7 +267,8 @@ export default function PerformanceAppraisalPage() {
       const { error } = await supabase
         .from('appraisals')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },

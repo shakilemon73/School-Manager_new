@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   AlertTriangle, 
@@ -53,6 +53,7 @@ const statusColors = {
 export default function DisciplinaryRecordsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('all-incidents');
   const [searchText, setSearchText] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -92,16 +93,9 @@ export default function DisciplinaryRecordsPage() {
     followUpDate: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    const schoolId = await userProfile.getCurrentUserSchoolId();
-    if (!schoolId) throw new Error('User school ID not found');
-    return schoolId;
-  };
-
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ['incident-categories'],
+    queryKey: ['incident-categories', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('incident_categories')
         .select('*')
@@ -113,9 +107,8 @@ export default function DisciplinaryRecordsPage() {
   });
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['students-for-incidents'],
+    queryKey: ['students-for-incidents', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('students')
         .select('id, student_id, name, class, section')
@@ -128,9 +121,8 @@ export default function DisciplinaryRecordsPage() {
   });
 
   const { data: incidents = [], isLoading: incidentsLoading, refetch: refetchIncidents } = useQuery({
-    queryKey: ['disciplinary-incidents'],
+    queryKey: ['disciplinary-incidents', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('disciplinary_incidents')
         .select(`
@@ -146,13 +138,14 @@ export default function DisciplinaryRecordsPage() {
   });
 
   const { data: actions = [], isLoading: actionsLoading, refetch: refetchActions } = useQuery({
-    queryKey: ['disciplinary-actions', selectedIncident?.id],
+    queryKey: ['disciplinary-actions', selectedIncident?.id, schoolId],
     queryFn: async () => {
       if (!selectedIncident?.id) return [];
       const { data, error } = await supabase
         .from('disciplinary_actions')
         .select('*')
         .eq('incident_id', selectedIncident.id)
+        .eq('school_id', schoolId)
         .order('action_date', { ascending: false });
       if (error) throw error;
       return data;
@@ -162,7 +155,6 @@ export default function DisciplinaryRecordsPage() {
 
   const createCategoryMutation = useMutation({
     mutationFn: async (categoryData: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('incident_categories')
         .insert({
@@ -194,7 +186,6 @@ export default function DisciplinaryRecordsPage() {
 
   const createIncidentMutation = useMutation({
     mutationFn: async (incidentData: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('disciplinary_incidents')
         .insert({
@@ -252,6 +243,7 @@ export default function DisciplinaryRecordsPage() {
           action_taken_by: actionData.actionTakenBy,
           follow_up_required: actionData.followUpRequired,
           follow_up_date: actionData.followUpDate || null,
+          school_id: schoolId,
         })
         .select()
         .single();
@@ -292,6 +284,7 @@ export default function DisciplinaryRecordsPage() {
         .from('disciplinary_incidents')
         .update({ status })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
       if (error) throw error;

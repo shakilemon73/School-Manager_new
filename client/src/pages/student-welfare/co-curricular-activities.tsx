@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   Trophy, 
@@ -54,6 +54,7 @@ const achievementLevelColors = {
 export default function CoCurricularActivitiesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('activities');
   const [searchText, setSearchText] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -94,16 +95,9 @@ export default function CoCurricularActivitiesPage() {
     certificateUrl: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    const schoolId = await userProfile.getCurrentUserSchoolId();
-    if (!schoolId) throw new Error('User school ID not found');
-    return schoolId;
-  };
-
   const { data: activities = [], isLoading: activitiesLoading } = useQuery({
-    queryKey: ['activities'],
+    queryKey: ['activities', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('activities')
         .select('*, enrollments:activity_enrollments(count)')
@@ -115,9 +109,8 @@ export default function CoCurricularActivitiesPage() {
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['students-for-activities'],
+    queryKey: ['students-for-activities', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('students')
         .select('id, student_id, name, class, section')
@@ -130,15 +123,16 @@ export default function CoCurricularActivitiesPage() {
   });
 
   const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery({
-    queryKey: ['activity-enrollments'],
+    queryKey: ['activity-enrollments', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('activity_enrollments')
         .select(`
           *,
-          activity:activities(id, name, name_bn, category),
+          activity:activities!inner(id, name, name_bn, category, school_id),
           student:students(id, student_id, name, class, section)
         `)
+        .eq('activity.school_id', schoolId)
         .eq('is_active', true)
         .order('enrollment_date', { ascending: false });
       if (error) throw error;
@@ -147,16 +141,17 @@ export default function CoCurricularActivitiesPage() {
   });
 
   const { data: achievements = [], isLoading: achievementsLoading } = useQuery({
-    queryKey: ['activity-achievements'],
+    queryKey: ['activity-achievements', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('activity_achievements')
         .select(`
           *,
-          activity:activities(id, name, name_bn, category),
+          activity:activities!inner(id, name, name_bn, category, school_id),
           student:students(id, student_id, name, class, section)
         `)
-        .order('achievement_date', { ascending: false });
+        .eq('activity.school_id', schoolId)
+        .order('achievement_date', { ascending: false});
       if (error) throw error;
       return data;
     },
@@ -164,7 +159,6 @@ export default function CoCurricularActivitiesPage() {
 
   const createActivityMutation = useMutation({
     mutationFn: async (activityData: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('activities')
         .insert({
@@ -222,6 +216,7 @@ export default function CoCurricularActivitiesPage() {
           enrollment_date: enrollmentData.enrollmentDate,
           notes: enrollmentData.notes || null,
           is_active: true,
+          school_id: schoolId,
         })
         .select()
         .single();
@@ -266,6 +261,7 @@ export default function CoCurricularActivitiesPage() {
           position: achievementData.position || null,
           achievement_date: achievementData.achievementDate,
           certificate_url: achievementData.certificateUrl || null,
+          school_id: schoolId,
         })
         .select()
         .single();

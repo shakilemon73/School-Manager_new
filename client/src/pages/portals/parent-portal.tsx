@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { useRequireSchoolId } from "@/hooks/use-require-school-id";
 import { supabase } from "@/lib/supabase";
 import { useLocation } from "wouter";
 import { 
@@ -51,11 +52,12 @@ interface ChildPerformance {
 
 export default function ParentPortal() {
   const { user, loading: authLoading } = useSupabaseDirectAuth();
+  const schoolId = useRequireSchoolId();
   const [, navigate] = useLocation();
 
   // Get parent data
   const { data: parent, isLoading: parentLoading } = useQuery<Parent>({
-    queryKey: ['parent-profile', user?.id],
+    queryKey: ['parent-profile', user?.id, schoolId],
     queryFn: async () => {
       if (!user?.id) throw new Error('No user ID');
       
@@ -63,6 +65,7 @@ export default function ParentPortal() {
         .from('parents')
         .select('*')
         .eq('user_id', user.id)
+        .eq('school_id', schoolId)
         .single();
       
       if (error) {
@@ -76,14 +79,15 @@ export default function ParentPortal() {
 
   // Get children data
   const { data: children } = useQuery<Child[]>({
-    queryKey: ['parent-children', parent?.id],
+    queryKey: ['parent-children', parent?.id, schoolId],
     queryFn: async () => {
       if (!parent?.id) return [];
       
       const { data: parentStudents, error: psError } = await supabase
         .from('parent_students')
         .select('student_id')
-        .eq('parent_id', parent.id);
+        .eq('parent_id', parent.id)
+        .eq('school_id', schoolId);
       
       if (psError) {
         console.error('Error fetching parent-student links:', psError);
@@ -96,7 +100,8 @@ export default function ParentPortal() {
       const { data, error } = await supabase
         .from('students')
         .select('*')
-        .in('id', studentIds);
+        .in('id', studentIds)
+        .eq('school_id', schoolId);
       
       if (error) {
         console.error('Error fetching children:', error);
@@ -117,7 +122,7 @@ export default function ParentPortal() {
 
   // Get children performance data
   const { data: childrenPerformance } = useQuery<ChildPerformance[]>({
-    queryKey: ['children-performance', children?.map(c => c.id)],
+    queryKey: ['children-performance', children?.map(c => c.id), schoolId],
     queryFn: async () => {
       if (!children || children.length === 0) return [];
       
@@ -126,7 +131,8 @@ export default function ParentPortal() {
         const { data: attendanceData } = await supabase
           .from('attendance_records')
           .select('status')
-          .eq('student_id', child.id);
+          .eq('student_id', child.id)
+          .eq('school_id', schoolId);
         
         const total = attendanceData?.length || 100;
         const present = attendanceData?.filter(r => r.status === 'present').length || 95;
@@ -136,7 +142,8 @@ export default function ParentPortal() {
         const { data: results } = await supabase
           .from('exam_results')
           .select('obtained_marks, total_marks')
-          .eq('student_id', child.id);
+          .eq('student_id', child.id)
+          .eq('school_id', schoolId);
         
         let totalMarks = 0;
         let obtainedMarks = 0;
@@ -151,7 +158,8 @@ export default function ParentPortal() {
         const { data: feeReceipts } = await supabase
           .from('fee_receipts')
           .select('total_amount, paid')
-          .eq('student_id', child.id);
+          .eq('student_id', child.id)
+          .eq('school_id', schoolId);
         
         const totalFees = feeReceipts?.reduce((sum, r) => sum + (r.total_amount || 0), 0) || 0;
         const paidFees = feeReceipts?.reduce((sum, r) => sum + (r.paid || 0), 0) || 0;
@@ -172,14 +180,12 @@ export default function ParentPortal() {
 
   // Get recent notifications
   const { data: notifications } = useQuery({
-    queryKey: ['parent-notifications', parent?.school_id],
+    queryKey: ['parent-notifications', schoolId],
     queryFn: async () => {
-      if (!parent?.school_id) return [];
-      
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('school_id', parent.school_id)
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
         .limit(5);
       
@@ -190,7 +196,7 @@ export default function ParentPortal() {
       
       return data;
     },
-    enabled: !!parent?.school_id,
+    enabled: true,
   });
 
   const handleLogout = async () => {

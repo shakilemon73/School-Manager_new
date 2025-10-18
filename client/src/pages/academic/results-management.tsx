@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useCurrentAcademicYear } from '@/hooks/use-school-context';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { Link } from 'wouter';
@@ -45,6 +45,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 export default function ResultsManagement() {
   const { toast } = useToast();
   const { language } = useLanguage();
+  const schoolId = useRequireSchoolId();
   const { currentAcademicYear } = useCurrentAcademicYear();
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
@@ -53,23 +54,11 @@ export default function ResultsManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('table');
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Fetch classes
   const { data: classes = [] } = useQuery({
-    queryKey: ['classes'],
+    queryKey: ['classes', schoolId],
     queryFn: async () => {
       try {
-        const schoolId = await getCurrentSchoolId();
         const { data, error } = await supabase
           .from('classes')
           .select('*')
@@ -86,10 +75,9 @@ export default function ResultsManagement() {
 
   // Fetch subjects
   const { data: subjects = [] } = useQuery({
-    queryKey: ['subjects'],
+    queryKey: ['subjects', schoolId],
     queryFn: async () => {
       try {
-        const schoolId = await getCurrentSchoolId();
         const { data, error } = await supabase
           .from('subjects')
           .select('*')
@@ -106,12 +94,11 @@ export default function ResultsManagement() {
 
   // Fetch academic terms
   const { data: terms = [] } = useQuery({
-    queryKey: ['academic-terms', currentAcademicYear?.id],
+    queryKey: ['academic-terms', schoolId, currentAcademicYear?.id],
     queryFn: async () => {
       try {
         if (!currentAcademicYear?.id) return [];
         
-        const schoolId = await getCurrentSchoolId();
         const { data, error } = await supabase
           .from('academic_terms')
           .select('*')
@@ -130,11 +117,9 @@ export default function ResultsManagement() {
 
   // Fetch student scores with filters
   const { data: studentResults = [], isLoading: resultsLoading } = useQuery({
-    queryKey: ['student-results', selectedClass, selectedSection, selectedSubject, selectedTerm],
+    queryKey: ['student-results', schoolId, selectedClass, selectedSection, selectedSubject, selectedTerm],
     queryFn: async () => {
       try {
-        const schoolId = await getCurrentSchoolId();
-        
         let query = supabase
           .from('student_scores')
           .select(`

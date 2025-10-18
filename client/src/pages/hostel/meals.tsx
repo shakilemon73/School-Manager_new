@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   UtensilsCrossed, 
@@ -84,6 +84,7 @@ interface MealTransaction {
 export default function HostelMealsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('plans');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -122,21 +123,9 @@ export default function HostelMealsPage() {
     notes: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   const { data: mealPlans = [] } = useQuery({
-    queryKey: ['/api/meal-plans'],
+    queryKey: ['/api/meal-plans', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('meal_plans')
         .select('*')
@@ -149,9 +138,8 @@ export default function HostelMealsPage() {
   });
 
   const { data: mealMenus = [] } = useQuery({
-    queryKey: ['/api/meal-menus'],
+    queryKey: ['/api/meal-menus', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('meal_menu')
         .select('*')
@@ -165,9 +153,8 @@ export default function HostelMealsPage() {
   });
 
   const { data: subscriptions = [] } = useQuery({
-    queryKey: ['/api/meal-subscriptions'],
+    queryKey: ['/api/meal-subscriptions', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('meal_subscriptions')
         .select(`
@@ -184,9 +171,8 @@ export default function HostelMealsPage() {
   });
 
   const { data: transactions = [] } = useQuery({
-    queryKey: ['/api/meal-transactions'],
+    queryKey: ['/api/meal-transactions', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('meal_transactions')
         .select(`
@@ -204,9 +190,8 @@ export default function HostelMealsPage() {
 
   // Migrated to direct Supabase: Students GET
   const { data: students = [] } = useQuery({
-    queryKey: ['students'],
+    queryKey: ['students', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('students')
         .select('id, student_id, name')
@@ -221,7 +206,6 @@ export default function HostelMealsPage() {
 
   const createPlanMutation = useMutation({
     mutationFn: async (plan: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('meal_plans')
         .insert([{ ...plan, school_id: schoolId }])
@@ -244,7 +228,6 @@ export default function HostelMealsPage() {
 
   const createMenuMutation = useMutation({
     mutationFn: async (menu: any) => {
-      const schoolId = await getCurrentSchoolId();
       const menuData = {
         ...menu,
         menu_items: menu.menu_items.split(',').map((s: string) => s.trim()).filter(Boolean),
@@ -253,7 +236,7 @@ export default function HostelMealsPage() {
         school_id: schoolId,
       };
 
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('meal_menu')
         .insert([menuData])
         .select()
@@ -275,7 +258,6 @@ export default function HostelMealsPage() {
 
   const createSubscriptionMutation = useMutation({
     mutationFn: async (sub: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('meal_subscriptions')
         .insert([{ 
@@ -304,7 +286,6 @@ export default function HostelMealsPage() {
 
   const createTransactionMutation = useMutation({
     mutationFn: async (txn: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('meal_transactions')
         .insert([{ 

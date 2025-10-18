@@ -34,13 +34,14 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { Plus, Edit2, Trash2, BookOpen, Search, GraduationCap, Filter } from 'lucide-react';
 import { Subject } from '@shared/schema';
 
 export default function SubjectsManagementPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [searchText, setSearchText] = useState('');
@@ -56,22 +57,10 @@ export default function SubjectsManagementPage() {
     department: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Fetch subjects
   const { data: subjects = [], isLoading } = useQuery({
-    queryKey: ['/api/subjects'],
+    queryKey: ['/api/subjects', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('subjects')
         .select('*')
@@ -86,7 +75,6 @@ export default function SubjectsManagementPage() {
   // Create subject mutation
   const createMutation = useMutation({
     mutationFn: async (newSubject: any) => {
-      const schoolId = await getCurrentSchoolId();
       // Convert from snake_case form to camelCase schema
       const dbData = {
         code: newSubject.subject_code,
@@ -135,6 +123,7 @@ export default function SubjectsManagementPage() {
         .from('subjects')
         .update(dbData)
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
       
@@ -158,7 +147,8 @@ export default function SubjectsManagementPage() {
       const { error } = await supabase
         .from('subjects')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },

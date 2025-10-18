@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import {
   Plus,
   FileText,
@@ -64,6 +64,7 @@ interface AdmissionTest {
 export default function AdmissionTestsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -82,21 +83,9 @@ export default function AdmissionTestsPage() {
     status: 'scheduled',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   const { data: tests = [], isLoading } = useQuery({
-    queryKey: ['/api/admission-tests'],
+    queryKey: ['/api/admission-tests', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('admission_tests')
         .select('*')
@@ -110,7 +99,6 @@ export default function AdmissionTestsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (newTest: any) => {
-      const schoolId = await getCurrentSchoolId();
       const subjects = newTest.subjects ? newTest.subjects.split(',').map((s: string) => s.trim()) : [];
 
       const { data, error } = await supabase
@@ -147,6 +135,7 @@ export default function AdmissionTestsPage() {
         .from('admission_tests')
         .update({ ...updates, subjects })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
 
@@ -168,7 +157,8 @@ export default function AdmissionTestsPage() {
       const { error } = await supabase
         .from('admission_tests')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
 
       if (error) throw error;
     },

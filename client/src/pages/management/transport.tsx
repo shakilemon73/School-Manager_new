@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,7 +37,6 @@ import { db, supabase } from '@/lib/supabase';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { 
   Plus, 
   Edit, 
@@ -93,7 +93,7 @@ const vehicleStatuses = [
 export default function TransportPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { schoolId } = useSupabaseDirectAuth();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('vehicles');
   const [searchText, setSearchText] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -104,41 +104,33 @@ export default function TransportPage() {
   const { data: transportStats } = useQuery({
     queryKey: ['transport-stats', schoolId],
     queryFn: async () => {
-      if (!schoolId) throw new Error('School ID not found');
       const stats = await db.getTransportStats(schoolId);
       return stats;
     },
-    enabled: !!schoolId,
   });
 
   const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery({
     queryKey: ['transport-vehicles', schoolId],
     queryFn: async () => {
-      if (!schoolId) throw new Error('School ID not found');
       const data = await db.getTransportVehicles(schoolId);
       return data;
     },
-    enabled: !!schoolId,
   });
 
   const { data: routes = [], isLoading: routesLoading } = useQuery({
     queryKey: ['transport-routes', schoolId],
     queryFn: async () => {
-      if (!schoolId) throw new Error('School ID not found');
       const data = await db.getTransportRoutes(schoolId);
       return data;
     },
-    enabled: !!schoolId,
   });
 
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
     queryKey: ['transport-assignments', schoolId],
     queryFn: async () => {
-      if (!schoolId) throw new Error('School ID not found');
       const data = await db.getTransportAssignments(schoolId);
       return data;
     },
-    enabled: !!schoolId,
   });
 
   // Vehicle form

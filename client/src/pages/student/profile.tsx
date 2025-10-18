@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useDesignSystem } from "@/hooks/use-design-system";
+import { useRequireSchoolId } from "@/hooks/use-require-school-id";
 import { Link } from "wouter";
 import { 
   ArrowLeft,
@@ -62,6 +63,7 @@ interface Student {
 
 export default function StudentProfile() {
   useDesignSystem();
+  const schoolId = useRequireSchoolId();
 
   const { data: student, isLoading } = useQuery<Student>({
     queryKey: ["/api/students/me"],

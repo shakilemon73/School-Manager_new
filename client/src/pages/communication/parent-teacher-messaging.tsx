@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useToast } from '@/hooks/use-toast';
 import { AppShell } from '@/components/layout/app-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -68,6 +68,7 @@ interface Message {
 
 export default function ParentTeacherMessagingPage() {
   const { toast } = useToast();
+  const schoolId = useRequireSchoolId();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [participantFilter, setParticipantFilter] = useState('all');
@@ -83,21 +84,14 @@ export default function ParentTeacherMessagingPage() {
     participant_id: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    const schoolId = await userProfile.getCurrentUserSchoolId();
-    if (!schoolId) throw new Error('School ID not found');
-    return schoolId;
-  };
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const { data: conversations = [], isLoading: conversationsLoading, refetch: refetchConversations } = useQuery({
-    queryKey: ['conversations'],
+    queryKey: ['conversations', schoolId],
     queryFn: async () => {
       console.log('💬 Fetching conversations');
-      const schoolId = await getCurrentSchoolId();
       
       const { data, error } = await supabase
         .from('conversations')
@@ -114,6 +108,7 @@ export default function ParentTeacherMessagingPage() {
             .from('messages')
             .select('*')
             .eq('conversation_id', conv.id)
+            .eq('school_id', schoolId)
             .order('created_at', { ascending: false })
             .limit(1)
             .single();
@@ -131,7 +126,7 @@ export default function ParentTeacherMessagingPage() {
   });
 
   const { data: messages = [], isLoading: messagesLoading, refetch: refetchMessages } = useQuery({
-    queryKey: ['messages', selectedConversation?.id],
+    queryKey: ['messages', selectedConversation?.id, schoolId],
     queryFn: async () => {
       if (!selectedConversation) return [];
       
@@ -141,6 +136,7 @@ export default function ParentTeacherMessagingPage() {
         .from('messages')
         .select('*')
         .eq('conversation_id', selectedConversation.id)
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: true });
       
       if (error) throw error;
@@ -182,8 +178,6 @@ export default function ParentTeacherMessagingPage() {
 
   const createConversationMutation = useMutation({
     mutationFn: async (form: typeof newConversationForm) => {
-      const schoolId = await getCurrentSchoolId();
-      
       const { data, error } = await supabase
         .from('conversations')
         .insert({
@@ -224,8 +218,6 @@ export default function ParentTeacherMessagingPage() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async ({ conversationId, message }: { conversationId: number; message: string }) => {
-      const schoolId = await getCurrentSchoolId();
-      
       const { data, error } = await supabase
         .from('messages')
         .insert({
@@ -246,7 +238,8 @@ export default function ParentTeacherMessagingPage() {
       await supabase
         .from('conversations')
         .update({ last_message_at: new Date().toISOString() })
-        .eq('id', conversationId);
+        .eq('id', conversationId)
+        .eq('school_id', schoolId);
       
       return data;
     },
@@ -273,7 +266,8 @@ export default function ParentTeacherMessagingPage() {
           is_read: true,
           read_at: new Date().toISOString(),
         })
-        .eq('id', messageId);
+        .eq('id', messageId)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },

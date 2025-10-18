@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +34,6 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -88,32 +88,18 @@ const departments = [
 export default function TeachersPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<any>(null);
 
-  // Get current school ID from authenticated user context
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) {
-        throw new Error('User school ID not found - user may not be properly authenticated');
-      }
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required: Cannot determine user school context');
-    }
-  };
-
   // Fetch teachers via direct Supabase calls
   const { data: teachersData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['teachers'],
+    queryKey: ['teachers', schoolId],
     queryFn: async () => {
-      console.log('👩‍🏫 Fetching teachers with direct Supabase calls');
-      const schoolId = await getCurrentSchoolId();
+      console.log('👩‍🏫 Fetching teachers with direct Supabase calls for school:', schoolId);
       
       const { data, error } = await supabase
         .from('teachers')
@@ -130,10 +116,9 @@ export default function TeachersPage() {
 
   // Fetch teacher stats via direct Supabase calls
   const { data: stats } = useQuery({
-    queryKey: ['teacher-stats'],
+    queryKey: ['teacher-stats', schoolId],
     queryFn: async () => {
-      console.log('👩‍🏫 Fetching teacher stats with direct Supabase calls');
-      const schoolId = await getCurrentSchoolId();
+      console.log('👩‍🏫 Fetching teacher stats with direct Supabase calls for school:', schoolId);
       
       const [totalTeachers, activeTeachers, inactiveTeachers] = await Promise.all([
         supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId),
@@ -174,8 +159,7 @@ export default function TeachersPage() {
   // Create teacher mutation via direct Supabase calls
   const createTeacher = useMutation({
     mutationFn: async (teacherData: any) => {
-      console.log('👩‍🏫 Creating teacher with direct Supabase call');
-      const schoolId = await getCurrentSchoolId();
+      console.log('👩‍🏫 Creating teacher with direct Supabase call for school:', schoolId);
       
       // Convert camelCase to snake_case for database
       const dbTeacherData = convertToDbFormat(teacherData);
@@ -215,7 +199,7 @@ export default function TeachersPage() {
   // Update teacher mutation via direct Supabase calls
   const updateTeacher = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      console.log('👩‍🏫 Updating teacher with direct Supabase call');
+      console.log('👩‍🏫 Updating teacher with direct Supabase call for school:', schoolId);
       
       // Convert camelCase to snake_case for database
       const dbTeacherData = convertToDbFormat(data);
@@ -226,6 +210,7 @@ export default function TeachersPage() {
           ...dbTeacherData,
           updated_at: new Date().toISOString()
         })
+        .eq('school_id', schoolId)
         .eq('id', id)
         .select()
         .single();
@@ -256,11 +241,12 @@ export default function TeachersPage() {
   // Delete teacher mutation via direct Supabase calls
   const deleteTeacher = useMutation({
     mutationFn: async (id: number) => {
-      console.log('👩‍🏫 Deleting teacher with direct Supabase call');
+      console.log('👩‍🏫 Deleting teacher with direct Supabase call for school:', schoolId);
       
       const { error } = await supabase
         .from('teachers')
         .delete()
+        .eq('school_id', schoolId)
         .eq('id', id);
       
       if (error) throw error;

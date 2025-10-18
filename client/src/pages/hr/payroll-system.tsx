@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   DollarSign, 
@@ -79,6 +79,7 @@ interface PayrollRecord {
 export default function PayrollSystemPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
   const [isComponentDialogOpen, setIsComponentDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('payroll');
@@ -109,22 +110,10 @@ export default function PayrollSystemPage() {
     is_active: true,
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Fetch staff members
   const { data: staffMembers = [] } = useQuery({
-    queryKey: ['/api/staff'],
+    queryKey: ['/api/staff', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('staff')
         .select('*')
@@ -139,9 +128,8 @@ export default function PayrollSystemPage() {
 
   // Fetch salary components
   const { data: salaryComponents = [] } = useQuery({
-    queryKey: ['/api/salary-components'],
+    queryKey: ['/api/salary-components', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('salary_components')
         .select('*')
@@ -156,9 +144,8 @@ export default function PayrollSystemPage() {
 
   // Fetch payroll records
   const { data: payrollRecords = [], isLoading } = useQuery({
-    queryKey: ['/api/payroll-records', selectedMonth, selectedYear],
+    queryKey: ['/api/payroll-records', schoolId, selectedMonth, selectedYear],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('payroll_records')
         .select(`
@@ -186,7 +173,6 @@ export default function PayrollSystemPage() {
   // Create salary component mutation
   const createComponentMutation = useMutation({
     mutationFn: async (newComponent: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('salary_components')
         .insert([{ ...newComponent, school_id: schoolId }])
@@ -210,8 +196,6 @@ export default function PayrollSystemPage() {
   // Process payroll mutation
   const processPayrollMutation = useMutation({
     mutationFn: async (payroll: any) => {
-      const schoolId = await getCurrentSchoolId();
-      
       // Calculate totals
       const earnings = salaryComponents
         .filter(c => c.type === 'earning' && payroll.earnings?.[c.id])
@@ -249,6 +233,7 @@ export default function PayrollSystemPage() {
           .from('payroll_records')
           .update(payrollRecord)
           .eq('id', existing.id)
+          .eq('school_id', schoolId)
           .select()
           .single();
         
@@ -286,6 +271,7 @@ export default function PayrollSystemPage() {
           payment_date: paymentDate || null
         })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
       
@@ -304,7 +290,6 @@ export default function PayrollSystemPage() {
   // Bulk process payroll mutation
   const bulkProcessMutation = useMutation({
     mutationFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const promises = staffMembers.map(async (staff) => {
         const basicSalary = staff.salary || 0;
         const grossSalary = basicSalary;

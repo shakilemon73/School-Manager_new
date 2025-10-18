@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useDesignSystem } from "@/hooks/use-design-system";
+import { useRequireSchoolId } from "@/hooks/use-require-school-id";
 import { Link } from "wouter";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
@@ -54,6 +55,7 @@ interface PaymentSummary {
 
 export default function StudentFees() {
   useDesignSystem();
+  const schoolId = useRequireSchoolId();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all');
 

@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   Heart,
@@ -66,6 +66,7 @@ interface HealthRecord {
 export default function HealthRecordsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<HealthRecord | null>(null);
@@ -85,22 +86,10 @@ export default function HealthRecordsPage() {
     medical_notes: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Migrated to direct Supabase: Students GET
   const { data: students = [] } = useQuery({
-    queryKey: ['students'],
+    queryKey: ['students', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('students')
         .select('*')
@@ -114,9 +103,8 @@ export default function HealthRecordsPage() {
   });
 
   const { data: healthRecords = [], isLoading } = useQuery({
-    queryKey: ['/api/health-records'],
+    queryKey: ['/api/health-records', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('health_records')
         .select(`
@@ -141,7 +129,6 @@ export default function HealthRecordsPage() {
 
   const createOrUpdateMutation = useMutation({
     mutationFn: async (newRecord: any) => {
-      const schoolId = await getCurrentSchoolId();
       
       const bmi = newRecord.height && newRecord.weight 
         ? (parseFloat(newRecord.weight) / Math.pow(parseFloat(newRecord.height) / 100, 2)).toFixed(2)
@@ -170,6 +157,7 @@ export default function HealthRecordsPage() {
           .from('health_records')
           .update(recordData)
           .eq('id', selectedRecord.id)
+          .eq('school_id', schoolId)
           .select()
           .single();
         
@@ -206,7 +194,8 @@ export default function HealthRecordsPage() {
       const { error } = await supabase
         .from('health_records')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },

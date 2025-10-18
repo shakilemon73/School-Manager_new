@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +34,6 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/supabase';
-import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -108,7 +108,7 @@ const statusLabels = {
 export default function InventoryPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { schoolId, getUserSchoolId } = useSupabaseDirectAuth();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('items');
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -127,11 +127,8 @@ export default function InventoryPage() {
   }>({
     queryKey: ['inventory/stats', schoolId],
     queryFn: async () => {
-      const currentSchoolId = schoolId || getUserSchoolId();
-      if (!currentSchoolId) throw new Error('School ID is required');
-      
-      const stats = await db.getInventoryStats(currentSchoolId);
-      const items = await db.getInventoryItems(currentSchoolId);
+      const stats = await db.getInventoryStats(schoolId);
+      const items = await db.getInventoryItems(schoolId);
       
       const totalValue = items?.reduce((sum, item) => sum + ((item.unit_price || 0) * (item.current_quantity || 0)), 0) || 0;
       const outOfStock = items?.filter(item => (item.current_quantity || 0) === 0).length || 0;
@@ -143,16 +140,12 @@ export default function InventoryPage() {
         totalValue
       };
     },
-    enabled: !!schoolId
   });
 
   const { data: items = [], isLoading: itemsLoading, refetch: refetchItems } = useQuery<any[]>({
     queryKey: ['inventory/items', schoolId, searchText, selectedCategory, selectedStatus],
     queryFn: async () => {
-      const currentSchoolId = schoolId || getUserSchoolId();
-      if (!currentSchoolId) throw new Error('School ID is required');
-      
-      const allItems = await db.getInventoryItems(currentSchoolId);
+      const allItems = await db.getInventoryItems(schoolId);
       
       // Apply client-side filtering
       return allItems?.filter(item => {
@@ -175,16 +168,12 @@ export default function InventoryPage() {
         return matchesSearch && matchesCategory && matchesStatus;
       }) || [];
     },
-    enabled: !!schoolId
   });
 
   const { data: movements = [], isLoading: movementsLoading } = useQuery<any[]>({
     queryKey: ['inventory/movements', schoolId, searchText],
     queryFn: async () => {
-      const currentSchoolId = schoolId || getUserSchoolId();
-      if (!currentSchoolId) throw new Error('School ID is required');
-      
-      const allMovements = await db.getInventoryMovements(currentSchoolId);
+      const allMovements = await db.getInventoryMovements(schoolId);
       
       // Apply client-side filtering
       return allMovements?.filter(movement => {
@@ -193,7 +182,6 @@ export default function InventoryPage() {
                movement.reason?.toLowerCase().includes(searchText.toLowerCase());
       }) || [];
     },
-    enabled: !!schoolId
   });
 
   // Item form
@@ -234,12 +222,9 @@ export default function InventoryPage() {
   // Create mutations
   const createItem = useMutation({
     mutationFn: async (data: ItemFormData) => {
-      const currentSchoolId = schoolId || getUserSchoolId();
-      if (!currentSchoolId) throw new Error('School ID is required');
-      
       // Map form data to database format
       const dbItem = {
-        school_id: currentSchoolId,
+        school_id: schoolId,
         name: data.name,
         name_bn: data.nameInBangla,
         category: data.category,
@@ -271,12 +256,9 @@ export default function InventoryPage() {
 
   const createMovement = useMutation({
     mutationFn: async (data: MovementFormData) => {
-      const currentSchoolId = schoolId || getUserSchoolId();
-      if (!currentSchoolId) throw new Error('School ID is required');
-      
       // Map form data to database format
       const dbMovement = {
-        school_id: currentSchoolId,
+        school_id: schoolId,
         item_id: parseInt(data.itemId),
         type: data.type,
         quantity: parseInt(data.quantity),

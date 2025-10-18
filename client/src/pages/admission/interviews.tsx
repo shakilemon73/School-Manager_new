@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import {
   Plus,
   Users,
@@ -62,6 +62,7 @@ interface AdmissionInterview {
 export default function AdmissionInterviewsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -81,21 +82,9 @@ export default function AdmissionInterviewsPage() {
     status: 'scheduled',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   const { data: interviews = [], isLoading } = useQuery({
-    queryKey: ['/api/admission-interviews'],
+    queryKey: ['/api/admission-interviews', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('admission_interviews')
         .select('*')
@@ -108,9 +97,8 @@ export default function AdmissionInterviewsPage() {
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ['/api/students-list'],
+    queryKey: ['/api/students-list', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('students')
         .select('id, name, student_id')
@@ -124,7 +112,6 @@ export default function AdmissionInterviewsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (newInterview: any) => {
-      const schoolId = await getCurrentSchoolId();
       const panelMembers = newInterview.panel_members
         ? newInterview.panel_members.split(',').map((m: string) => m.trim())
         : [];
@@ -160,6 +147,7 @@ export default function AdmissionInterviewsPage() {
         .from('admission_interviews')
         .update({ status })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
 
@@ -180,7 +168,8 @@ export default function AdmissionInterviewsPage() {
       const { error } = await supabase
         .from('admission_interviews')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
 
       if (error) throw error;
     },

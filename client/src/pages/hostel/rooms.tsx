@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   Home, 
@@ -58,6 +58,7 @@ interface HostelRoom {
 export default function HostelRoomsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [filterFloor, setFilterFloor] = useState<string>('all');
@@ -77,21 +78,9 @@ export default function HostelRoomsPage() {
     notes: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   const { data: hostels = [] } = useQuery({
-    queryKey: ['/api/hostels'],
+    queryKey: ['/api/hostels', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('hostels')
         .select('*')
@@ -103,9 +92,8 @@ export default function HostelRoomsPage() {
   });
 
   const { data: rooms = [], isLoading } = useQuery({
-    queryKey: ['/api/hostel-rooms'],
+    queryKey: ['/api/hostel-rooms', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('hostel_rooms')
         .select(`
@@ -127,7 +115,6 @@ export default function HostelRoomsPage() {
 
   const createOrUpdateMutation = useMutation({
     mutationFn: async (room: any) => {
-      const schoolId = await getCurrentSchoolId();
       const facilitiesArray = room.facilities 
         ? room.facilities.split(',').map((f: string) => f.trim()).filter(Boolean)
         : [];
@@ -144,6 +131,7 @@ export default function HostelRoomsPage() {
           .from('hostel_rooms')
           .update(roomData)
           .eq('id', editingRoom.id)
+          .eq('school_id', schoolId)
           .select()
           .single();
         
@@ -179,7 +167,8 @@ export default function HostelRoomsPage() {
       const { error } = await supabase
         .from('hostel_rooms')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },

@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { Link } from 'wouter';
 import { format, subDays } from 'date-fns';
@@ -49,29 +49,18 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 export default function AttendanceManagementAdmin() {
   const { toast } = useToast();
   const { language } = useLanguage();
+  const schoolId = useRequireSchoolId();
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState('daily');
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Fetch classes
   const { data: classes = [] } = useQuery({
-    queryKey: ['classes'],
+    queryKey: ['classes', schoolId],
     queryFn: async () => {
       try {
-        const schoolId = await getCurrentSchoolId();
         const { data, error } = await supabase
           .from('classes')
           .select('*')
@@ -88,11 +77,9 @@ export default function AttendanceManagementAdmin() {
 
   // Fetch attendance records
   const { data: attendanceRecords = [], isLoading: attendanceLoading } = useQuery({
-    queryKey: ['attendance-admin', selectedClass, selectedSection, selectedDate],
+    queryKey: ['attendance-admin', schoolId, selectedClass, selectedSection, selectedDate],
     queryFn: async () => {
       try {
-        const schoolId = await getCurrentSchoolId();
-        
         let query = supabase
           .from('attendance')
           .select(`
@@ -127,11 +114,9 @@ export default function AttendanceManagementAdmin() {
 
   // Fetch students for statistics
   const { data: students = [] } = useQuery({
-    queryKey: ['students', selectedClass, selectedSection],
+    queryKey: ['students', schoolId, selectedClass, selectedSection],
     queryFn: async () => {
       try {
-        const schoolId = await getCurrentSchoolId();
-        
         let query = supabase
           .from('students')
           .select('*')

@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { Plus, FileText, Calendar, Clock, CheckCircle, AlertCircle, Search } from 'lucide-react';
 import { Assignment, Subject } from '@/lib/new-features-types';
 import { format } from 'date-fns';
@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 export default function AssignmentsManagementPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
@@ -45,22 +46,10 @@ export default function AssignmentsManagementPage() {
     status: 'active',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Fetch assignments
   const { data: assignments = [], isLoading } = useQuery({
-    queryKey: ['/api/assignments'],
+    queryKey: ['/api/assignments', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('assignments')
         .select(`
@@ -77,9 +66,8 @@ export default function AssignmentsManagementPage() {
 
   // Fetch subjects
   const { data: subjects = [] } = useQuery({
-    queryKey: ['/api/subjects'],
+    queryKey: ['/api/subjects', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('subjects')
         .select('*')
@@ -94,7 +82,6 @@ export default function AssignmentsManagementPage() {
   // Create assignment mutation
   const createMutation = useMutation({
     mutationFn: async (newAssignment: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data: teacherData } = await supabase
         .from('teachers')
         .select('id')

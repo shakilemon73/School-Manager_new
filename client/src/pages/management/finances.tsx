@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +34,6 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { db, supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -96,6 +96,7 @@ const typeLabels = {
 export default function FinancesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('overview');
   const [searchText, setSearchText] = useState('');
   const [selectedType, setSelectedType] = useState('all');
@@ -110,26 +111,18 @@ export default function FinancesPage() {
   const [reportType, setReportType] = useState('summary');
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    const schoolId = await userProfile.getCurrentUserSchoolId();
-    if (!schoolId) throw new Error('School ID not found');
-    return schoolId;
-  };
-
   // Fetch financial data from Supabase
   const { data: financialStats } = useQuery({
-    queryKey: ['finance-stats'],
+    queryKey: ['finance-stats', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const stats = await db.getFinancialStats(schoolId);
       return stats;
     },
   });
 
   const { data: transactions = [], isLoading: transactionsLoading } = useQuery({
-    queryKey: ['finance-transactions'],
+    queryKey: ['finance-transactions', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const data = await db.getFinancialTransactions(schoolId);
       return data;
     },
@@ -152,7 +145,6 @@ export default function FinancesPage() {
   // Create transaction mutation
   const createTransaction = useMutation({
     mutationFn: async (data: TransactionFormData) => {
-      const schoolId = await getCurrentSchoolId();
       return await db.createFinancialTransaction({
         ...data,
         amount: parseFloat(data.amount),
@@ -175,7 +167,6 @@ export default function FinancesPage() {
   // Update transaction mutation
   const updateTransaction = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: TransactionFormData }) => {
-      // First check if updateFinancialTransaction exists, if not use direct Supabase call
       const updates = {
         ...data,
         amount: parseFloat(data.amount),
@@ -184,6 +175,7 @@ export default function FinancesPage() {
       const { data: result, error } = await supabase
         .from('financial_transactions')
         .update(updates)
+        .eq('school_id', schoolId)
         .eq('id', id)
         .select()
         .single();
@@ -209,6 +201,7 @@ export default function FinancesPage() {
       const { error } = await supabase
         .from('financial_transactions')
         .delete()
+        .eq('school_id', schoolId)
         .eq('id', id);
       
       if (error) throw error;

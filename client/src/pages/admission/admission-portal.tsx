@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { Plus, FileText, CheckCircle, Clock, XCircle, Search, AlertCircle } from 'lucide-react';
 import { AdmissionApplication } from '@/lib/new-features-types';
 import { format } from 'date-fns';
@@ -27,6 +27,7 @@ import { format } from 'date-fns';
 export default function AdmissionPortalPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -44,22 +45,10 @@ export default function AdmissionPortalPage() {
     desired_class: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Fetch applications
   const { data: applications = [], isLoading } = useQuery({
-    queryKey: ['/api/admission-applications'],
+    queryKey: ['/api/admission-applications', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('admission_applications')
         .select('*')
@@ -74,7 +63,6 @@ export default function AdmissionPortalPage() {
   // Create application
   const createMutation = useMutation({
     mutationFn: async (newApplication: any) => {
-      const schoolId = await getCurrentSchoolId();
       const appNumber = `APP${Date.now().toString().slice(-8)}`;
       
       const { data, error } = await supabase
@@ -405,7 +393,7 @@ export default function AdmissionPortalPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {getStatusBadge(app.application_status)}
+                            {getStatusBadge(app.application_status || 'submitted')}
                           </TableCell>
                         </TableRow>
                       ))

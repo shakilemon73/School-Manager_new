@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   Calendar as CalendarIcon, 
@@ -71,6 +71,7 @@ interface AttendanceRecord {
 export default function HostelAttendancePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchText, setSearchText] = useState('');
@@ -87,22 +88,10 @@ export default function HostelAttendancePage() {
     notes: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Migrated to direct Supabase: Students GET
   const { data: students = [] } = useQuery({
-    queryKey: ['students'],
+    queryKey: ['students', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('students')
         .select('id, student_id, name, name_in_bangla, class, section')
@@ -116,9 +105,8 @@ export default function HostelAttendancePage() {
   });
 
   const { data: rooms = [] } = useQuery({
-    queryKey: ['/api/hostel-rooms'],
+    queryKey: ['/api/hostel-rooms', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('hostel_rooms')
         .select('id, room_number, floor')
@@ -132,9 +120,8 @@ export default function HostelAttendancePage() {
   });
 
   const { data: attendance = [], isLoading } = useQuery({
-    queryKey: ['/api/hostel-attendance', format(selectedDate, 'yyyy-MM-dd')],
+    queryKey: ['/api/hostel-attendance', format(selectedDate, 'yyyy-MM-dd'), schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('hostel_attendance')
         .select(`
@@ -164,8 +151,6 @@ export default function HostelAttendancePage() {
 
   const createOrUpdateMutation = useMutation({
     mutationFn: async (record: any) => {
-      const schoolId = await getCurrentSchoolId();
-      
       const existing = await supabase
         .from('hostel_attendance')
         .select('id')
@@ -186,6 +171,7 @@ export default function HostelAttendancePage() {
           .from('hostel_attendance')
           .update(recordData)
           .eq('id', existing.data.id)
+          .eq('school_id', schoolId)
           .select()
           .single();
         
@@ -218,7 +204,8 @@ export default function HostelAttendancePage() {
       const { error } = await supabase
         .from('hostel_attendance')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },

@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, AlertTriangle, Package, TrendingDown, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { userProfile } from "@/hooks/use-supabase-direct-auth";
+import { useRequireSchoolId } from "@/hooks/use-require-school-id";
 
 interface StockAlert {
   id: number;
@@ -37,6 +37,7 @@ interface InventoryItem {
 
 export default function StockAlerts() {
   const { toast } = useToast();
+  const schoolId = useRequireSchoolId();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAlert, setEditingAlert] = useState<StockAlert | null>(null);
   const [formData, setFormData] = useState({
@@ -47,22 +48,10 @@ export default function StockAlerts() {
     alert_status: "active"
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      return 1;
-    }
-  };
-
   // Fetch stock alerts
   const { data: alerts, isLoading: alertsLoading } = useQuery({
-    queryKey: ['/api/stock-alerts'],
+    queryKey: ['/api/stock-alerts', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('stock_alerts')
         .select(`
@@ -88,9 +77,8 @@ export default function StockAlerts() {
 
   // Fetch inventory items for dropdown
   const { data: inventoryItems } = useQuery({
-    queryKey: ['/api/inventory-items'],
+    queryKey: ['/api/inventory-items', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('inventory_items')
         .select('id, item_name, quantity, category')
@@ -105,7 +93,6 @@ export default function StockAlerts() {
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (alertData: any) => {
-      const schoolId = await getCurrentSchoolId();
       if (editingAlert) {
         const { error } = await supabase
           .from('stock_alerts')
@@ -141,7 +128,6 @@ export default function StockAlerts() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const schoolId = await getCurrentSchoolId();
       const { error } = await supabase
         .from('stock_alerts')
         .delete()

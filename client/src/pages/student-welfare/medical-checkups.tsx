@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   Stethoscope,
@@ -68,6 +68,7 @@ interface MedicalCheckup {
 export default function MedicalCheckupsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -89,22 +90,10 @@ export default function MedicalCheckupsPage() {
     next_checkup_date: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Migrated to direct Supabase: Students GET
   const { data: students = [] } = useQuery({
-    queryKey: ['students'],
+    queryKey: ['students', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('students')
         .select('*')
@@ -118,9 +107,8 @@ export default function MedicalCheckupsPage() {
   });
 
   const { data: checkups = [], isLoading } = useQuery({
-    queryKey: ['/api/medical-checkups'],
+    queryKey: ['/api/medical-checkups', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('medical_checkups')
         .select(`
@@ -144,7 +132,6 @@ export default function MedicalCheckupsPage() {
 
   const createOrUpdateMutation = useMutation({
     mutationFn: async (newCheckup: any) => {
-      const schoolId = await getCurrentSchoolId();
       
       const bmi = newCheckup.height && newCheckup.weight 
         ? (parseFloat(newCheckup.weight) / Math.pow(parseFloat(newCheckup.height) / 100, 2)).toFixed(2)
@@ -174,6 +161,7 @@ export default function MedicalCheckupsPage() {
           .from('medical_checkups')
           .update(checkupData)
           .eq('id', selectedCheckup.id)
+          .eq('school_id', schoolId)
           .select()
           .single();
         
@@ -210,7 +198,8 @@ export default function MedicalCheckupsPage() {
       const { error } = await supabase
         .from('medical_checkups')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },

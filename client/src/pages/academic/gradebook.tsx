@@ -36,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gradesDb } from '@/lib/db/grades';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { cn } from '@/lib/utils';
 import {
   Plus,
@@ -57,13 +58,12 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { InsertAssessment, InsertStudentScore } from '@shared/schema';
-import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 
 export default function Gradebook() {
   const { toast } = useToast();
   const { language } = useLanguage();
   const queryClient = useQueryClient();
-  const { schoolId } = useSupabaseDirectAuth();
+  const schoolId = useRequireSchoolId();
 
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
@@ -110,10 +110,10 @@ export default function Gradebook() {
   });
 
   const { data: distribution, isLoading: distributionLoading } = useQuery({
-    queryKey: ['grade-distribution', selectedAssessment],
+    queryKey: ['grade-distribution', schoolId, selectedAssessment],
     queryFn: () => {
       if (!selectedAssessment) return null;
-      return gradesDb.getGradeDistribution(selectedAssessment);
+      return gradesDb.getGradeDistribution(selectedAssessment, schoolId);
     },
     enabled: !!selectedAssessment,
   });

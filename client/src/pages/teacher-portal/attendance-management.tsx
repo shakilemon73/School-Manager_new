@@ -18,6 +18,7 @@ import { designClasses } from '@/lib/design-utils';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import type { Student, Class, Subject } from '@shared/schema';
 import {
   Users,
@@ -89,6 +90,7 @@ const AttendanceStatsCard = ({ title, value, subtitle, icon: Icon, color }: any)
 export default function AttendanceManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
@@ -127,7 +129,7 @@ export default function AttendanceManagement() {
       subject: selectedSubject
     }],
     queryFn: async () => {
-      let query = supabase.from('attendance').select('*');
+      let query = supabase.from('attendance').select('*').eq('school_id', schoolId);
       
       if (selectedDate) {
         query = query.eq('date', format(selectedDate, 'yyyy-MM-dd'));
@@ -138,6 +140,7 @@ export default function AttendanceManagement() {
         const { data: classStudents } = await supabase
           .from('students')
           .select('id')
+          .eq('school_id', schoolId)
           .eq('class', selectedClass);
         
         if (classStudents && classStudents.length > 0) {
@@ -175,6 +178,7 @@ export default function AttendanceManagement() {
       const { data: classStudents } = await supabase
         .from('students')
         .select('id')
+        .eq('school_id', schoolId)
         .eq('class', selectedClass);
       
       if (!classStudents || classStudents.length === 0) {
@@ -187,6 +191,7 @@ export default function AttendanceManagement() {
       const { data: attendanceRecords, error } = await supabase
         .from('attendance')
         .select('*')
+        .eq('school_id', schoolId)
         .in('student_id', studentIds);
       
       if (error) throw error;
@@ -211,6 +216,7 @@ export default function AttendanceManagement() {
       const { data: classData } = await supabase
         .from('classes')
         .select('id')
+        .eq('school_id', schoolId)
         .eq('name', selectedClass)
         .single();
       
@@ -224,6 +230,7 @@ export default function AttendanceManagement() {
       await supabase
         .from('attendance')
         .delete()
+        .eq('school_id', schoolId)
         .eq('date', dateStr)
         .in('student_id', studentIds);
       
@@ -234,7 +241,7 @@ export default function AttendanceManagement() {
         date: dateStr,
         status: record.status,
         remarks: record.remarks || null,
-        school_id: 1, // Default school ID
+        school_id: schoolId,
       }));
       
       // Insert new attendance records

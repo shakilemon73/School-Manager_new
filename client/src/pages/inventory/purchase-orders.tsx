@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import {
   Plus,
   FileText,
@@ -61,6 +61,7 @@ interface PurchaseOrder {
 export default function PurchaseOrdersPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -78,21 +79,9 @@ export default function PurchaseOrdersPage() {
     notes: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   const { data: purchaseOrders = [], isLoading } = useQuery({
-    queryKey: ['/api/purchase-orders'],
+    queryKey: ['/api/purchase-orders', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('purchase_orders')
         .select(`
@@ -108,9 +97,8 @@ export default function PurchaseOrdersPage() {
   });
 
   const { data: vendors = [] } = useQuery({
-    queryKey: ['/api/vendors-list'],
+    queryKey: ['/api/vendors-list', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('vendors')
         .select('id, vendor_name, vendor_code')
@@ -125,7 +113,6 @@ export default function PurchaseOrdersPage() {
 
   const createMutation = useMutation({
     mutationFn: async (newPO: any) => {
-      const schoolId = await getCurrentSchoolId();
       const items = newPO.items ? JSON.parse(newPO.items) : [];
 
       const { data, error } = await supabase
@@ -165,6 +152,7 @@ export default function PurchaseOrdersPage() {
         .from('purchase_orders')
         .update(updates)
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
 
@@ -185,7 +173,8 @@ export default function PurchaseOrdersPage() {
       const { error } = await supabase
         .from('purchase_orders')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
 
       if (error) throw error;
     },

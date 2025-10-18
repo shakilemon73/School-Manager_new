@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,13 +35,13 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { ProfileDetailsModal } from '@/components/profile-details-modal';
 import { Trash2, Edit, Plus, Users, CheckCircle, AlertCircle, Search, Download } from 'lucide-react';
 
 export default function StaffPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
@@ -59,17 +60,10 @@ export default function StaffPage() {
     salary: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    const schoolId = await userProfile.getCurrentUserSchoolId();
-    if (!schoolId) throw new Error('School ID not found');
-    return schoolId;
-  };
-
   // Fetch staff from Supabase
   const { data: staffData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['staff'],
+    queryKey: ['staff', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       console.log('🔍 Fetching staff data for school ID:', schoolId);
       try {
         const data = await db.getStaff(schoolId);
@@ -87,7 +81,6 @@ export default function StaffPage() {
   // Create staff mutation
   const createStaffMutation = useMutation({
     mutationFn: async (staff: any) => {
-      const schoolId = await getCurrentSchoolId();
       const staffData = {
         ...staff,
         staffId: staff.staffId || `STF${Date.now()}`,

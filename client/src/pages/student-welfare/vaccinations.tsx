@@ -20,7 +20,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   Syringe,
@@ -64,6 +64,7 @@ export default function VaccinationsPage() {
   const { toast } = useToast();
   const { language } = useLanguage();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [filterVaccine, setFilterVaccine] = useState('all');
@@ -128,22 +129,10 @@ export default function VaccinationsPage() {
     confirmDelete: language === 'bn' ? 'এই টিকা রেকর্ড মুছে ফেলতে চান?' : 'Delete this vaccination record?',
   };
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Migrated to direct Supabase: Students GET
   const { data: students = [] } = useQuery({
-    queryKey: ['students'],
+    queryKey: ['students', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('students')
         .select('*')
@@ -157,9 +146,8 @@ export default function VaccinationsPage() {
   });
 
   const { data: vaccinations = [], isLoading } = useQuery({
-    queryKey: ['/api/vaccinations'],
+    queryKey: ['/api/vaccinations', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('vaccinations')
         .select(`
@@ -183,7 +171,6 @@ export default function VaccinationsPage() {
 
   const createOrUpdateMutation = useMutation({
     mutationFn: async (newVaccination: any) => {
-      const schoolId = await getCurrentSchoolId();
       
       const vaccinationData = {
         student_id: parseInt(newVaccination.student_id),
@@ -205,6 +192,7 @@ export default function VaccinationsPage() {
           .from('vaccinations')
           .update(vaccinationData)
           .eq('id', selectedVaccination.id)
+          .eq('school_id', schoolId)
           .select()
           .single();
         
@@ -241,7 +229,8 @@ export default function VaccinationsPage() {
       const { error } = await supabase
         .from('vaccinations')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },

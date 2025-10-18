@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { useDesignSystem } from "@/hooks/use-design-system";
+import { useRequireSchoolId } from "@/hooks/use-require-school-id";
 import { Link } from "wouter";
 import { useState } from "react";
 import { format, parseISO, isToday, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
@@ -40,6 +41,7 @@ interface AttendanceStats {
 
 export default function StudentAttendance() {
   useDesignSystem();
+  const schoolId = useRequireSchoolId();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
 

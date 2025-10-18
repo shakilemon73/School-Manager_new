@@ -20,13 +20,14 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { Plus, Home, Bed, Users, Building, Search } from 'lucide-react';
 import { Hostel } from '@/lib/new-features-types';
 
 export default function HostelManagementPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -40,22 +41,10 @@ export default function HostelManagementPage() {
     facilities: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Fetch hostels
   const { data: hostels = [], isLoading } = useQuery({
-    queryKey: ['/api/hostels'],
+    queryKey: ['/api/hostels', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('hostels')
         .select('*, hostel_rooms(count)')
@@ -69,7 +58,6 @@ export default function HostelManagementPage() {
   // Create hostel
   const createMutation = useMutation({
     mutationFn: async (newHostel: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('hostels')
         .insert([{ ...newHostel, school_id: schoolId }])

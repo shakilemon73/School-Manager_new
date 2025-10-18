@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useToast } from '@/hooks/use-toast';
 import { AppShell } from '@/components/layout/app-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,6 +77,7 @@ interface AnnouncementCategory {
 
 export default function AnnouncementsBoardPage() {
   const { toast } = useToast();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState<'admin' | 'public'>('admin');
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,17 +110,10 @@ export default function AnnouncementsBoardPage() {
     color: '#3b82f6',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    const schoolId = await userProfile.getCurrentUserSchoolId();
-    if (!schoolId) throw new Error('School ID not found');
-    return schoolId;
-  };
-
   const { data: announcements = [], isLoading: announcementsLoading, refetch: refetchAnnouncements } = useQuery({
-    queryKey: ['announcements', activeTab],
+    queryKey: ['announcements', activeTab, schoolId],
     queryFn: async () => {
       console.log('📢 Fetching announcements');
-      const schoolId = await getCurrentSchoolId();
       
       let query = supabase
         .from('announcements')
@@ -140,10 +134,9 @@ export default function AnnouncementsBoardPage() {
   });
 
   const { data: categories = [], isLoading: categoriesLoading, refetch: refetchCategories } = useQuery({
-    queryKey: ['announcement-categories'],
+    queryKey: ['announcement-categories', schoolId],
     queryFn: async () => {
       console.log('🏷️ Fetching announcement categories');
-      const schoolId = await getCurrentSchoolId();
       
       const { data, error } = await supabase
         .from('announcement_categories')
@@ -159,8 +152,6 @@ export default function AnnouncementsBoardPage() {
 
   const createAnnouncementMutation = useMutation({
     mutationFn: async (announcement: typeof announcementForm) => {
-      const schoolId = await getCurrentSchoolId();
-      
       const { data, error } = await supabase
         .from('announcements')
         .insert({
@@ -202,6 +193,7 @@ export default function AnnouncementsBoardPage() {
           category_id: announcement.category_id ? parseInt(announcement.category_id) : null,
         })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
       
@@ -232,7 +224,8 @@ export default function AnnouncementsBoardPage() {
       const { error } = await supabase
         .from('announcements')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },
@@ -257,7 +250,8 @@ export default function AnnouncementsBoardPage() {
       const { error } = await supabase
         .from('announcements')
         .update({ is_published: !isPublished })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },
@@ -285,7 +279,8 @@ export default function AnnouncementsBoardPage() {
       const { error } = await supabase
         .from('announcements')
         .update({ view_count: announcement.view_count + 1 })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },
@@ -293,8 +288,6 @@ export default function AnnouncementsBoardPage() {
 
   const createCategoryMutation = useMutation({
     mutationFn: async (category: typeof categoryForm) => {
-      const schoolId = await getCurrentSchoolId();
-      
       const { data, error } = await supabase
         .from('announcement_categories')
         .insert({

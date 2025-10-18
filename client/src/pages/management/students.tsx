@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCurrentAcademicYear } from '@/hooks/use-school-context';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,13 +45,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
 import { ProfileDetailsModal } from '@/components/profile-details-modal';
 import { Trash2, Edit, Plus, Users, CheckCircle, AlertCircle, Search, Download } from 'lucide-react';
 
 export default function StudentsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const { currentAcademicYear, loading: academicYearLoading } = useCurrentAcademicYear();
   const [activeTab, setActiveTab] = useState('all');
   const [searchText, setSearchText] = useState('');
@@ -76,28 +77,13 @@ export default function StudentsPage() {
     dateOfBirth: '',
   });
 
-  // Get current school ID from authenticated user context
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) {
-        throw new Error('User school ID not found - user may not be properly authenticated');
-      }
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required: Cannot determine user school context');
-    }
-  };
-
   // Fetch students via direct Supabase calls - filtered by current academic year
   const { data: studentsData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['students', currentAcademicYear?.id],
+    queryKey: ['students', schoolId, currentAcademicYear?.id],
     queryFn: async () => {
-      console.log('🎓 Fetching students with direct Supabase calls for academic year:', currentAcademicYear?.name);
-      const schoolId = await getCurrentSchoolId();
+      console.log('🎓 Fetching students with direct Supabase calls for school:', schoolId, 'academic year:', currentAcademicYear?.name);
       
-      // Build query with academic year filtering
+      // Build query with school_id and academic year filtering
       let query = supabase
         .from('students')
         .select('*')
@@ -144,8 +130,7 @@ export default function StudentsPage() {
   // Create student mutation with direct Supabase
   const createStudent = useMutation({
     mutationFn: async (studentData: any) => {
-      console.log('🎓 Creating student with direct Supabase call');
-      const schoolId = await getCurrentSchoolId();
+      console.log('🎓 Creating student with direct Supabase call for school:', schoolId);
       
       // Convert camelCase to snake_case for database
       const dbStudentData = convertToDbFormat(studentData);
@@ -185,7 +170,7 @@ export default function StudentsPage() {
   // Update student mutation via direct Supabase calls
   const updateStudent = useMutation({
     mutationFn: async ({ id, ...studentData }: any) => {
-      console.log('🎓 Updating student with direct Supabase call');
+      console.log('🎓 Updating student with direct Supabase call for school:', schoolId);
       
       // Convert camelCase to snake_case for database
       const dbStudentData = convertToDbFormat(studentData);
@@ -196,6 +181,7 @@ export default function StudentsPage() {
           ...dbStudentData,
           updated_at: new Date().toISOString()
         })
+        .eq('school_id', schoolId)
         .eq('id', id)
         .select()
         .single();
@@ -225,11 +211,12 @@ export default function StudentsPage() {
   // Delete student mutation via direct Supabase calls  
   const deleteStudent = useMutation({
     mutationFn: async (id: number) => {
-      console.log('🎓 Deleting student with direct Supabase call');
+      console.log('🎓 Deleting student with direct Supabase call for school:', schoolId);
       
       const { error } = await supabase
         .from('students')
         .delete()
+        .eq('school_id', schoolId)
         .eq('id', id);
       
       if (error) throw error;

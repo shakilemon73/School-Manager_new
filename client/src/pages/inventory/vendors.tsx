@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import {
   Plus,
   Building2,
@@ -60,6 +60,7 @@ interface Vendor {
 export default function VendorsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -80,21 +81,9 @@ export default function VendorsPage() {
     notes: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   const { data: vendors = [], isLoading } = useQuery({
-    queryKey: ['/api/vendors'],
+    queryKey: ['/api/vendors', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('vendors')
         .select('*')
@@ -108,8 +97,6 @@ export default function VendorsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (newVendor: any) => {
-      const schoolId = await getCurrentSchoolId();
-
       const { data, error } = await supabase
         .from('vendors')
         .insert([{ ...newVendor, school_id: schoolId }])
@@ -136,6 +123,7 @@ export default function VendorsPage() {
         .from('vendors')
         .update(updates)
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
 
@@ -156,7 +144,8 @@ export default function VendorsPage() {
       const { error } = await supabase
         .from('vendors')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
 
       if (error) throw error;
     },

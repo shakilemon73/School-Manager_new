@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { Plus, Calendar, Check, X, Clock, Search, Users, Settings, TrendingUp } from 'lucide-react';
 import { LeaveApplication, LeaveType, LeaveBalance } from '@/lib/new-features-types';
 import { format } from 'date-fns';
@@ -29,6 +29,7 @@ import { format } from 'date-fns';
 export default function LeaveManagementPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isTypeDialogOpen, setIsTypeDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -49,22 +50,10 @@ export default function LeaveManagementPage() {
     requires_approval: true,
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Fetch leave applications
   const { data: applications = [], isLoading } = useQuery({
-    queryKey: ['/api/leave-applications'],
+    queryKey: ['/api/leave-applications', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('leave_applications')
         .select(`
@@ -81,9 +70,8 @@ export default function LeaveManagementPage() {
 
   // Fetch leave types
   const { data: leaveTypes = [] } = useQuery({
-    queryKey: ['/api/leave-types'],
+    queryKey: ['/api/leave-types', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('leave_types')
         .select('*')
@@ -96,9 +84,8 @@ export default function LeaveManagementPage() {
 
   // Fetch leave balances
   const { data: leaveBalances = [] } = useQuery({
-    queryKey: ['/api/leave-balances'],
+    queryKey: ['/api/leave-balances', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('leave_balances')
         .select(`
@@ -114,9 +101,8 @@ export default function LeaveManagementPage() {
 
   // Fetch staff for balance tracking
   const { data: staffMembers = [] } = useQuery({
-    queryKey: ['/api/staff'],
+    queryKey: ['/api/staff', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('staff')
         .select('*')
@@ -132,7 +118,6 @@ export default function LeaveManagementPage() {
   // Create leave application
   const createMutation = useMutation({
     mutationFn: async (newApplication: any) => {
-      const schoolId = await getCurrentSchoolId();
       const totalDays = Math.ceil(
         (new Date(newApplication.end_date).getTime() - new Date(newApplication.start_date).getTime()) 
         / (1000 * 60 * 60 * 24)
@@ -167,7 +152,6 @@ export default function LeaveManagementPage() {
   // Create leave type
   const createTypeMutation = useMutation({
     mutationFn: async (newType: any) => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('leave_types')
         .insert([{ ...newType, school_id: schoolId }])
@@ -198,6 +182,7 @@ export default function LeaveManagementPage() {
           approved_at: status === 'approved' ? new Date().toISOString() : null
         })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
       

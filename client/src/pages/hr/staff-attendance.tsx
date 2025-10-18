@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Plus, 
   Calendar as CalendarIcon, 
@@ -78,6 +78,7 @@ interface AttendanceSummary {
 export default function StaffAttendancePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [isMarkDialogOpen, setIsMarkDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchText, setSearchText] = useState('');
@@ -94,22 +95,10 @@ export default function StaffAttendancePage() {
     notes: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) throw new Error('User school ID not found');
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required');
-    }
-  };
-
   // Fetch staff members
   const { data: staffMembers = [], isLoading: isLoadingStaff } = useQuery({
-    queryKey: ['/api/staff'],
+    queryKey: ['/api/staff', schoolId],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('staff')
         .select('*')
@@ -124,9 +113,8 @@ export default function StaffAttendancePage() {
 
   // Fetch attendance records for selected date
   const { data: attendanceRecords = [], isLoading: isLoadingAttendance } = useQuery({
-    queryKey: ['/api/staff-attendance', format(selectedDate, 'yyyy-MM-dd')],
+    queryKey: ['/api/staff-attendance', schoolId, format(selectedDate, 'yyyy-MM-dd')],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('staff_attendance')
         .select(`
@@ -151,9 +139,8 @@ export default function StaffAttendancePage() {
 
   // Fetch attendance summary for current month
   const { data: summaryData = [] } = useQuery({
-    queryKey: ['/api/attendance-summary', selectedDate.getMonth() + 1, selectedDate.getFullYear()],
+    queryKey: ['/api/attendance-summary', schoolId, selectedDate.getMonth() + 1, selectedDate.getFullYear()],
     queryFn: async () => {
-      const schoolId = await getCurrentSchoolId();
       const { data, error } = await supabase
         .from('attendance_summary')
         .select('*')
@@ -169,8 +156,6 @@ export default function StaffAttendancePage() {
   // Mark attendance mutation
   const markAttendanceMutation = useMutation({
     mutationFn: async (newAttendance: any) => {
-      const schoolId = await getCurrentSchoolId();
-      
       // Check if attendance already exists
       const { data: existing } = await supabase
         .from('staff_attendance')
@@ -186,6 +171,7 @@ export default function StaffAttendancePage() {
           .from('staff_attendance')
           .update(newAttendance)
           .eq('id', existing.id)
+          .eq('school_id', schoolId)
           .select()
           .single();
         
@@ -217,7 +203,6 @@ export default function StaffAttendancePage() {
   // Bulk mark attendance mutation
   const bulkMarkMutation = useMutation({
     mutationFn: async ({ staffIds, status }: { staffIds: number[]; status: string }) => {
-      const schoolId = await getCurrentSchoolId();
       const date = format(selectedDate, 'yyyy-MM-dd');
       
       const records = staffIds.map(staffId => ({

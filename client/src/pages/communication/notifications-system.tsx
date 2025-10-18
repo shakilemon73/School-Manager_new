@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useToast } from '@/hooks/use-toast';
 import { AppShell } from '@/components/layout/app-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -85,6 +85,7 @@ interface NotificationLog {
 
 export default function NotificationsSystemPage() {
   const { toast } = useToast();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState('templates');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -113,17 +114,10 @@ export default function NotificationsSystemPage() {
     custom_body: '',
   });
 
-  const getCurrentSchoolId = async (): Promise<number> => {
-    const schoolId = await userProfile.getCurrentUserSchoolId();
-    if (!schoolId) throw new Error('School ID not found');
-    return schoolId;
-  };
-
   const { data: templates = [], isLoading: templatesLoading, refetch: refetchTemplates } = useQuery({
-    queryKey: ['notification-templates'],
+    queryKey: ['notification-templates', schoolId],
     queryFn: async () => {
       console.log('📧 Fetching notification templates');
-      const schoolId = await getCurrentSchoolId();
       
       const { data, error } = await supabase
         .from('notification_templates')
@@ -137,10 +131,9 @@ export default function NotificationsSystemPage() {
   });
 
   const { data: logs = [], isLoading: logsLoading, refetch: refetchLogs } = useQuery({
-    queryKey: ['notification-logs', statusFilter],
+    queryKey: ['notification-logs', statusFilter, schoolId],
     queryFn: async () => {
       console.log('📊 Fetching notification logs');
-      const schoolId = await getCurrentSchoolId();
       
       let query = supabase
         .from('notification_logs')
@@ -162,8 +155,6 @@ export default function NotificationsSystemPage() {
 
   const createTemplateMutation = useMutation({
     mutationFn: async (template: typeof templateForm) => {
-      const schoolId = await getCurrentSchoolId();
-      
       const { data, error } = await supabase
         .from('notification_templates')
         .insert({
@@ -201,6 +192,7 @@ export default function NotificationsSystemPage() {
         .from('notification_templates')
         .update(template)
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
       
@@ -231,7 +223,8 @@ export default function NotificationsSystemPage() {
       const { error } = await supabase
         .from('notification_templates')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
     },
@@ -253,8 +246,6 @@ export default function NotificationsSystemPage() {
 
   const sendNotificationMutation = useMutation({
     mutationFn: async (notification: typeof sendForm) => {
-      const schoolId = await getCurrentSchoolId();
-      
       const { data, error } = await supabase
         .from('notification_logs')
         .insert({

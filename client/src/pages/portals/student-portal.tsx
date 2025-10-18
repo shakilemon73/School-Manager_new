@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { useRequireSchoolId } from "@/hooks/use-require-school-id";
 import { supabase } from "@/lib/supabase";
 import { useDesignSystem } from "@/hooks/use-design-system";
 import { designClasses } from "@/lib/design-utils";
@@ -74,11 +75,12 @@ interface UpcomingEvent {
 export default function StudentPortal() {
   useDesignSystem();
   const { user, loading: authLoading } = useSupabaseDirectAuth();
+  const schoolId = useRequireSchoolId();
   const [, navigate] = useLocation();
 
   // Get current student data from Supabase
   const { data: student, isLoading: studentLoading } = useQuery<Student>({
-    queryKey: ['student-profile', user?.id],
+    queryKey: ['student-profile', user?.id, schoolId],
     queryFn: async () => {
       if (!user?.id) throw new Error('No user ID');
       
@@ -86,6 +88,7 @@ export default function StudentPortal() {
         .from('students')
         .select('*')
         .eq('user_id', user.id)
+        .eq('school_id', schoolId)
         .single();
       
       if (error) {
@@ -99,14 +102,15 @@ export default function StudentPortal() {
 
   // Get attendance statistics
   const { data: attendanceStats } = useQuery<AttendanceStats>({
-    queryKey: ['student-attendance-stats', student?.id],
+    queryKey: ['student-attendance-stats', student?.id, schoolId],
     queryFn: async () => {
       if (!student?.id) throw new Error('No student ID');
       
       const { data, error } = await supabase
         .from('attendance_records')
         .select('status')
-        .eq('student_id', student.id);
+        .eq('student_id', student.id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
       
@@ -121,14 +125,15 @@ export default function StudentPortal() {
 
   // Get academic statistics
   const { data: academicStats } = useQuery<AcademicStats>({
-    queryKey: ['student-academic-stats', student?.id],
+    queryKey: ['student-academic-stats', student?.id, schoolId],
     queryFn: async () => {
       if (!student?.id) throw new Error('No student ID');
       
       const { data, error } = await supabase
         .from('exam_results')
         .select('obtained_marks, total_marks')
-        .eq('student_id', student.id);
+        .eq('student_id', student.id)
+        .eq('school_id', schoolId);
       
       if (error) throw error;
       
@@ -157,7 +162,7 @@ export default function StudentPortal() {
 
   // Get recent activities
   const { data: recentActivities } = useQuery<RecentActivity[]>({
-    queryKey: ['student-activities', student?.id],
+    queryKey: ['student-activities', student?.id, schoolId],
     queryFn: async () => {
       if (!student?.id) return [];
       
@@ -165,6 +170,7 @@ export default function StudentPortal() {
         .from('activity_logs')
         .select('*')
         .eq('user_id', user?.id)
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
         .limit(5);
       
@@ -190,14 +196,12 @@ export default function StudentPortal() {
 
   // Get upcoming events
   const { data: upcomingEvents } = useQuery<UpcomingEvent[]>({
-    queryKey: ['student-events', student?.school_id],
+    queryKey: ['student-events', schoolId],
     queryFn: async () => {
-      if (!student?.school_id) return [];
-      
       const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
-        .eq('school_id', student.school_id)
+        .eq('school_id', schoolId)
         .gte('event_date', new Date().toISOString())
         .order('event_date', { ascending: true })
         .limit(5);
@@ -215,12 +219,12 @@ export default function StudentPortal() {
         subject: event.description || undefined
       }));
     },
-    enabled: !!student?.school_id,
+    enabled: true,
   });
 
   // Get borrowed books count
   const { data: borrowedBooks } = useQuery({
-    queryKey: ['student-borrowed-books', student?.id],
+    queryKey: ['student-borrowed-books', student?.id, schoolId],
     queryFn: async () => {
       if (!student?.id) return [];
       
@@ -228,6 +232,7 @@ export default function StudentPortal() {
         .from('library_borrowed_books')
         .select('*')
         .eq('student_id', student.id)
+        .eq('school_id', schoolId)
         .eq('status', 'borrowed');
       
       if (error) {

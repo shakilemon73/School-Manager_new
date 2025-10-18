@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDesignSystem } from "@/hooks/use-design-system";
+import { useRequireSchoolId } from "@/hooks/use-require-school-id";
 import { Link } from "wouter";
 import { useState } from "react";
 import { format, addDays, startOfWeek, isSameDay, isToday } from "date-fns";
@@ -56,6 +57,7 @@ interface ExamSchedule {
 
 export default function StudentSchedule() {
   useDesignSystem();
+  const schoolId = useRequireSchoolId();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [viewMode, setViewMode] = useState<'classes' | 'exams'>('classes');
 

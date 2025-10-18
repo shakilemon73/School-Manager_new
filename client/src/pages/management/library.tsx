@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { ModulePageLayout } from '@/components/layout/module-page-layout';
 import { BookOpen } from 'lucide-react';
 import { db } from '@/lib/supabase';
-import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { 
   Table,
   TableBody,
@@ -68,8 +68,7 @@ export default function LibraryPage() {
   const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { schoolId } = useSupabaseDirectAuth();
-  const currentSchoolId = schoolId || 1;
+  const schoolId = useRequireSchoolId();
 
   const form = useForm<BookFormValues>({
     resolver: zodResolver(bookSchema),
@@ -89,27 +88,27 @@ export default function LibraryPage() {
 
   // Fetch library data from Supabase
   const { data: booksData = [], isLoading: booksLoading, error: booksError } = useQuery({
-    queryKey: ['library-books', currentSchoolId],
+    queryKey: ['library-books', schoolId],
     queryFn: async () => {
-      console.log('📚 Fetching library books for school ID:', currentSchoolId);
-      const data = await db.getLibraryBooks(currentSchoolId);
+      console.log('📚 Fetching library books for school ID:', schoolId);
+      const data = await db.getLibraryBooks(schoolId);
       console.log('✅ Library books received:', data);
       return data;
     },
   });
 
   const { data: borrowedBooksData = [], isLoading: borrowedLoading } = useQuery({
-    queryKey: ['borrowed-books', currentSchoolId],
+    queryKey: ['borrowed-books', schoolId],
     queryFn: async () => {
-      const data = await db.getBorrowedBooks(currentSchoolId);
+      const data = await db.getBorrowedBooks(schoolId);
       return data;
     },
   });
 
   const { data: libraryStats } = useQuery({
-    queryKey: ['library-stats', currentSchoolId],
+    queryKey: ['library-stats', schoolId],
     queryFn: async () => {
-      const stats = await db.getLibraryStats(currentSchoolId);
+      const stats = await db.getLibraryStats(schoolId);
       return stats;
     },
   });
@@ -129,14 +128,14 @@ export default function LibraryPage() {
         available_copies: parseInt(book.totalCopies),
         location: book.location,
         description: book.description,
-        school_id: currentSchoolId,
+        school_id: schoolId,
       };
       
       return await db.createLibraryBook(bookData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library-books', currentSchoolId] });
-      queryClient.invalidateQueries({ queryKey: ['library-stats', currentSchoolId] });
+      queryClient.invalidateQueries({ queryKey: ['library-books', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['library-stats', schoolId] });
       toast({
         title: "বই যোগ করা হয়েছে",
         description: "নতুন বই সফলভাবে লাইব্রেরিতে যোগ করা হয়েছে।",

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useDesignSystem } from "@/hooks/use-design-system";
+import { useRequireSchoolId } from "@/hooks/use-require-school-id";
 import { Link } from "wouter";
 import { useState } from "react";
 import { 
@@ -53,6 +54,7 @@ interface AcademicPerformance {
 
 export default function StudentResults() {
   useDesignSystem();
+  const schoolId = useRequireSchoolId();
   const [searchTerm, setSearchTerm] = useState("");
   const [termFilter, setTermFilter] = useState<string>('all');
 

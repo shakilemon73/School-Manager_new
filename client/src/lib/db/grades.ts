@@ -74,11 +74,12 @@ export const gradesDb = {
     return data;
   },
 
-  async updateAssessment(id: number, assessment: Partial<InsertAssessment>) {
+  async updateAssessment(id: number, schoolId: number, assessment: Partial<InsertAssessment>) {
     const { data, error } = await supabase
       .from('assessments')
       .update(assessment)
       .eq('id', id)
+      .eq('school_id', schoolId)
       .select()
       .single();
 
@@ -86,11 +87,12 @@ export const gradesDb = {
     return data as Assessment;
   },
 
-  async deleteAssessment(id: number) {
+  async deleteAssessment(id: number, schoolId: number) {
     const { error } = await supabase
       .from('assessments')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('school_id', schoolId);
 
     if (error) throw error;
   },
@@ -129,7 +131,7 @@ export const gradesDb = {
     return data;
   },
 
-  async getAssessment(id: number) {
+  async getAssessment(id: number, schoolId: number) {
     const { data, error } = await supabase
       .from('assessments')
       .select(`
@@ -140,6 +142,7 @@ export const gradesDb = {
         components:assessment_components(*)
       `)
       .eq('id', id)
+      .eq('school_id', schoolId)
       .single();
 
     if (error) throw error;
@@ -176,21 +179,24 @@ export const gradesDb = {
     return data as StudentScore[];
   },
 
-  async getStudentScoresForAssessment(assessmentId: number) {
+  async getStudentScoresForAssessment(assessmentId: number, schoolId: number) {
     const { data, error } = await supabase
       .from('student_scores')
       .select(`
         *,
-        student:students(*)
+        student:students!inner(*),
+        assessment:assessments!inner(*)
       `)
       .eq('assessment_id', assessmentId)
+      .eq('students.school_id', schoolId)
+      .eq('assessments.school_id', schoolId)
       .order('student_id');
 
     if (error) throw error;
     return data;
   },
 
-  async calculateWeightedGrade(studentId: number, subjectId: number, termId: number) {
+  async calculateWeightedGrade(studentId: number, subjectId: number, termId: number, schoolId: number) {
     const { data: assessments, error: assessmentsError } = await supabase
       .from('assessments')
       .select(`
@@ -199,7 +205,8 @@ export const gradesDb = {
         weight_percentage
       `)
       .eq('subject_id', subjectId)
-      .eq('term_id', termId);
+      .eq('term_id', termId)
+      .eq('school_id', schoolId);
 
     if (assessmentsError) throw assessmentsError;
 
@@ -241,18 +248,21 @@ export const gradesDb = {
     };
   },
 
-  async getStudentGradeBook(studentId: number, termId?: number) {
+  async getStudentGradeBook(studentId: number, schoolId: number, termId?: number) {
     let query = supabase
       .from('student_scores')
       .select(`
         *,
-        assessment:assessments(
+        assessment:assessments!inner(
           *,
           subject:subjects(*),
           term:academic_terms(*)
-        )
+        ),
+        student:students!inner(*)
       `)
       .eq('student_id', studentId)
+      .eq('students.school_id', schoolId)
+      .eq('assessments.school_id', schoolId)
       .order('created_at', { ascending: false });
 
     if (termId) {
@@ -322,11 +332,16 @@ export const gradesDb = {
     };
   },
 
-  async getGradeDistribution(assessmentId: number) {
+  async getGradeDistribution(assessmentId: number, schoolId: number) {
     const { data, error } = await supabase
       .from('student_scores')
-      .select('score_obtained, grade_letter')
+      .select(`
+        score_obtained,
+        grade_letter,
+        assessment:assessments!inner(*)
+      `)
       .eq('assessment_id', assessmentId)
+      .eq('assessments.school_id', schoolId)
       .not('is_absent', 'eq', true);
 
     if (error) throw error;
@@ -335,6 +350,7 @@ export const gradesDb = {
       .from('assessments')
       .select('total_marks')
       .eq('id', assessmentId)
+      .eq('school_id', schoolId)
       .single();
 
     const totalMarks = Number(assessment?.total_marks || 100);
@@ -384,16 +400,18 @@ export const gradesDb = {
     return data;
   },
 
-  async getGradeOverrides(studentId: number, termId?: number) {
+  async getGradeOverrides(studentId: number, schoolId: number, termId?: number) {
     let query = supabase
       .from('grade_overrides')
       .select(`
         *,
-        subject:subjects(*),
+        subject:subjects!inner(*),
+        student:students!inner(*),
         created_by_user:teachers!grade_overrides_created_by_fkey(*),
         approved_by_user:teachers!grade_overrides_approved_by_fkey(*)
       `)
-      .eq('student_id', studentId);
+      .eq('student_id', studentId)
+      .eq('students.school_id', schoolId);
 
     if (termId) {
       query = query.eq('term_id', termId);
@@ -443,7 +461,7 @@ export const gradesDb = {
 
         let weightedGrade = '';
         if (subjectId && termId) {
-          const grade = await this.calculateWeightedGrade(student.id, subjectId, termId);
+          const grade = await this.calculateWeightedGrade(student.id, subjectId, termId, schoolId);
           weightedGrade = grade.percentage.toFixed(2);
         }
 
