@@ -57,6 +57,19 @@ export async function supabaseAuth(req: Request, res: Response, next: NextFuncti
     if (schoolId) {
       req.userSchoolId = parseInt(schoolId);
       req.supabaseUser = user;
+      
+      // Populate req.user for backward compatibility with Passport-based routes
+      if (!req.user) {
+        req.user = {
+          id: user.id,
+          email: user.email,
+          school_id: parseInt(schoolId),
+          schoolId: parseInt(schoolId),
+          role: user.user_metadata?.role || user.app_metadata?.role || 'user',
+          ...user.user_metadata
+        } as any;
+      }
+      
       console.log(`✅ Authenticated user: ${user.email}, school_id: ${req.userSchoolId}`);
     } else {
       console.warn(`⚠️ User ${user.email} has no school_id in metadata`);

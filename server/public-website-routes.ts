@@ -3,6 +3,7 @@ import { db } from "./db";
 import { schoolSettings, students, teachers, notifications, calendarEvents } from "../shared/schema";
 import { count, desc, eq, and } from "drizzle-orm";
 import { z } from "zod";
+import { requireSchoolId, getSchoolId } from "./middleware/supabase-auth";
 
 // Schema for admission applications
 const admissionApplicationSchema = z.object({
@@ -30,8 +31,9 @@ const contactMessageSchema = z.object({
 
 export function registerPublicWebsiteRoutes(app: Express) {
   // Get school basic information
-  app.get("/api/public/school-info", async (req: Request, res: Response) => {
+  app.get("/api/public/school-info", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id || 1;
       const schoolInfo = await db
         .select({
           schoolName: schoolSettings.schoolName,
@@ -50,6 +52,7 @@ export function registerPublicWebsiteRoutes(app: Express) {
           logo: schoolSettings.logo,
         })
         .from(schoolSettings)
+        .where(eq(schoolSettings.id, schoolId))
         .limit(1);
 
       if (schoolInfo.length === 0) {
@@ -80,23 +83,31 @@ export function registerPublicWebsiteRoutes(app: Express) {
   });
 
   // Get school statistics
-  app.get("/api/public/school-stats", async (req: Request, res: Response) => {
+  app.get("/api/public/school-stats", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id || 1;
       const [studentCount] = await db
         .select({ count: count() })
         .from(students)
-        .where(eq(students.status, "active"));
+        .where(and(
+          eq(students.status, "active"),
+          eq(students.schoolId, schoolId)
+        ));
 
       const [teacherCount] = await db
         .select({ count: count() })
         .from(teachers)
-        .where(eq(teachers.status, "active"));
+        .where(and(
+          eq(teachers.status, "active"),
+          eq(teachers.schoolId, schoolId)
+        ));
 
       const schoolInfo = await db
         .select({
           establishmentYear: schoolSettings.establishmentYear,
         })
         .from(schoolSettings)
+        .where(eq(schoolSettings.id, schoolId))
         .limit(1);
 
       res.json({
@@ -112,8 +123,9 @@ export function registerPublicWebsiteRoutes(app: Express) {
   });
 
   // Get upcoming events
-  app.get("/api/public/upcoming-events", async (req: Request, res: Response) => {
+  app.get("/api/public/upcoming-events", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id || 1;
       const events = await db
         .select({
           id: calendarEvents.id,
@@ -124,6 +136,7 @@ export function registerPublicWebsiteRoutes(app: Express) {
           type: calendarEvents.type,
         })
         .from(calendarEvents)
+        .where(eq(calendarEvents.schoolId, schoolId))
         .orderBy(calendarEvents.startDate)
         .limit(5);
 
@@ -135,8 +148,9 @@ export function registerPublicWebsiteRoutes(app: Express) {
   });
 
   // Get latest news/notifications
-  app.get("/api/public/latest-news", async (req: Request, res: Response) => {
+  app.get("/api/public/latest-news", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id || 1;
       const news = await db
         .select({
           id: notifications.id,
@@ -148,9 +162,10 @@ export function registerPublicWebsiteRoutes(app: Express) {
           createdAt: notifications.createdAt,
         })
         .from(notifications)
-        .where(
-          eq(notifications.isLive, true)
-        )
+        .where(and(
+          eq(notifications.isLive, true),
+          eq(notifications.schoolId, schoolId)
+        ))
         .orderBy(desc(notifications.createdAt))
         .limit(5);
 
@@ -162,8 +177,9 @@ export function registerPublicWebsiteRoutes(app: Express) {
   });
 
   // Get faculty information
-  app.get("/api/public/faculty", async (req: Request, res: Response) => {
+  app.get("/api/public/faculty", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id || 1;
       const faculty = await db
         .select({
           id: teachers.id,
@@ -173,7 +189,10 @@ export function registerPublicWebsiteRoutes(app: Express) {
           photo: teachers.photo,
         })
         .from(teachers)
-        .where(eq(teachers.status, "active"))
+        .where(and(
+          eq(teachers.status, "active"),
+          eq(teachers.schoolId, schoolId)
+        ))
         .limit(10);
 
       res.json(faculty);
@@ -184,8 +203,9 @@ export function registerPublicWebsiteRoutes(app: Express) {
   });
 
   // Submit admission application
-  app.post("/api/public/admission-applications", async (req: Request, res: Response) => {
+  app.post("/api/public/admission-applications", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id || 1;
       const validatedData = admissionApplicationSchema.parse(req.body);
       
       // For now, we'll just log the admission application
@@ -204,7 +224,7 @@ export function registerPublicWebsiteRoutes(app: Express) {
         recipientType: "admin",
         isActive: true,
         isPublic: false,
-        schoolId: 1,
+        schoolId: schoolId,
       });
 
       res.json({ 
@@ -219,8 +239,9 @@ export function registerPublicWebsiteRoutes(app: Express) {
   });
 
   // Submit contact message
-  app.post("/api/public/contact-messages", async (req: Request, res: Response) => {
+  app.post("/api/public/contact-messages", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id || 1;
       const validatedData = contactMessageSchema.parse(req.body);
       
       // Save contact message as a notification
@@ -235,7 +256,7 @@ export function registerPublicWebsiteRoutes(app: Express) {
         recipientType: "admin",
         isActive: true,
         isPublic: false,
-        schoolId: 1,
+        schoolId: schoolId,
       });
 
       res.json({ 
@@ -249,15 +270,19 @@ export function registerPublicWebsiteRoutes(app: Express) {
   });
 
   // Get academic programs/classes offered
-  app.get("/api/public/academic-programs", async (req: Request, res: Response) => {
+  app.get("/api/public/academic-programs", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id || 1;
       // Get unique classes from students table
       const programs = await db
         .selectDistinct({
           class: students.class,
         })
         .from(students)
-        .where(eq(students.status, "active"));
+        .where(and(
+          eq(students.status, "active"),
+          eq(students.schoolId, schoolId)
+        ));
 
       const academicPrograms = [
         {
@@ -280,8 +305,9 @@ export function registerPublicWebsiteRoutes(app: Express) {
   });
 
   // Get school facilities
-  app.get("/api/public/facilities", async (req: Request, res: Response) => {
+  app.get("/api/public/facilities", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id || 1;
       const facilities = [
         {
           name: "আধুনিক শ্রেণীকক্ষ",

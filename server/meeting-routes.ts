@@ -1,11 +1,13 @@
 import { Request, Response, Express } from "express";
 import { supabase } from "../shared/supabase";
+import { requireSchoolId, getSchoolId } from "./middleware/supabase-auth";
 
 export function registerMeetingRoutes(app: Express) {
   
   // Get all meetings for the current user
-  app.get("/api/meetings", async (req: Request, res: Response) => {
+  app.get("/api/meetings", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id;
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({
@@ -18,6 +20,7 @@ export function registerMeetingRoutes(app: Express) {
       const { data: meetings, error } = await supabase
         .from('video_conferences')
         .select('*')
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -65,8 +68,9 @@ export function registerMeetingRoutes(app: Express) {
   });
 
   // Create a new meeting
-  app.post("/api/meetings", async (req: Request, res: Response) => {
+  app.post("/api/meetings", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id;
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({
@@ -104,7 +108,8 @@ export function registerMeetingRoutes(app: Express) {
           room_id: `room_${Date.now()}`,
           status: 'scheduled',
           current_participants: 0,
-          is_recording: false
+          is_recording: false,
+          school_id: schoolId
         })
         .select()
         .single();
@@ -133,8 +138,9 @@ export function registerMeetingRoutes(app: Express) {
   });
 
   // Update meeting status
-  app.patch("/api/meetings/:id/status", async (req: Request, res: Response) => {
+  app.patch("/api/meetings/:id/status", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id;
       const { id } = req.params;
       const { status } = req.body;
 
@@ -142,6 +148,7 @@ export function registerMeetingRoutes(app: Express) {
         .from('video_conferences')
         .update({ status })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
 
@@ -169,11 +176,13 @@ export function registerMeetingRoutes(app: Express) {
   });
 
   // Get meeting statistics
-  app.get("/api/meetings/stats", async (req: Request, res: Response) => {
+  app.get("/api/meetings/stats", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id;
       const { data: meetings, error } = await supabase
         .from('video_conferences')
-        .select('*');
+        .select('*')
+        .eq('school_id', schoolId);
 
       if (error) {
         console.error('Error fetching meeting stats:', error);

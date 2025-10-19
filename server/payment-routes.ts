@@ -2,6 +2,7 @@ import { Request, Response, Express } from "express";
 import { db } from "./db";
 import { financialTransactions, feeItems } from "../shared/schema";
 import { eq, and } from "drizzle-orm";
+import { requireSchoolId, getSchoolId } from "./middleware/supabase-auth";
 
 interface PaymentRequest {
   method: string;
@@ -14,8 +15,9 @@ interface PaymentRequest {
 export function registerPaymentRoutes(app: Express) {
   
   // Process payment for fees
-  app.post("/api/payments/process", async (req: Request, res: Response) => {
+  app.post("/api/payments/process", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id;
       const { method, amount, phoneNumber, feeIds, userId }: PaymentRequest = req.body;
 
       // Validate required fields
@@ -104,7 +106,7 @@ export function registerPaymentRoutes(app: Express) {
 
       // Record the financial transaction
       const [transaction] = await db.insert(financialTransactions).values({
-        schoolId: 1, // Assuming school ID 1 for demo
+        schoolId: schoolId,
         transactionType: 'income',
         category: 'fee_payment',
         amount: amount.toString(),
@@ -148,8 +150,9 @@ export function registerPaymentRoutes(app: Express) {
   });
 
   // Get payment history for a user
-  app.get("/api/payments/history", async (req: Request, res: Response) => {
+  app.get("/api/payments/history", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id;
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({
@@ -161,7 +164,8 @@ export function registerPaymentRoutes(app: Express) {
       const transactions = await db.select().from(financialTransactions)
         .where(and(
           eq(financialTransactions.createdBy, userId),
-          eq(financialTransactions.category, 'fee_payment')
+          eq(financialTransactions.category, 'fee_payment'),
+          eq(financialTransactions.schoolId, schoolId)
         ))
         .orderBy(financialTransactions.createdAt);
 
@@ -187,8 +191,9 @@ export function registerPaymentRoutes(app: Express) {
   });
 
   // Get pending fees for a user/student
-  app.get("/api/payments/pending-fees", async (req: Request, res: Response) => {
+  app.get("/api/payments/pending-fees", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id;
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({
@@ -198,7 +203,7 @@ export function registerPaymentRoutes(app: Express) {
       }
 
       // For demo purposes, return mock pending fees
-      // In production, you would query actual fee data from the database
+      // In production, you would query actual fee data from the database with schoolId filtering
       const pendingFees = [
         {
           id: 1,
@@ -241,12 +246,16 @@ export function registerPaymentRoutes(app: Express) {
   });
 
   // Verify payment status (for polling)
-  app.get("/api/payments/verify/:transactionId", async (req: Request, res: Response) => {
+  app.get("/api/payments/verify/:transactionId", requireSchoolId, async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req) || req.user?.school_id;
       const { transactionId } = req.params;
       
       const transaction = await db.select().from(financialTransactions)
-        .where(eq(financialTransactions.id, parseInt(transactionId)))
+        .where(and(
+          eq(financialTransactions.id, parseInt(transactionId)),
+          eq(financialTransactions.schoolId, schoolId)
+        ))
         .limit(1);
 
       if (transaction.length === 0) {
