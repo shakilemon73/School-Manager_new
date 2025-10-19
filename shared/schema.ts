@@ -77,7 +77,7 @@ export const libraryBooks = pgTable("library_books", {
   availableCopies: integer("available_copies").default(1).notNull(),
   location: text("location").notNull(),
   description: text("description"),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -139,7 +139,7 @@ export const studentImportBatches = pgTable("student_import_batches", {
   status: text("status").default("processing").notNull(), // processing, completed, failed
   errorLog: json("error_log"), // Array of error messages
   uploadedBy: text("uploaded_by"), // User ID who uploaded
-  schoolId: integer("school_id").default(1),
+  schoolId: integer("school_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
 });
@@ -159,7 +159,7 @@ export const libraryBorrowedBooks = pgTable("library_borrowed_books", {
   status: text("status").default("active").notNull(), // active, returned, overdue
   fine: decimal("fine", { precision: 8, scale: 2 }).default("0"),
   notes: text("notes"),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -182,7 +182,7 @@ export const videoConferences = pgTable("video_conferences", {
   meetingId: text("meeting_id").unique().notNull(),
   isRecording: boolean("is_recording").default(false),
   recordingUrl: text("recording_url"),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -205,7 +205,7 @@ export const paymentTransactions = pgTable("payment_transactions", {
   description: text("description").notNull(),
   descriptionBn: text("description_bn").notNull(),
   studentId: integer("student_id").references(() => students.id),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
 });
@@ -244,7 +244,7 @@ export const documentTemplates = pgTable("document_templates", {
   isPopular: boolean("is_popular").default(false),
   usageCount: integer("usage_count").default(0),
   lastUsed: timestamp("last_used"),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
 });
 
 export const documentTemplatesInsertSchema = createInsertSchema(documentTemplates);
@@ -266,7 +266,7 @@ export const academicYears = pgTable("academic_years", {
   totalClasses: integer("total_classes").default(0),
   totalTerms: integer("total_terms").default(0),
   status: text("status").default("draft").notNull(), // draft, active, completed, archived
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -288,7 +288,7 @@ export const academicTerms = pgTable("academic_terms", {
   examScheduled: boolean("exam_scheduled").default(false),
   resultPublished: boolean("result_published").default(false),
   status: text("status").default("upcoming").notNull(), // upcoming, ongoing, completed
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -318,7 +318,7 @@ export const inventoryItems = pgTable("inventory_items", {
   location: text("location").notNull(),
   condition: text("condition").notNull(),
   description: text("description"),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -336,7 +336,7 @@ export const inventoryMovements = pgTable("inventory_movements", {
   reason: text("reason").notNull(),
   reference: text("reference"),
   notes: text("notes"),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -352,7 +352,7 @@ export const transportRoutes = pgTable("transport_routes", {
   pickupPoints: text("pickup_points"),
   timings: text("timings"),
   monthlyFee: decimal("monthly_fee", { precision: 8, scale: 2 }).notNull(),
-  schoolId: integer("school_id").default(1),
+  schoolId: integer("school_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -372,7 +372,7 @@ export const transportVehicles = pgTable("transport_vehicles", {
   helperPhone: text("helper_phone"),
   routeId: integer("route_id").references(() => transportRoutes.id),
   isActive: boolean("is_active").default(true),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -391,7 +391,7 @@ export const transportStudentAssignments = pgTable("transport_student_assignment
   dropPoint: text("drop_point").notNull(),
   monthlyFee: decimal("monthly_fee", { precision: 8, scale: 2 }).notNull(),
   isActive: boolean("is_active").default(true),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -420,7 +420,7 @@ export const notifications = pgTable("notifications", {
   isPublic: boolean("is_public").default(false),
   actionRequired: boolean("action_required").default(false),
   readAt: timestamp("read_at"),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -438,7 +438,7 @@ export const contactMessages = pgTable("contact_messages", {
   subject: text("subject").notNull(),
   message: text("message").notNull(),
   status: text("status").default("pending").notNull(), // pending, read, responded, archived
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   respondedAt: timestamp("responded_at"),
   respondedBy: integer("responded_by"),
@@ -469,7 +469,7 @@ export const admissionApplications = pgTable("admission_applications", {
   email: text("email"),
   status: text("status").default("pending").notNull(), // pending, reviewed, approved, rejected, enrolled
   applicationNumber: text("application_number").unique(),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   reviewedAt: timestamp("reviewed_at"),
   reviewedBy: integer("reviewed_by"),
@@ -513,7 +513,7 @@ export const financialTransactions = pgTable("financial_transactions", {
   description: text("description"),
   paymentMethod: text("payment_method").notNull(),
   referenceNumber: text("reference_number"),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -539,7 +539,7 @@ export const calendarEvents = pgTable("calendar_events", {
   location: text("location"),
   organizer: text("organizer"),
   attendees: json("attendees"),
-  schoolId: integer("school_id").default(1).notNull(),
+  schoolId: integer("school_id").notNull(),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -573,7 +573,7 @@ export type SchoolDocumentPermission = typeof schoolDocumentPermissions.$inferSe
 // School Settings table - Enhanced for complete school configuration
 export const schoolSettings = pgTable("school_settings", {
   id: serial("id").primaryKey(),
-  schoolId: integer("school_id").references(() => schools.id).notNull().default(1),
+  schoolId: integer("school_id").references(() => schools.id).notNull(),
   
   // Basic Information
   name: text("name").notNull(),
@@ -1796,7 +1796,7 @@ export const notificationTemplates = pgTable("notification_templates", {
   bodyBn: text("body_bn"),
   variables: json("variables"),
   isActive: boolean("is_active").default(true),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1823,7 +1823,7 @@ export const notificationLogs = pgTable("notification_logs", {
   readAt: timestamp("read_at"),
   errorMessage: text("error_message"),
   metadata: json("metadata"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1839,7 +1839,7 @@ export const conversations = pgTable("conversations", {
   participantTypes: text("participant_types").array().notNull(),
   lastMessageAt: timestamp("last_message_at"),
   isActive: boolean("is_active").default(true),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1859,7 +1859,7 @@ export const messages = pgTable("messages", {
   attachments: json("attachments"),
   isRead: boolean("is_read").default(false),
   readAt: timestamp("read_at"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1883,7 +1883,7 @@ export const announcements = pgTable("announcements", {
   isPublished: boolean("is_published").default(false),
   viewCount: integer("view_count").default(0),
   attachments: json("attachments"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1902,7 +1902,7 @@ export const announcementCategories = pgTable("announcement_categories", {
   icon: text("icon"),
   color: text("color").default("#3b82f6"),
   isActive: boolean("is_active").default(true),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1924,7 +1924,7 @@ export const seatingArrangements = pgTable("seating_arrangements", {
   rowNumber: integer("row_number"),
   columnNumber: integer("column_number"),
   instructions: text("instructions"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1944,7 +1944,7 @@ export const invigilationDuties = pgTable("invigilation_duties", {
   startTime: time("start_time").notNull(),
   endTime: time("end_time").notNull(),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1967,7 +1967,7 @@ export const staffAttendance = pgTable("staff_attendance", {
   lateMinutes: integer("late_minutes").default(0),
   overtimeMinutes: integer("overtime_minutes").default(0),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1988,7 +1988,7 @@ export const attendanceSummary = pgTable("attendance_summary", {
   halfDays: integer("half_days").default(0),
   leaveDays: integer("leave_days").default(0),
   attendancePercentage: decimal("attendance_percentage", { precision: 5, scale: 2 }),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2007,7 +2007,7 @@ export const salaryComponents = pgTable("salary_components", {
   percentage: decimal("percentage", { precision: 5, scale: 2 }),
   isTaxable: boolean("is_taxable").default(true),
   isActive: boolean("is_active").default(true),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2031,7 +2031,7 @@ export const payrollRecords = pgTable("payroll_records", {
   paymentMethod: text("payment_method"),
   paymentStatus: text("payment_status").default("pending"),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -2051,7 +2051,7 @@ export const appraisalCriteria = pgTable("appraisal_criteria", {
   maxScore: integer("max_score").default(10),
   weightage: decimal("weightage", { precision: 5, scale: 2 }).default("1.0"),
   isActive: boolean("is_active").default(true),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2075,7 +2075,7 @@ export const appraisals = pgTable("appraisals", {
   reviewerId: integer("reviewer_id"),
   reviewerName: text("reviewer_name"),
   status: text("status").default("draft"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2097,7 +2097,7 @@ export const incidentCategories = pgTable("incident_categories", {
   severityLevel: text("severity_level").default("low"),
   defaultAction: text("default_action"),
   isActive: boolean("is_active").default(true),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2119,7 +2119,7 @@ export const disciplinaryIncidents = pgTable("disciplinary_incidents", {
   reporterName: text("reporter_name"),
   witnesses: text("witnesses"),
   status: text("status").default("reported"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2141,7 +2141,7 @@ export const disciplinaryActions = pgTable("disciplinary_actions", {
   completionStatus: text("completion_status").default("pending"),
   completionDate: date("completion_date"),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -2166,7 +2166,7 @@ export const activities = pgTable("activities", {
   startDate: date("start_date"),
   endDate: date("end_date"),
   isActive: boolean("is_active").default(true),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2184,7 +2184,7 @@ export const activityEnrollments = pgTable("activity_enrollments", {
   status: text("status").default("active"),
   attendancePercentage: decimal("attendance_percentage", { precision: 5, scale: 2 }),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2205,7 +2205,7 @@ export const activityAchievements = pgTable("activity_achievements", {
   achievementDate: date("achievement_date").notNull(),
   description: text("description"),
   certificateUrl: text("certificate_url"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2230,7 +2230,7 @@ export const healthRecords = pgTable("health_records", {
   familyDoctorName: text("family_doctor_name"),
   familyDoctorPhone: text("family_doctor_phone"),
   medicalNotes: text("medical_notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2253,7 +2253,7 @@ export const vaccinations = pgTable("vaccinations", {
   location: text("location"),
   sideEffects: text("side_effects"),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2279,7 +2279,7 @@ export const medicalCheckups = pgTable("medical_checkups", {
   recommendations: text("recommendations"),
   examinedBy: text("examined_by"),
   nextCheckupDate: date("next_checkup_date"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2311,7 +2311,7 @@ export const admissionTests = pgTable("admission_tests", {
   percentage: decimal("percentage", { precision: 5, scale: 2 }),
   rank: integer("rank"),
   status: text("status").default("scheduled"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2338,7 +2338,7 @@ export const admissionInterviews = pgTable("admission_interviews", {
   interviewerId: integer("interviewer_id"),
   interviewerName: text("interviewer_name"),
   status: text("status").default("scheduled"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2368,7 +2368,7 @@ export const vendors = pgTable("vendors", {
   rating: decimal("rating", { precision: 2, scale: 1 }),
   isActive: boolean("is_active").default(true),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2394,7 +2394,7 @@ export const purchaseOrders = pgTable("purchase_orders", {
   approvedBy: integer("approved_by"),
   approvedAt: timestamp("approved_at"),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -2419,7 +2419,7 @@ export const stockAlerts = pgTable("stock_alerts", {
   acknowledgedBy: integer("acknowledged_by"),
   acknowledgedAt: timestamp("acknowledged_at"),
   actionTaken: text("action_taken"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2444,7 +2444,7 @@ export const hostelRooms = pgTable("hostel_rooms", {
   facilities: text("facilities").array(),
   status: text("status").default("available"),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2465,7 +2465,7 @@ export const hostelAttendance = pgTable("hostel_attendance", {
   leaveType: text("leave_type"),
   leaveApprovedBy: integer("leave_approved_by"),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2482,7 +2482,7 @@ export const mealPlans = pgTable("meal_plans", {
   mealTypes: text("meal_types").array().notNull(),
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
   isActive: boolean("is_active").default(true),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2499,7 +2499,7 @@ export const mealMenu = pgTable("meal_menu", {
   menuItems: text("menu_items").array().notNull(),
   menuItemsBn: text("menu_items_bn").array(),
   specialNotes: text("special_notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2516,7 +2516,7 @@ export const mealSubscriptions = pgTable("meal_subscriptions", {
   endDate: date("end_date"),
   isActive: boolean("is_active").default(true),
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2535,7 +2535,7 @@ export const mealTransactions = pgTable("meal_transactions", {
   isConsumed: boolean("is_consumed").default(false),
   consumedAt: timestamp("consumed_at"),
   notes: text("notes"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2561,7 +2561,7 @@ export const reportTemplates = pgTable("report_templates", {
   sorting: json("sorting"),
   chartConfig: json("chart_config"),
   isPublic: boolean("is_public").default(false),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -2585,7 +2585,7 @@ export const subjects = pgTable("subjects", {
   creditHours: integer("credit_hours").default(3),
   isCompulsory: boolean("is_compulsory").default(false),
   department: text("department"),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -2599,7 +2599,7 @@ export type Subject = typeof subjects.$inferSelect;
 // Grade Scales table
 export const gradeScales = pgTable("grade_scales", {
   id: serial("id").primaryKey(),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   scaleName: text("scale_name").notNull(),
   scaleNameBn: text("scale_name_bn"),
   scaleType: text("scale_type").notNull(), // percentage, letter, points, descriptive
@@ -2626,7 +2626,7 @@ export type GradeScale = typeof gradeScales.$inferSelect;
 // Assessments table
 export const assessments = pgTable("assessments", {
   id: serial("id").primaryKey(),
-  schoolId: integer("school_id").notNull().default(1),
+  schoolId: integer("school_id").notNull(),
   subjectId: integer("subject_id").references(() => subjects.id).notNull(),
   class: text("class").notNull(),
   section: text("section").notNull(),
