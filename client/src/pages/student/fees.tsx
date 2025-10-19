@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useDesignSystem } from "@/hooks/use-design-system";
 import { useRequireSchoolId } from "@/hooks/use-require-school-id";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { db } from "@/lib/supabase";
 import { Link } from "wouter";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
@@ -56,20 +58,42 @@ interface PaymentSummary {
 export default function StudentFees() {
   useDesignSystem();
   const schoolId = useRequireSchoolId();
+  const { user } = useSupabaseDirectAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all');
 
-  const { data: feeReceipts, isLoading } = useQuery<FeeReceipt[]>({
-    queryKey: ["/api/fee-receipts"],
+  // First get student profile to get student database ID
+  const { data: studentProfile } = useQuery({
+    queryKey: ['student-profile', user?.id, schoolId],
+    queryFn: async () => {
+      if (!user?.id || !schoolId) return null;
+      return await db.getStudentProfile(user.id, schoolId);
+    },
+    enabled: !!user?.id && !!schoolId,
   });
 
-  const { data: paymentSummary } = useQuery<PaymentSummary>({
-    queryKey: ["/api/students/fees/summary"],
+  const studentId = studentProfile?.id;
+
+  const { data: feeReceipts, isLoading } = useQuery<any[]>({
+    queryKey: ['student-fee-receipts', studentId, schoolId],
+    queryFn: async () => {
+      if (!studentId || !schoolId) return [];
+      return await db.getStudentFeeReceipts(studentId, schoolId);
+    },
+    enabled: !!studentId && !!schoolId,
   });
 
-  const { data: feeItems } = useQuery<FeeItem[]>({
-    queryKey: ["/api/fee-items"],
+  const { data: paymentSummary } = useQuery<any>({
+    queryKey: ['student-fee-summary', studentId, schoolId],
+    queryFn: async () => {
+      if (!studentId || !schoolId) return null;
+      return await db.getStudentFeeSummary(studentId, schoolId);
+    },
+    enabled: !!studentId && !!schoolId,
   });
+
+  // Extract fee items from receipts
+  const feeItems = feeReceipts?.flatMap(receipt => receipt.fee_items || []) || [];
 
   // Filter receipts based on search and status
   const filteredReceipts = feeReceipts?.filter(receipt => {

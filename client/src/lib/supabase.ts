@@ -1087,6 +1087,432 @@ export const db = {
     return true;
   },
 
+  // ==================== STUDENT PORTAL FUNCTIONS ====================
+  // Comprehensive serverless functions for student-specific operations
+  // All functions include school isolation and proper error handling
+
+  /**
+   * Get current student profile by user ID
+   * Used in: student/profile.tsx (replaces /api/students/me)
+   */
+  async getStudentProfile(userId: string, schoolId: number) {
+    if (!userId || !schoolId) {
+      throw new Error('User ID and School ID are required');
+    }
+
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('school_id', schoolId)
+      .single();
+
+    if (error) {
+      // If no student found with user_id, return null (not an error)
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+
+    return data ? fromDbStudent(data) : null;
+  },
+
+  /**
+   * Get student fee receipts
+   * Used in: student/fees.tsx (replaces /api/fee-receipts)
+   */
+  async getStudentFeeReceipts(studentId: number, schoolId: number, options?: {
+    limit?: number;
+    status?: string;
+  }) {
+    if (!studentId || !schoolId) {
+      throw new Error('Student ID and School ID are required');
+    }
+
+    let query = supabase
+      .from('fee_receipts')
+      .select(`
+        *,
+        fee_items (
+          id,
+          name,
+          amount,
+          receipt_id
+        )
+      `)
+      .eq('student_id', studentId)
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false });
+
+    if (options?.status) {
+      query = query.eq('status', options.status);
+    }
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  /**
+   * Get student fee summary (total paid, pending, etc.)
+   * Used in: student/fees.tsx (replaces /api/students/fees/summary)
+   */
+  async getStudentFeeSummary(studentId: number, schoolId: number) {
+    if (!studentId || !schoolId) {
+      throw new Error('Student ID and School ID are required');
+    }
+
+    const { data, error } = await supabase
+      .from('fee_receipts')
+      .select('amount, status')
+      .eq('student_id', studentId)
+      .eq('school_id', schoolId);
+
+    if (error) throw error;
+
+    const summary = {
+      total_paid: 0,
+      total_pending: 0,
+      total_amount: 0,
+      receipt_count: data?.length || 0
+    };
+
+    data?.forEach(receipt => {
+      const amount = receipt.amount || 0;
+      summary.total_amount += amount;
+      
+      if (receipt.status === 'paid' || receipt.status === 'completed') {
+        summary.total_paid += amount;
+      } else {
+        summary.total_pending += amount;
+      }
+    });
+
+    return summary;
+  },
+
+  /**
+   * Get student attendance records
+   * Used in: student/attendance.tsx (replaces /api/students/attendance)
+   */
+  async getStudentAttendance(studentId: number, schoolId: number, filters?: {
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }) {
+    if (!studentId || !schoolId) {
+      throw new Error('Student ID and School ID are required');
+    }
+
+    let query = supabase
+      .from('attendance')
+      .select(`
+        *,
+        subjects (id, name, name_bn),
+        teachers (id, name)
+      `)
+      .eq('student_id', studentId)
+      .eq('school_id', schoolId)
+      .order('date', { ascending: false });
+
+    if (filters?.startDate) {
+      query = query.gte('date', filters.startDate);
+    }
+
+    if (filters?.endDate) {
+      query = query.lte('date', filters.endDate);
+    }
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  /**
+   * Get student attendance statistics
+   * Used in: student/attendance.tsx (replaces /api/students/attendance/stats)
+   */
+  async getStudentAttendanceStats(studentId: number, schoolId: number, filters?: {
+    startDate?: string;
+    endDate?: string;
+  }) {
+    if (!studentId || !schoolId) {
+      throw new Error('Student ID and School ID are required');
+    }
+
+    let query = supabase
+      .from('attendance')
+      .select('status, date')
+      .eq('student_id', studentId)
+      .eq('school_id', schoolId);
+
+    if (filters?.startDate) {
+      query = query.gte('date', filters.startDate);
+    }
+
+    if (filters?.endDate) {
+      query = query.lte('date', filters.endDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    const stats = {
+      total_days: data?.length || 0,
+      present: 0,
+      absent: 0,
+      late: 0,
+      excused: 0,
+      attendance_percentage: 0
+    };
+
+    data?.forEach(record => {
+      if (record.status === 'present') stats.present++;
+      else if (record.status === 'absent') stats.absent++;
+      else if (record.status === 'late') stats.late++;
+      else if (record.status === 'excused') stats.excused++;
+    });
+
+    if (stats.total_days > 0) {
+      stats.attendance_percentage = Math.round((stats.present / stats.total_days) * 100);
+    }
+
+    return stats;
+  },
+
+  /**
+   * Get student exam results
+   * Used in: student/results.tsx (replaces /api/students/results)
+   */
+  async getStudentResults(studentId: number, schoolId: number, filters?: {
+    examId?: number;
+    academicYearId?: number;
+    limit?: number;
+  }) {
+    if (!studentId || !schoolId) {
+      throw new Error('Student ID and School ID are required');
+    }
+
+    let query = supabase
+      .from('exam_results')
+      .select(`
+        *,
+        exams (id, name, name_bn, exam_type, exam_date, total_marks),
+        subjects (id, name, name_bn),
+        teachers (id, name)
+      `)
+      .eq('student_id', studentId)
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false });
+
+    if (filters?.examId) {
+      query = query.eq('exam_id', filters.examId);
+    }
+
+    if (filters?.academicYearId) {
+      query = query.eq('exams.academic_year_id', filters.academicYearId);
+    }
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  /**
+   * Get student performance analytics
+   * Used in: student/results.tsx (replaces /api/students/performance)
+   */
+  async getStudentPerformance(studentId: number, schoolId: number, options?: {
+    academicYearId?: number;
+  }) {
+    if (!studentId || !schoolId) {
+      throw new Error('Student ID and School ID are required');
+    }
+
+    let query = supabase
+      .from('exam_results')
+      .select(`
+        marks_obtained,
+        total_marks,
+        grade,
+        subjects (name, name_bn),
+        exams (name, exam_type)
+      `)
+      .eq('student_id', studentId)
+      .eq('school_id', schoolId);
+
+    if (options?.academicYearId) {
+      query = query.eq('exams.academic_year_id', options.academicYearId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Calculate performance metrics
+    const performance = {
+      total_exams: data?.length || 0,
+      average_percentage: 0,
+      highest_marks: 0,
+      lowest_marks: 100,
+      subjects_performance: {} as Record<string, {
+        average: number;
+        count: number;
+        subject_name: string;
+      }>,
+      grade_distribution: {
+        'A+': 0,
+        'A': 0,
+        'B': 0,
+        'C': 0,
+        'D': 0,
+        'F': 0
+      }
+    };
+
+    let totalPercentage = 0;
+
+    data?.forEach(result => {
+      const percentage = result.total_marks > 0 
+        ? (result.marks_obtained / result.total_marks) * 100 
+        : 0;
+      
+      totalPercentage += percentage;
+      
+      if (percentage > performance.highest_marks) {
+        performance.highest_marks = Math.round(percentage);
+      }
+      
+      if (percentage < performance.lowest_marks) {
+        performance.lowest_marks = Math.round(percentage);
+      }
+
+      // Grade distribution
+      if (result.grade && performance.grade_distribution.hasOwnProperty(result.grade)) {
+        performance.grade_distribution[result.grade as keyof typeof performance.grade_distribution]++;
+      }
+
+      // Subject-wise performance
+      const subjects = result.subjects as any;
+      const subjectName = (Array.isArray(subjects) ? subjects[0]?.name : subjects?.name) || 'Unknown';
+      if (!performance.subjects_performance[subjectName]) {
+        performance.subjects_performance[subjectName] = {
+          average: 0,
+          count: 0,
+          subject_name: subjectName
+        };
+      }
+      performance.subjects_performance[subjectName].average += percentage;
+      performance.subjects_performance[subjectName].count++;
+    });
+
+    // Calculate averages
+    if (performance.total_exams > 0) {
+      performance.average_percentage = Math.round(totalPercentage / performance.total_exams);
+    }
+
+    // Finalize subject averages
+    Object.keys(performance.subjects_performance).forEach(subject => {
+      const subjectData = performance.subjects_performance[subject];
+      if (subjectData.count > 0) {
+        subjectData.average = Math.round(subjectData.average / subjectData.count);
+      }
+    });
+
+    return performance;
+  },
+
+  /**
+   * Get student notifications
+   * Used in: student/notifications.tsx (replaces /api/students/notifications)
+   */
+  async getStudentNotifications(studentId: number, schoolId: number, options?: {
+    limit?: number;
+    unreadOnly?: boolean;
+  }) {
+    if (!studentId || !schoolId) {
+      throw new Error('Student ID and School ID are required');
+    }
+
+    let query = supabase
+      .from('notifications')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false });
+
+    // Filter by target - either for all students or specific student
+    query = query.or(`target_id.eq.${studentId},target_type.eq.all_students`);
+
+    if (options?.unreadOnly) {
+      query = query.eq('is_read', false);
+    }
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  /**
+   * Mark notification as read
+   * Used in: student/notifications.tsx
+   */
+  async markNotificationAsRead(notificationId: number, studentId: number) {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId)
+      .eq('target_id', studentId);
+
+    if (error) throw error;
+    return true;
+  },
+
+  /**
+   * Get student by student_id (not database id)
+   * Useful for looking up students by their school-assigned ID
+   */
+  async getStudentByStudentId(studentId: string, schoolId: number) {
+    if (!studentId || !schoolId) {
+      throw new Error('Student ID and School ID are required');
+    }
+
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('school_id', schoolId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+
+    return data ? fromDbStudent(data) : null;
+  },
+
+  // ==================== END STUDENT PORTAL FUNCTIONS ====================
+
   // Teachers - SECURITY: Defense-in-depth with both RLS and client-side filtering
   async getTeachers(schoolId?: number) {
     if (!schoolId) {
@@ -1422,17 +1848,6 @@ export const db = {
     return data;
   },
 
-  async markNotificationAsRead(id: number) {
-    const { data, error } = await supabase
-      .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
 
   async sendNotification(notification: Database['public']['Tables']['notifications']['Insert']) {
     const { data, error } = await supabase
@@ -3164,31 +3579,6 @@ export const db = {
   },
 
   // ==================== STUDENT PORTAL FUNCTIONS ====================
-  
-  async getStudentAttendanceStats(studentId: number, schoolId: number) {
-    console.log('📊 Fetching attendance stats for student:', studentId);
-    try {
-      const { data, error } = await supabase
-        .from('attendance_records')
-        .select('status')
-        .eq('student_id', studentId)
-        .eq('school_id', schoolId);
-      
-      if (error) {
-        console.error('Error fetching attendance:', error);
-        return { present: 0, total: 0, percentage: 0 };
-      }
-      
-      const total = data?.length || 0;
-      const present = data?.filter(r => r.status === 'present').length || 0;
-      const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-      
-      return { present, total, percentage };
-    } catch (error) {
-      console.error('Error in getStudentAttendanceStats:', error);
-      return { present: 0, total: 0, percentage: 0 };
-    }
-  },
 
   async getStudentAcademicStats(studentId: number, schoolId: number) {
     console.log('📚 Fetching academic stats for student:', studentId);

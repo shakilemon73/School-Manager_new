@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useDesignSystem } from "@/hooks/use-design-system";
 import { useRequireSchoolId } from "@/hooks/use-require-school-id";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { db } from "@/lib/supabase";
 import { Link } from "wouter";
 import { 
   ArrowLeft,
@@ -64,13 +66,18 @@ interface Student {
 export default function StudentProfile() {
   useDesignSystem();
   const schoolId = useRequireSchoolId();
+  const { user } = useSupabaseDirectAuth();
 
+  // Fetch student profile using Supabase direct (serverless)
   const { data: student, isLoading } = useQuery<Student>({
-    queryKey: ["/api/students/me"],
-  });
-
-  const { data: user } = useQuery({
-    queryKey: ["/api/user"],
+    queryKey: ['student-profile', user?.id, schoolId],
+    queryFn: async () => {
+      if (!user?.id || !schoolId) {
+        throw new Error('User ID and School ID are required');
+      }
+      return await db.getStudentProfile(user.id, schoolId);
+    },
+    enabled: !!user?.id && !!schoolId,
   });
 
   if (isLoading) {

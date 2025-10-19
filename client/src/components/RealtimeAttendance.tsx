@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { userProfile } from "@/hooks/use-supabase-direct-auth";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { useRequireSchoolId } from "@/hooks/use-require-school-id";
+import { db } from "@/lib/supabase";
 
 interface AttendanceRecord {
   id: number;
@@ -33,11 +35,15 @@ export function RealtimeAttendance() {
   const [selectedStatus, setSelectedStatus] = useState<string>('present');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useSupabaseDirectAuth();
+  const schoolId = useRequireSchoolId();
 
   useEffect(() => {
     // Fetch initial data
-    fetchAttendanceRecords();
-    fetchStudents();
+    if (user?.id && schoolId) {
+      fetchAttendanceRecords();
+      fetchStudents();
+    }
 
     // Setup real-time subscription for attendance updates
     const attendanceSubscription = supabase
@@ -68,23 +74,34 @@ export function RealtimeAttendance() {
     return () => {
       supabase.removeChannel(attendanceSubscription);
     };
-  }, [toast]);
+  }, [toast, user?.id, schoolId]);
 
   const fetchAttendanceRecords = async () => {
+    if (!schoolId) return;
+    
     try {
-      const response = await fetch('/api/attendance?date=' + new Date().toISOString().split('T')[0]);
-      const records = await response.json();
-      setAttendanceRecords(records);
+      const today = new Date().toISOString().split('T')[0];
+      // Direct Supabase query for attendance by date
+      const { data, error } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('date', today)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setAttendanceRecords(data as any || []);
     } catch (error) {
       console.error('Error fetching attendance:', error);
     }
   };
 
   const fetchStudents = async () => {
+    if (!schoolId) return;
+    
     try {
-      const response = await fetch('/api/students');
-      const studentData = await response.json();
-      setStudents(studentData);
+      const studentData = await db.getStudents(schoolId);
+      setStudents(studentData as any);
     } catch (error) {
       console.error('Error fetching students:', error);
     }
@@ -100,38 +117,38 @@ export function RealtimeAttendance() {
       return;
     }
 
+    if (!schoolId) {
+      toast({
+        title: "Error",
+        description: "School ID not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
       const attendanceData = {
-        studentId: parseInt(selectedStudent),
-        classId: 1, // Default class
+        student_id: parseInt(selectedStudent),
+        class_id: 1, // Default class
         date: new Date().toISOString().split('T')[0],
         status: selectedStatus,
-        schoolId: schoolId,
-        updatedBy: 1
+        school_id: schoolId,
+        updated_by: 1
       };
 
-      const response = await fetch('/api/attendance/realtime', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(attendanceData),
+      await db.markAttendance(attendanceData);
+      
+      toast({
+        title: "Success",
+        description: "Attendance marked successfully",
       });
-
-      if (response.ok) {
-        const result = await response.json();
-        toast({
-          title: "Success",
-          description: result.message || "Attendance marked successfully",
-        });
-        setSelectedStudent('');
-        setSelectedStatus('present');
-      } else {
-        throw new Error('Failed to mark attendance');
-      }
+      setSelectedStudent('');
+      setSelectedStatus('present');
+      
+      // Refresh attendance records
+      await fetchAttendanceRecords();
     } catch (error) {
       toast({
         title: "Error",

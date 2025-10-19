@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useDesignSystem } from "@/hooks/use-design-system";
 import { useRequireSchoolId } from "@/hooks/use-require-school-id";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { db } from "@/lib/supabase";
 import { Link } from "wouter";
 import { useState } from "react";
 import { 
@@ -55,15 +57,38 @@ interface AcademicPerformance {
 export default function StudentResults() {
   useDesignSystem();
   const schoolId = useRequireSchoolId();
+  const { user } = useSupabaseDirectAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [termFilter, setTermFilter] = useState<string>('all');
 
-  const { data: examResults, isLoading } = useQuery<ExamResult[]>({
-    queryKey: ["/api/students/results"],
+  // First get student profile to get student database ID
+  const { data: studentProfile } = useQuery({
+    queryKey: ['student-profile', user?.id, schoolId],
+    queryFn: async () => {
+      if (!user?.id || !schoolId) return null;
+      return await db.getStudentProfile(user.id, schoolId);
+    },
+    enabled: !!user?.id && !!schoolId,
   });
 
-  const { data: performance } = useQuery<AcademicPerformance>({
-    queryKey: ["/api/students/performance"],
+  const studentId = studentProfile?.id;
+
+  const { data: examResults, isLoading } = useQuery<any[]>({
+    queryKey: ['student-results', studentId, schoolId],
+    queryFn: async () => {
+      if (!studentId || !schoolId) return [];
+      return await db.getStudentResults(studentId, schoolId);
+    },
+    enabled: !!studentId && !!schoolId,
+  });
+
+  const { data: performance } = useQuery<any>({
+    queryKey: ['student-performance', studentId, schoolId],
+    queryFn: async () => {
+      if (!studentId || !schoolId) return null;
+      return await db.getStudentPerformance(studentId, schoolId);
+    },
+    enabled: !!studentId && !!schoolId,
   });
 
   // Filter results

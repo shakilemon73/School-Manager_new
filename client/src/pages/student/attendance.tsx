@@ -6,6 +6,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { useDesignSystem } from "@/hooks/use-design-system";
 import { useRequireSchoolId } from "@/hooks/use-require-school-id";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { db } from "@/lib/supabase";
 import { Link } from "wouter";
 import { useState } from "react";
 import { format, parseISO, isToday, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
@@ -42,15 +44,38 @@ interface AttendanceStats {
 export default function StudentAttendance() {
   useDesignSystem();
   const schoolId = useRequireSchoolId();
+  const { user } = useSupabaseDirectAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
 
-  const { data: attendanceRecords, isLoading } = useQuery<AttendanceRecord[]>({
-    queryKey: ["/api/students/attendance"],
+  // First get student profile to get student database ID
+  const { data: studentProfile } = useQuery({
+    queryKey: ['student-profile', user?.id, schoolId],
+    queryFn: async () => {
+      if (!user?.id || !schoolId) return null;
+      return await db.getStudentProfile(user.id, schoolId);
+    },
+    enabled: !!user?.id && !!schoolId,
   });
 
-  const { data: attendanceStats } = useQuery<AttendanceStats>({
-    queryKey: ["/api/students/attendance/stats"],
+  const studentId = studentProfile?.id;
+
+  const { data: attendanceRecords, isLoading } = useQuery<any[]>({
+    queryKey: ['student-attendance', studentId, schoolId],
+    queryFn: async () => {
+      if (!studentId || !schoolId) return [];
+      return await db.getStudentAttendance(studentId, schoolId);
+    },
+    enabled: !!studentId && !!schoolId,
+  });
+
+  const { data: attendanceStats } = useQuery<any>({
+    queryKey: ['student-attendance-stats', studentId, schoolId],
+    queryFn: async () => {
+      if (!studentId || !schoolId) return null;
+      return await db.getStudentAttendanceStats(studentId, schoolId);
+    },
+    enabled: !!studentId && !!schoolId,
   });
 
   // Calculate monthly stats

@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useDesignSystem } from "@/hooks/use-design-system";
 import { useRequireSchoolId } from "@/hooks/use-require-school-id";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { db } from "@/lib/supabase";
 import { Link } from "wouter";
 import { useState } from "react";
 import { format, parseISO, isToday, isYesterday } from "date-fns";
@@ -38,12 +40,30 @@ interface Notification {
 export default function StudentNotifications() {
   useDesignSystem();
   const schoolId = useRequireSchoolId();
+  const { user } = useSupabaseDirectAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
-  const { data: notifications, isLoading } = useQuery<Notification[]>({
-    queryKey: ["/api/students/notifications"],
+  // First get student profile to get student database ID
+  const { data: studentProfile } = useQuery({
+    queryKey: ['student-profile', user?.id, schoolId],
+    queryFn: async () => {
+      if (!user?.id || !schoolId) return null;
+      return await db.getStudentProfile(user.id, schoolId);
+    },
+    enabled: !!user?.id && !!schoolId,
+  });
+
+  const studentId = studentProfile?.id;
+
+  const { data: notifications, isLoading } = useQuery<any[]>({
+    queryKey: ['student-notifications', studentId, schoolId],
+    queryFn: async () => {
+      if (!studentId || !schoolId) return [];
+      return await db.getStudentNotifications(studentId, schoolId);
+    },
+    enabled: !!studentId && !!schoolId,
   });
 
   // Filter notifications

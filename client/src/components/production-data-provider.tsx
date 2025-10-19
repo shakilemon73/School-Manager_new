@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
+import { db } from '@/lib/supabase';
 
 interface ProductionDataContextType {
   students: any[];
@@ -17,76 +19,76 @@ interface ProductionDataContextType {
 const ProductionDataContext = createContext<ProductionDataContextType | undefined>(undefined);
 
 export function ProductionDataProvider({ children }: { children: React.ReactNode }) {
-  const [schoolId] = useState(1); // Get from user context in real implementation
+  const { user, schoolId } = useSupabaseDirectAuth();
 
-  // Real students data from database
+  // Real students data from database using Supabase direct
   const studentsQuery = useQuery({
-    queryKey: ['students', schoolId],
+    queryKey: ['students', user?.id, schoolId],
     queryFn: async () => {
-      const response = await fetch(`/api/students?schoolId=${schoolId}`);
-      if (!response.ok) throw new Error('Failed to fetch students');
-      return response.json();
-    }
+      if (!schoolId) return [];
+      return await db.getStudents(schoolId);
+    },
+    enabled: !!schoolId,
   });
 
-  // Real teachers data from database
+  // Real teachers data from database using Supabase direct
   const teachersQuery = useQuery({
-    queryKey: ['teachers', schoolId],
+    queryKey: ['teachers', user?.id, schoolId],
     queryFn: async () => {
-      const response = await fetch(`/api/teachers?schoolId=${schoolId}`);
-      if (!response.ok) throw new Error('Failed to fetch teachers');
-      return response.json();
-    }
+      if (!schoolId) return [];
+      return await db.getTeachers(schoolId);
+    },
+    enabled: !!schoolId,
   });
 
-  // Real library books data from database
+  // Real library books data from database using Supabase direct
   const booksQuery = useQuery({
-    queryKey: ['library-books', schoolId],
+    queryKey: ['library-books', user?.id, schoolId],
     queryFn: async () => {
-      const response = await fetch(`/api/library/books?schoolId=${schoolId}`);
-      if (!response.ok) throw new Error('Failed to fetch books');
-      return response.json();
-    }
+      if (!schoolId) return [];
+      return await db.getLibraryBooks(schoolId);
+    },
+    enabled: !!schoolId,
   });
 
-  // Real inventory items data from database
+  // Real inventory items data from database using Supabase direct
   const inventoryQuery = useQuery({
-    queryKey: ['inventory-items', schoolId],
+    queryKey: ['inventory-items', user?.id, schoolId],
     queryFn: async () => {
-      const response = await fetch(`/api/inventory/items?schoolId=${schoolId}`);
-      if (!response.ok) throw new Error('Failed to fetch inventory');
-      return response.json();
-    }
+      if (!schoolId) return [];
+      return await db.getInventoryItems(schoolId);
+    },
+    enabled: !!schoolId,
   });
 
-  // Real calendar events data from database
+  // Real calendar events data from database using Supabase direct
   const eventsQuery = useQuery({
-    queryKey: ['calendar-events', schoolId],
+    queryKey: ['calendar-events', user?.id, schoolId],
     queryFn: async () => {
-      const response = await fetch(`/api/calendar/events?schoolId=${schoolId}`);
-      if (!response.ok) throw new Error('Failed to fetch events');
-      return response.json();
-    }
+      if (!schoolId) return [];
+      return await db.getCalendarEvents(schoolId);
+    },
+    enabled: !!schoolId,
   });
 
-  // Real notifications data from database
+  // Real notifications data from database using Supabase direct
   const notificationsQuery = useQuery({
-    queryKey: ['notifications', schoolId],
+    queryKey: ['notifications', user?.id, schoolId],
     queryFn: async () => {
-      const response = await fetch(`/api/notifications?schoolId=${schoolId}`);
-      if (!response.ok) throw new Error('Failed to fetch notifications');
-      return response.json();
-    }
+      if (!schoolId) return [];
+      return await db.getNotifications(schoolId);
+    },
+    enabled: !!schoolId,
   });
 
-  // Real dashboard statistics from database
+  // Real dashboard statistics from database using Supabase direct
   const dashboardQuery = useQuery({
-    queryKey: ['dashboard-stats', schoolId],
+    queryKey: ['dashboard-stats', user?.id, schoolId],
     queryFn: async () => {
-      const response = await fetch(`/api/dashboard/stats?schoolId=${schoolId}`);
-      if (!response.ok) throw new Error('Failed to fetch dashboard stats');
-      return response.json();
-    }
+      if (!schoolId) return {};
+      return await db.getDashboardStats(schoolId);
+    },
+    enabled: !!schoolId,
   });
 
   const isLoading = studentsQuery.isLoading || teachersQuery.isLoading || 
