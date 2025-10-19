@@ -10,11 +10,9 @@
     }
   ],
   "functions": {
-    "api/index.ts": {
+    "api/**/*.ts": {
       "maxDuration": 30,
-      "memory": 1024,
-      "runtime": "nodejs20.x",
-      "includeFiles": "server/**"
+      "memory": 1024
     }
   },
   "headers": [
