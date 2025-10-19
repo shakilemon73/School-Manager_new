@@ -160,8 +160,9 @@ export function Sidebar() {
     }
     
     // Blur the link after click to prevent focus-related scrolling
+    const target = e.currentTarget;
     setTimeout(() => {
-      (e.currentTarget as HTMLAnchorElement).blur();
+      target?.blur();
     }, 0);
   };
 
