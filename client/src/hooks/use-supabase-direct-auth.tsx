@@ -1,6 +1,7 @@
 import { useEffect, useState, createContext, useContext } from 'react';
 import { auth, supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
+import { queryClient } from '@/lib/queryClient';
 
 // Context for authentication state
 interface AuthContextType {
@@ -159,7 +160,13 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       }
 
       console.log('✓ Supabase signout successful');
+      
+      // Clear all React Query cache to prevent showing previous user's data
+      console.log('🔄 Clearing query cache on logout');
+      queryClient.clear();
+      
       setUser(null);
+      setSchoolId(null);
 
     } catch (error) {
       console.error('Signout error:', error);
