@@ -1,3 +1,4 @@
+// Migrated to direct Supabase: Assignments using assessments table
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
@@ -21,46 +22,71 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
-import { Plus, FileText, Calendar, Clock, CheckCircle, AlertCircle, Search } from 'lucide-react';
-import { Assignment, Subject } from '@/lib/new-features-types';
+import { Plus, FileText, Calendar, Clock, CheckCircle, AlertCircle, Search, Trash2, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
+
+interface Assessment {
+  id: number;
+  school_id: number;
+  subject_id: number;
+  class: string;
+  section: string;
+  academic_year_id: number | null;
+  term_id: number | null;
+  assessment_name: string;
+  assessment_name_bn: string | null;
+  assessment_type: string;
+  total_marks: string;
+  weight_percentage: string | null;
+  date: string | null;
+  created_by_teacher_id: number | null;
+  description: string | null;
+  description_bn: string | null;
+  is_published: boolean;
+  created_at: string;
+  subjects?: {
+    name: string;
+    name_bn: string;
+  };
+}
 
 export default function AssignmentsManagementPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const schoolId = useRequireSchoolId();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
   const [searchText, setSearchText] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
-  const [activeTab, setActiveTab] = useState('all');
+  const [selectedType, setSelectedType] = useState('all');
   const [formData, setFormData] = useState({
-    title: '',
-    title_bn: '',
+    assessment_name: '',
+    assessment_name_bn: '',
     description: '',
     subject_id: '',
     class: '',
     section: '',
-    assigned_date: new Date().toISOString().split('T')[0],
-    due_date: '',
-    total_marks: 100,
-    status: 'active',
+    date: new Date().toISOString().split('T')[0],
+    total_marks: '100',
+    assessment_type: 'homework',
   });
 
-  // Fetch assignments
-  const { data: assignments = [], isLoading } = useQuery({
-    queryKey: ['/api/assignments', schoolId],
+  // Fetch assessments (homework and assignments)
+  const { data: assessments = [], isLoading } = useQuery({
+    queryKey: ['/api/assessments', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('assignments')
+        .from('assessments')
         .select(`
           *,
-          subjects (subject_name)
+          subjects (name, name_bn)
         `)
         .eq('school_id', schoolId)
-        .order('due_date', { ascending: false });
+        .in('assessment_type', ['homework', 'project'])
+        .order('date', { ascending: false });
       
       if (error) throw error;
-      return data as any[];
+      return data as Assessment[];
     }
   });
 
@@ -72,16 +98,17 @@ export default function AssignmentsManagementPage() {
         .from('subjects')
         .select('*')
         .eq('school_id', schoolId)
-        .order('subject_name');
+        .order('name');
       
       if (error) throw error;
-      return data as Subject[];
+      return data || [];
     }
   });
 
-  // Create assignment mutation
-  const createMutation = useMutation({
-    mutationFn: async (newAssignment: any) => {
+  // Create/Update assessment mutation
+  const saveAssessmentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      // Get current teacher ID
       const { data: teacherData } = await supabase
         .from('teachers')
         .select('id')
@@ -89,25 +116,67 @@ export default function AssignmentsManagementPage() {
         .limit(1)
         .single();
 
-      const { data, error } = await supabase
-        .from('assignments')
-        .insert([{
-          ...newAssignment,
-          teacher_id: teacherData?.id || 1,
-          school_id: schoolId,
-          subject_id: newAssignment.subject_id || null
-        }])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      const assessmentData = {
+        ...data,
+        school_id: schoolId,
+        created_by_teacher_id: teacherData?.id || null,
+        subject_id: data.subject_id ? parseInt(data.subject_id) : null,
+        is_published: true,
+      };
+
+      if (editingAssessment) {
+        // Update existing
+        const { data: result, error } = await supabase
+          .from('assessments')
+          .update(assessmentData)
+          .eq('id', editingAssessment.id)
+          .eq('school_id', schoolId)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return result;
+      } else {
+        // Create new
+        const { data: result, error } = await supabase
+          .from('assessments')
+          .insert([assessmentData])
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return result;
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
-      toast({ title: 'সফল', description: 'হোমওয়ার্ক তৈরি হয়েছে' });
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments'] });
+      toast({ 
+        title: 'সফল', 
+        description: editingAssessment ? 'অ্যাসাইনমেন্ট আপডেট হয়েছে' : 'অ্যাসাইনমেন্ট তৈরি হয়েছে'
+      });
       setIsAddDialogOpen(false);
+      setEditingAssessment(null);
       resetForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Delete assessment mutation
+  const deleteAssessmentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase
+        .from('assessments')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/assessments'] });
+      toast({ title: 'সফল', description: 'অ্যাসাইনমেন্ট মুছে ফেলা হয়েছে' });
     },
     onError: (error: any) => {
       toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
@@ -116,49 +185,77 @@ export default function AssignmentsManagementPage() {
 
   const resetForm = () => {
     setFormData({
-      title: '',
-      title_bn: '',
+      assessment_name: '',
+      assessment_name_bn: '',
       description: '',
       subject_id: '',
       class: '',
       section: '',
-      assigned_date: new Date().toISOString().split('T')[0],
-      due_date: '',
-      total_marks: 100,
-      status: 'active',
+      date: new Date().toISOString().split('T')[0],
+      total_marks: '100',
+      assessment_type: 'homework',
     });
+  };
+
+  const handleEdit = (assessment: Assessment) => {
+    setFormData({
+      assessment_name: assessment.assessment_name,
+      assessment_name_bn: assessment.assessment_name_bn || '',
+      description: assessment.description || '',
+      subject_id: assessment.subject_id?.toString() || '',
+      class: assessment.class,
+      section: assessment.section,
+      date: assessment.date || new Date().toISOString().split('T')[0],
+      total_marks: assessment.total_marks,
+      assessment_type: assessment.assessment_type,
+    });
+    setEditingAssessment(assessment);
+    setIsAddDialogOpen(true);
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm('আপনি কি এই অ্যাসাইনমেন্ট মুছে ফেলতে চান?')) {
+      deleteAssessmentMutation.mutate(id);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate(formData);
+    saveAssessmentMutation.mutate(formData);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active': return <Badge variant="default">সক্রিয়</Badge>;
-      case 'completed': return <Badge variant="secondary">সম্পন্ন</Badge>;
-      case 'expired': return <Badge variant="destructive">মেয়াদোত্তীর্ণ</Badge>;
-      default: return <Badge variant="outline">{status}</Badge>;
+  const handleCloseDialog = () => {
+    setIsAddDialogOpen(false);
+    setEditingAssessment(null);
+    resetForm();
+  };
+
+  const getTypeBadge = (type: string) => {
+    switch (type) {
+      case 'homework': return <Badge variant="default">হোমওয়ার্ক</Badge>;
+      case 'project': return <Badge variant="secondary">প্রজেক্ট</Badge>;
+      case 'quiz': return <Badge variant="outline">কুইজ</Badge>;
+      default: return <Badge>{type}</Badge>;
     }
   };
 
-  const filteredAssignments = assignments.filter(assignment => {
+  const filteredAssessments = assessments.filter(assessment => {
     const matchesSearch = searchText === '' || 
-      assignment.title.toLowerCase().includes(searchText.toLowerCase());
-    const matchesClass = selectedClass === 'all' || assignment.class === selectedClass;
-    const matchesTab = activeTab === 'all' || assignment.status === activeTab;
+      assessment.assessment_name.toLowerCase().includes(searchText.toLowerCase()) ||
+      assessment.assessment_name_bn?.toLowerCase().includes(searchText.toLowerCase());
+    const matchesClass = selectedClass === 'all' || assessment.class === selectedClass;
+    const matchesType = selectedType === 'all' || assessment.assessment_type === selectedType;
     
-    return matchesSearch && matchesClass && matchesTab;
+    return matchesSearch && matchesClass && matchesType;
   });
 
   const stats = {
-    total: assignments.length,
-    active: assignments.filter(a => a.status === 'active').length,
-    completed: assignments.filter(a => a.status === 'completed').length,
+    total: assessments.length,
+    homework: assessments.filter(a => a.assessment_type === 'homework').length,
+    projects: assessments.filter(a => a.assessment_type === 'project').length,
   };
 
-  const classes = Array.from(new Set(assignments.map(a => a.class)));
+  const classes = Array.from(new Set(assessments.map(a => a.class))).filter(Boolean);
 
   return (
     <AppShell>
@@ -170,30 +267,43 @@ export default function AssignmentsManagementPage() {
               হোমওয়ার্ক ও অ্যাসাইনমেন্ট
             </h1>
             <p className="text-muted-foreground mt-1">
-              হোমওয়ার্ক তৈরি এবং জমা দেওয়া ট্র্যাক করুন
+              হোমওয়ার্ক তৈরি এবং পরিচালনা করুন
             </p>
           </div>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={handleCloseDialog}>
             <DialogTrigger asChild>
               <Button data-testid="button-add-assignment">
                 <Plus className="w-4 h-4 mr-2" />
-                নতুন হোমওয়ার্ক
+                নতুন অ্যাসাইনমেন্ট
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>নতুন হোমওয়ার্ক তৈরি করুন</DialogTitle>
+                <DialogTitle>
+                  {editingAssessment ? 'অ্যাসাইনমেন্ট সম্পাদনা করুন' : 'নতুন অ্যাসাইনমেন্ট তৈরি করুন'}
+                </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="title">হোমওয়ার্কের শিরোনাম *</Label>
-                  <Input
-                    id="title"
-                    data-testid="input-title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="assessment_name">শিরোনাম (ইংরেজি) *</Label>
+                    <Input
+                      id="assessment_name"
+                      data-testid="input-title"
+                      value={formData.assessment_name}
+                      onChange={(e) => setFormData({ ...formData, assessment_name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="assessment_name_bn">শিরোনাম (বাংলা)</Label>
+                    <Input
+                      id="assessment_name_bn"
+                      data-testid="input-title-bn"
+                      value={formData.assessment_name_bn}
+                      onChange={(e) => setFormData({ ...formData, assessment_name_bn: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -209,6 +319,22 @@ export default function AssignmentsManagementPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    <Label htmlFor="assessment_type">ধরণ *</Label>
+                    <Select
+                      value={formData.assessment_type}
+                      onValueChange={(value) => setFormData({ ...formData, assessment_type: value })}
+                    >
+                      <SelectTrigger data-testid="select-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="homework">হোমওয়ার্ক</SelectItem>
+                        <SelectItem value="project">প্রজেক্ট</SelectItem>
+                        <SelectItem value="quiz">কুইজ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label htmlFor="subject_id">বিষয়</Label>
                     <Select
                       value={formData.subject_id}
@@ -218,14 +344,17 @@ export default function AssignmentsManagementPage() {
                         <SelectValue placeholder="বিষয় নির্বাচন করুন" />
                       </SelectTrigger>
                       <SelectContent>
-                        {subjects.map((subject) => (
+                        {subjects.map((subject: any) => (
                           <SelectItem key={subject.id} value={subject.id.toString()}>
-                            {subject.subject_name}
+                            {subject.name_bn || subject.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="class">শ্রেণী *</Label>
                     <Input
@@ -236,9 +365,6 @@ export default function AssignmentsManagementPage() {
                       required
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="section">শাখা</Label>
                     <Input
@@ -249,35 +375,37 @@ export default function AssignmentsManagementPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="due_date">জমা দেওয়ার তারিখ *</Label>
-                    <Input
-                      id="due_date"
-                      data-testid="input-due-date"
-                      type="date"
-                      value={formData.due_date}
-                      onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="total_marks">মোট নম্বর</Label>
+                    <Label htmlFor="total_marks">মোট নম্বর *</Label>
                     <Input
                       id="total_marks"
                       data-testid="input-marks"
                       type="number"
                       min="0"
                       value={formData.total_marks}
-                      onChange={(e) => setFormData({ ...formData, total_marks: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => setFormData({ ...formData, total_marks: e.target.value })}
+                      required
                     />
                   </div>
                 </div>
 
+                <div>
+                  <Label htmlFor="date">তারিখ *</Label>
+                  <Input
+                    id="date"
+                    data-testid="input-date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    required
+                  />
+                </div>
+
                 <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
                     বাতিল
                   </Button>
-                  <Button type="submit" data-testid="button-submit" disabled={createMutation.isPending}>
-                    তৈরি করুন
+                  <Button type="submit" data-testid="button-submit" disabled={saveAssessmentMutation.isPending}>
+                    {saveAssessmentMutation.isPending ? 'সংরক্ষণ হচ্ছে...' : (editingAssessment ? 'আপডেট করুন' : 'তৈরি করুন')}
                   </Button>
                 </div>
               </form>
@@ -289,7 +417,7 @@ export default function AssignmentsManagementPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">মোট হোমওয়ার্ক</CardTitle>
+              <CardTitle className="text-sm font-medium">মোট অ্যাসাইনমেন্ট</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -298,20 +426,20 @@ export default function AssignmentsManagementPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">সক্রিয়</CardTitle>
+              <CardTitle className="text-sm font-medium">হোমওয়ার্ক</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.active}</div>
+              <div className="text-2xl font-bold">{stats.homework}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">সম্পন্ন</CardTitle>
+              <CardTitle className="text-sm font-medium">প্রজেক্ট</CardTitle>
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.completed}</div>
+              <div className="text-2xl font-bold">{stats.projects}</div>
             </CardContent>
           </Card>
         </div>
@@ -322,7 +450,7 @@ export default function AssignmentsManagementPage() {
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="হোমওয়ার্ক অনুসন্ধান করুন..."
+                placeholder="অনুসন্ধান করুন..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 className="pl-8"
@@ -331,7 +459,7 @@ export default function AssignmentsManagementPage() {
             </div>
           </div>
           <Select value={selectedClass} onValueChange={setSelectedClass}>
-            <SelectTrigger className="w-[200px]" data-testid="select-class">
+            <SelectTrigger className="w-[200px]" data-testid="select-class-filter">
               <SelectValue placeholder="শ্রেণী নির্বাচন করুন" />
             </SelectTrigger>
             <SelectContent>
@@ -341,80 +469,102 @@ export default function AssignmentsManagementPage() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={selectedType} onValueChange={setSelectedType}>
+            <SelectTrigger className="w-[200px]" data-testid="select-type-filter">
+              <SelectValue placeholder="ধরণ নির্বাচন করুন" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">সকল ধরণ</SelectItem>
+              <SelectItem value="homework">হোমওয়ার্ক</SelectItem>
+              <SelectItem value="project">প্রজেক্ট</SelectItem>
+              <SelectItem value="quiz">কুইজ</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="all">সকল ({stats.total})</TabsTrigger>
-            <TabsTrigger value="active">সক্রিয় ({stats.active})</TabsTrigger>
-            <TabsTrigger value="completed">সম্পন্ন ({stats.completed})</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="space-y-4">
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>শিরোনাম</TableHead>
-                      <TableHead>বিষয়</TableHead>
-                      <TableHead>শ্রেণী</TableHead>
-                      <TableHead>জমা দেওয়ার তারিখ</TableHead>
-                      <TableHead>নম্বর</TableHead>
-                      <TableHead>অবস্থা</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          লোড হচ্ছে...
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredAssignments.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          কোন হোমওয়ার্ক পাওয়া যায়নি
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredAssignments.map((assignment) => (
-                        <TableRow key={assignment.id} data-testid={`row-assignment-${assignment.id}`}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium" data-testid={`text-title-${assignment.id}`}>
-                                {assignment.title}
-                              </div>
-                              {assignment.description && (
-                                <div className="text-sm text-muted-foreground line-clamp-1">
-                                  {assignment.description}
-                                </div>
-                              )}
+        {/* Table */}
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>শিরোনাম</TableHead>
+                  <TableHead>ধরণ</TableHead>
+                  <TableHead>বিষয়</TableHead>
+                  <TableHead>শ্রেণী</TableHead>
+                  <TableHead>তারিখ</TableHead>
+                  <TableHead>নম্বর</TableHead>
+                  <TableHead className="text-right">কার্যক্রম</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      লোড হচ্ছে...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredAssessments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      কোন অ্যাসাইনমেন্ট পাওয়া যায়নি
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredAssessments.map((assessment) => (
+                    <TableRow key={assessment.id} data-testid={`row-assignment-${assessment.id}`}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium" data-testid={`text-title-${assessment.id}`}>
+                            {assessment.assessment_name_bn || assessment.assessment_name}
+                          </div>
+                          {assessment.description && (
+                            <div className="text-sm text-muted-foreground line-clamp-1">
+                              {assessment.description}
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            {assignment.subjects?.subject_name || '-'}
-                          </TableCell>
-                          <TableCell>
-                            {assignment.class} {assignment.section}
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(assignment.due_date), 'dd MMM yyyy')}
-                          </TableCell>
-                          <TableCell>{assignment.total_marks}</TableCell>
-                          <TableCell>
-                            {getStatusBadge(assignment.status)}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getTypeBadge(assessment.assessment_type)}
+                      </TableCell>
+                      <TableCell>
+                        {assessment.subjects?.name_bn || assessment.subjects?.name || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {assessment.class} {assessment.section}
+                      </TableCell>
+                      <TableCell>
+                        {assessment.date ? format(new Date(assessment.date), 'dd MMM yyyy') : '-'}
+                      </TableCell>
+                      <TableCell>{assessment.total_marks}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEdit(assessment)}
+                            data-testid={`button-edit-${assessment.id}`}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(assessment.id)}
+                            data-testid={`button-delete-${assessment.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </AppShell>
   );

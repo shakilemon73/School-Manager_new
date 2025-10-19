@@ -75,14 +75,14 @@ export default function SubjectsManagementPage() {
   // Create subject mutation
   const createMutation = useMutation({
     mutationFn: async (newSubject: any) => {
-      // Convert from snake_case form to camelCase schema
+      // Use actual database column names (snake_case)
       const dbData = {
         code: newSubject.subject_code,
         name: newSubject.subject_name,
-        nameBn: newSubject.subject_name_bn,
+        name_bn: newSubject.subject_name_bn,
         description: newSubject.description,
-        creditHours: newSubject.credit_hours,
-        isCompulsory: newSubject.is_compulsory,
+        credit_hours: newSubject.credit_hours,
+        is_compulsory: newSubject.is_compulsory,
         department: newSubject.department,
         school_id: schoolId,
       };
@@ -109,14 +109,14 @@ export default function SubjectsManagementPage() {
   // Update subject mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
-      // Convert from snake_case form to camelCase schema
+      // Use actual database column names (snake_case)
       const dbData = {
         code: updates.subject_code,
         name: updates.subject_name,
-        nameBn: updates.subject_name_bn,
+        name_bn: updates.subject_name_bn,
         description: updates.description,
-        creditHours: updates.credit_hours,
-        isCompulsory: updates.is_compulsory,
+        credit_hours: updates.credit_hours,
+        is_compulsory: updates.is_compulsory,
         department: updates.department,
       };
       const { data, error } = await supabase
@@ -183,16 +183,16 @@ export default function SubjectsManagementPage() {
     }
   };
 
-  const handleEdit = (subject: Subject) => {
+  const handleEdit = (subject: any) => {
     setEditingSubject(subject);
-    // Convert from camelCase schema to snake_case form
+    // Map database fields (snake_case) to form fields
     setFormData({
       subject_code: subject.code || '',
       subject_name: subject.name || '',
-      subject_name_bn: subject.nameBn || '',
+      subject_name_bn: subject.name_bn || '',
       description: subject.description || '',
-      credit_hours: subject.creditHours || 3,
-      is_compulsory: subject.isCompulsory || false,
+      credit_hours: subject.credit_hours || 3,
+      is_compulsory: subject.is_compulsory || false,
       department: subject.department || '',
     });
     setIsAddDialogOpen(true);
@@ -204,27 +204,27 @@ export default function SubjectsManagementPage() {
     }
   };
 
-  // Filter subjects
-  const filteredSubjects = subjects.filter(subject => {
+  // Filter subjects (use snake_case from database)
+  const filteredSubjects = subjects.filter((subject: any) => {
     const matchesSearch = searchText === '' || 
       subject.name.toLowerCase().includes(searchText.toLowerCase()) ||
       (subject.code && subject.code.toLowerCase().includes(searchText.toLowerCase()));
     
     const matchesDepartment = selectedDepartment === 'all' || subject.department === selectedDepartment;
     const matchesTab = activeTab === 'all' || 
-      (activeTab === 'compulsory' && subject.isCompulsory) ||
-      (activeTab === 'elective' && !subject.isCompulsory);
+      (activeTab === 'compulsory' && subject.is_compulsory) ||
+      (activeTab === 'elective' && !subject.is_compulsory);
     
     return matchesSearch && matchesDepartment && matchesTab;
   });
 
   const stats = {
     total: subjects.length,
-    compulsory: subjects.filter(s => s.isCompulsory).length,
-    elective: subjects.filter(s => !s.isCompulsory).length,
+    compulsory: subjects.filter((s: any) => s.is_compulsory).length,
+    elective: subjects.filter((s: any) => !s.is_compulsory).length,
   };
 
-  const departments = Array.from(new Set(subjects.map(s => s.department).filter(Boolean)));
+  const departments = Array.from(new Set(subjects.map((s: any) => s.department).filter(Boolean)));
 
   return (
     <AppShell>
@@ -439,7 +439,7 @@ export default function SubjectsManagementPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredSubjects.map((subject) => (
+                      filteredSubjects.map((subject: any) => (
                         <TableRow key={subject.id} data-testid={`row-subject-${subject.id}`}>
                           <TableCell className="font-medium">{subject.code}</TableCell>
                           <TableCell>
@@ -447,17 +447,17 @@ export default function SubjectsManagementPage() {
                               <div className="font-medium" data-testid={`text-subject-name-${subject.id}`}>
                                 {subject.name}
                               </div>
-                              {subject.nameBn && (
+                              {subject.name_bn && (
                                 <div className="text-sm text-muted-foreground">
-                                  {subject.nameBn}
+                                  {subject.name_bn}
                                 </div>
                               )}
                             </div>
                           </TableCell>
                           <TableCell>{subject.department || '-'}</TableCell>
-                          <TableCell>{subject.creditHours || '-'}</TableCell>
+                          <TableCell>{subject.credit_hours || '-'}</TableCell>
                           <TableCell>
-                            {subject.isCompulsory ? (
+                            {subject.is_compulsory ? (
                               <Badge variant="default">বাধ্যতামূলক</Badge>
                             ) : (
                               <Badge variant="secondary">ঐচ্ছিক</Badge>

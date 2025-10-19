@@ -125,7 +125,7 @@ export default function ResultsManagement() {
           .select(`
             *,
             students!inner(id, name, student_id, class, section, school_id),
-            assessments!inner(id, title, max_score, subject_id, term_id)
+            assessments!inner(id, assessment_name, total_marks, subject_id, term_id)
           `)
           .eq('students.school_id', schoolId);
 
@@ -165,7 +165,7 @@ export default function ResultsManagement() {
     passingRate: studentResults.length > 0
       ? ((studentResults.filter(r => {
           const score = parseFloat(r.score_obtained || '0');
-          const maxScore = r.assessments?.max_score || 100;
+          const maxScore = parseFloat(r.assessments?.total_marks || '100');
           return (score / maxScore) * 100 >= 40;
         }).length / studentResults.length) * 100).toFixed(1)
       : '0'
@@ -424,7 +424,7 @@ export default function ResultsManagement() {
                       ) : (
                         filteredResults.map((result: any) => {
                           const score = parseFloat(result.score_obtained || '0');
-                          const maxScore = result.assessments?.max_score || 100;
+                          const maxScore = parseFloat(result.assessments?.total_marks || '100');
                           const percentage = (score / maxScore) * 100;
                           const isPassing = percentage >= 40;
 
@@ -435,7 +435,7 @@ export default function ResultsManagement() {
                               </TableCell>
                               <TableCell className="font-medium">{result.students?.name}</TableCell>
                               <TableCell>{result.students?.class} - {result.students?.section}</TableCell>
-                              <TableCell>{result.assessments?.title}</TableCell>
+                              <TableCell>{result.assessments?.assessment_name}</TableCell>
                               <TableCell className="text-center font-semibold">
                                 {result.is_absent ? (
                                   <Badge variant="outline">{t.absent}</Badge>
