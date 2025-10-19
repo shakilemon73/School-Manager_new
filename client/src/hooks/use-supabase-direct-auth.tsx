@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   schoolId: number | null;
+  authReady: boolean; // ✅ NEW: True when both user AND schoolId are available
   getUserSchoolId: () => number | null;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (email: string, password: string, userData?: any) => Promise<{ success: boolean; error?: string }>;
@@ -17,57 +18,72 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Helper function to extract school ID from user metadata synchronously
+function extractSchoolIdFromUser(user: User | null): number | null {
+  if (!user) return null;
+  
+  const userSchoolId = user.user_metadata?.school_id || user.user_metadata?.schoolId;
+  
+  if (!userSchoolId) {
+    console.error('🚨 SECURITY WARNING: User has no school_id in metadata!', user.email);
+    return null;
+  }
+  
+  const schoolId = typeof userSchoolId === 'number' ? userSchoolId : parseInt(userSchoolId);
+  console.log('🏫 Extracted school ID:', schoolId, 'for user:', user.email);
+  return schoolId;
+}
+
 // Authentication Provider Component
 export function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [schoolId, setSchoolId] = useState<number | null>(null);
+  const [authReady, setAuthReady] = useState(false); // ✅ NEW: Tracks if auth is fully initialized
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-
-      // Extract school ID from user metadata - NO FALLBACK for security
-      if (session?.user) {
-        const userSchoolId = session.user.user_metadata?.school_id || session.user.user_metadata?.schoolId;
-        
-        if (!userSchoolId) {
-          console.error('🚨 SECURITY WARNING: User has no school_id in metadata!', session.user.email);
-          setSchoolId(null);
-        } else {
-          setSchoolId(typeof userSchoolId === 'number' ? userSchoolId : parseInt(userSchoolId));
-          console.log('🏫 Initial user school ID:', userSchoolId);
-        }
-      } else {
-        setSchoolId(null);
-      }
-
+      const currentUser = session?.user ?? null;
+      const currentSchoolId = extractSchoolIdFromUser(currentUser);
+      
+      setUser(currentUser);
+      setSchoolId(currentSchoolId);
+      
+      // ✅ Auth is ready when BOTH user and schoolId are available
+      const isReady = !!(currentUser && currentSchoolId);
+      setAuthReady(isReady);
       setLoading(false);
+      
+      console.log('📝 Initial auth state:', { 
+        hasUser: !!currentUser, 
+        schoolId: currentSchoolId, 
+        authReady: isReady 
+      });
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.email || null);
-        setUser(session?.user ?? null);
-
-        // Extract school ID from user metadata - NO FALLBACK for security
-        if (session?.user) {
-          const userSchoolId = session.user.user_metadata?.school_id || session.user.user_metadata?.schoolId;
-          
-          if (!userSchoolId) {
-            console.error('🚨 SECURITY WARNING: User has no school_id in metadata!', session.user.email);
-            setSchoolId(null);
-          } else {
-            setSchoolId(typeof userSchoolId === 'number' ? userSchoolId : parseInt(userSchoolId));
-            console.log('🏫 User school ID:', userSchoolId);
-          }
-        } else {
-          setSchoolId(null);
-        }
-
+        console.log('🔐 Auth state change:', event, session?.user?.email || null);
+        
+        const currentUser = session?.user ?? null;
+        const currentSchoolId = extractSchoolIdFromUser(currentUser);
+        
+        setUser(currentUser);
+        setSchoolId(currentSchoolId);
+        
+        // ✅ Auth is ready when BOTH user and schoolId are available
+        const isReady = !!(currentUser && currentSchoolId);
+        setAuthReady(isReady);
         setLoading(false);
+        
+        console.log('📝 Auth state updated:', { 
+          event,
+          hasUser: !!currentUser, 
+          schoolId: currentSchoolId, 
+          authReady: isReady 
+        });
       }
     );
 
@@ -167,6 +183,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       
       setUser(null);
       setSchoolId(null);
+      setAuthReady(false); // ✅ Reset authReady flag
 
     } catch (error) {
       console.error('Signout error:', error);
@@ -229,6 +246,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     user,
     loading,
     schoolId,
+    authReady, // ✅ NEW: Expose authReady flag to consumers
     getUserSchoolId,
     signIn,
     signUp,

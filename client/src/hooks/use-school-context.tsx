@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { useSupabaseSettings } from './use-supabase-settings';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from './use-supabase-direct-auth';
+import { useSupabaseDirectAuth } from './use-supabase-direct-auth';
 
 // School Settings Context Type
 interface SchoolContextType {
@@ -45,21 +45,9 @@ const SchoolContext = createContext<SchoolContextType | undefined>(undefined);
 
 export function SchoolProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
-  const [schoolId, setSchoolId] = useState<number | null>(null);
   
-  // Get current school ID first
-  useEffect(() => {
-    const getSchoolId = async () => {
-      try {
-        const id = await userProfile.getCurrentUserSchoolId();
-        setSchoolId(id);
-      } catch (error) {
-        console.error('Failed to get school ID:', error);
-        setSchoolId(null);
-      }
-    };
-    getSchoolId();
-  }, []);
+  // ✅ FIX: Use schoolId directly from AuthContext (single source of truth)
+  const { schoolId } = useSupabaseDirectAuth();
   
   // Get school settings from Supabase
   const { schoolSettings } = useSupabaseSettings();

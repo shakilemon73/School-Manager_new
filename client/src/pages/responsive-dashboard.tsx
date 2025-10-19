@@ -87,7 +87,8 @@ interface CalendarEvent {
 }
 
 export default function ResponsiveDashboard() {
-  const { user } = useSupabaseDirectAuth();
+  // ✅ FIX: Get schoolId directly from AuthContext (single source of truth)
+  const { user, schoolId, authReady } = useSupabaseDirectAuth();
   const { schoolName, schoolNameBn } = useSchoolBranding();
   const { currentAcademicYear, loading: academicYearLoading } = useCurrentAcademicYear();
   const { toast } = useToast();
@@ -100,26 +101,16 @@ export default function ResponsiveDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Get current school ID from authenticated user context
-  const getCurrentSchoolId = async (): Promise<number> => {
-    try {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      if (!schoolId) {
-        throw new Error('User school ID not found - user may not be properly authenticated');
-      }
-      return schoolId;
-    } catch (error) {
-      console.error('❌ Failed to get user school ID:', error);
-      throw new Error('Authentication required: Cannot determine user school context');
-    }
-  };
+  // ✅ FIX: Removed redundant getCurrentSchoolId() - use schoolId directly from AuthContext
 
   // Fetch dashboard stats using direct Supabase calls - filtered by current academic year
   const { data: dashboardStats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStats>({
-    queryKey: ['dashboard-stats', currentAcademicYear?.id],
+    queryKey: ['dashboard-stats', schoolId, currentAcademicYear?.id],
     queryFn: async () => {
-      console.log('📊 Fetching dashboard stats with direct Supabase calls for academic year:', currentAcademicYear?.name);
-      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) {
+        throw new Error('School ID not available');
+      }
+      console.log('📊 Fetching dashboard stats for school:', schoolId, 'academic year:', currentAcademicYear?.name);
       
       // Build queries - using estimated counts for better performance
       const [studentsCount, teachersCount, booksCount, inventoryCount] = await Promise.all([
@@ -145,17 +136,19 @@ export default function ResponsiveDashboard() {
         documents: 0
       };
     },
-    enabled: !!user && !academicYearLoading,
+    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
     retry: 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnMount: true, // Always refetch when component mounts after login
   });
 
   const { data: notifications, isLoading: notificationsLoading } = useQuery<NotificationItem[]>({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', schoolId],
     queryFn: async () => {
-      console.log('🔔 Fetching notifications with direct Supabase calls');
-      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) {
+        throw new Error('School ID not available');
+      }
+      console.log('🔔 Fetching notifications for school:', schoolId);
       
       const { data, error } = await supabase
         .from('notifications')
@@ -170,7 +163,7 @@ export default function ResponsiveDashboard() {
         return [];
       }
       
-      return data?.map((n: any) => ({
+      return (data || []).map((n: any) => ({
         id: n.id,
         title: n.title,
         message: n.message,
@@ -179,16 +172,16 @@ export default function ResponsiveDashboard() {
         read: n.is_read || false
       })) || [];
     },
-    enabled: !!user && !academicYearLoading,
+    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
     retry: 2,
     refetchOnMount: true,
   });
 
   const { data: documentTemplates, isLoading: documentsLoading } = useQuery<DocumentTemplate[]>({
-    queryKey: ['document-templates'],
+    queryKey: ['document-templates', schoolId],
     queryFn: async () => {
       console.log('📄 Fetching document templates with direct Supabase calls');
-      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) throw new Error('School ID not available');
       
       const { data, error } = await supabase
         .from('document_templates')
@@ -213,16 +206,16 @@ export default function ResponsiveDashboard() {
         isActive: t.is_active || false
       })) || [];
     },
-    enabled: !!user && !academicYearLoading,
+    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
     retry: 2,
     refetchOnMount: true,
   });
 
   const { data: calendarEvents, isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
-    queryKey: ['calendar-events'],
+    queryKey: ['calendar-events', schoolId],
     queryFn: async () => {
       console.log('📅 Fetching calendar events with direct Supabase calls');
-      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) throw new Error('School ID not available');
       
       const { data, error } = await supabase
         .from('calendar_events')
@@ -246,17 +239,17 @@ export default function ResponsiveDashboard() {
         description: e.description || undefined
       })) || [];
     },
-    enabled: !!user && !academicYearLoading,
+    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
     retry: 2,
     refetchOnMount: true,
   });
 
   // Super Admin: Teacher Activity Log
   const { data: teacherActivities } = useQuery({
-    queryKey: ['teacher-activities'],
+    queryKey: ['teacher-activities', schoolId],
     queryFn: async () => {
       console.log('👨‍🏫 Fetching teacher activities with direct Supabase calls');
-      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) throw new Error('School ID not available');
       
       // Get recent notifications related to teacher activities
       const { data, error } = await supabase
@@ -280,17 +273,17 @@ export default function ResponsiveDashboard() {
         user_type: 'Teacher'
       })) || [];
     },
-    enabled: !!user && !academicYearLoading,
+    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
     staleTime: 30000,
     refetchInterval: 30000
   });
 
   // Super Admin: Pending Approvals (simplified to avoid schema issues)
   const { data: pendingApprovals } = useQuery({
-    queryKey: ['pending-approvals'],
+    queryKey: ['pending-approvals', schoolId],
     queryFn: async () => {
       console.log('⏳ Fetching pending approvals with direct Supabase calls');
-      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) throw new Error('School ID not available');
       
       // Get recent exam results as pending approvals (simplified)
       const { data: results, error } = await supabase
@@ -317,16 +310,16 @@ export default function ResponsiveDashboard() {
         teacher_name: 'Teacher'
       }));
     },
-    enabled: !!user && !academicYearLoading,
+    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
     staleTime: 30000
   });
 
   // Super Admin: System-wide Activity
   const { data: systemActivities } = useQuery({
-    queryKey: ['system-activities'],
+    queryKey: ['system-activities', schoolId],
     queryFn: async () => {
       console.log('🌐 Fetching system-wide activities with direct Supabase calls');
-      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) throw new Error('School ID not available');
       
       const { data, error } = await supabase
         .from('notifications')
@@ -342,17 +335,17 @@ export default function ResponsiveDashboard() {
       
       return data || [];
     },
-    enabled: !!user && !academicYearLoading,
+    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
     staleTime: 30000,
     refetchInterval: 30000
   });
 
   // Super Admin: Student Performance Analytics (simplified)
   const { data: studentPerformance } = useQuery({
-    queryKey: ['student-performance'],
+    queryKey: ['student-performance', schoolId],
     queryFn: async () => {
       console.log('📈 Fetching student performance analytics with direct Supabase calls');
-      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) throw new Error('School ID not available');
       
       // Get students for performance display (simplified)
       const { data: students, error: studentsError } = await supabase
@@ -385,16 +378,16 @@ export default function ResponsiveDashboard() {
       
       return { topPerformers, needsAttention };
     },
-    enabled: !!user && !academicYearLoading,
+    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
     staleTime: 60000
   });
 
   // Super Admin: Enhanced Admin Dashboard Stats
   const { data: adminStats } = useQuery({
-    queryKey: ['admin-stats'],
+    queryKey: ['admin-stats', schoolId],
     queryFn: async () => {
       console.log('📊 Fetching enhanced admin stats with direct Supabase calls');
-      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) throw new Error('School ID not available');
       
       // Get today's date range
       const today = new Date();
@@ -443,7 +436,7 @@ export default function ResponsiveDashboard() {
         pendingApprovals: pendingCount.count || 0
       };
     },
-    enabled: !!user && !academicYearLoading,
+    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     refetchOnMount: true, // Always refetch when component mounts after login

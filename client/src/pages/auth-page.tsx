@@ -41,7 +41,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function AuthPage() {
-  const { user: supabaseUser, loading: supabaseLoading, signIn } = useSupabaseDirectAuth();
+  const { user: supabaseUser, loading: supabaseLoading, signIn, authReady, schoolId } = useSupabaseDirectAuth();
   const [_, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
@@ -55,11 +55,17 @@ export default function AuthPage() {
     },
   });
 
-  // Redirect if user is already logged in
+  // ✅ FIX: Redirect only when BOTH user AND schoolId are ready
   useEffect(() => {
-    if (supabaseUser) {
+    if (authReady && supabaseUser && schoolId) {
       const userMetadata = supabaseUser.user_metadata;
       const userRole = userMetadata?.role || 'school_admin';
+
+      console.log('✅ Auth ready - navigating to dashboard', { 
+        user: supabaseUser.email, 
+        schoolId, 
+        role: userRole 
+      });
 
       if (userRole === 'super_admin') {
         setLocation('/super-admin');
@@ -75,7 +81,7 @@ export default function AuthPage() {
         setLocation('/');
       }
     }
-  }, [supabaseUser, setLocation]);
+  }, [authReady, supabaseUser, schoolId, setLocation]);
 
   const onLoginSubmit = async (data: LoginFormValues) => {
     try {
