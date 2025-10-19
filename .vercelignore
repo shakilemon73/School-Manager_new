@@ -13,19 +13,13 @@ node_modules/
 replit.nix
 .config/
 
-# Server files (not needed for SPA deployment)
-server/
-api/
-
-# Database files
-db/
+# Database files (local SQLite files, not needed)
 *.db
 *.db-*
 
-# Build artifacts (Vercel will rebuild)
-public/
-dist/
+# Build artifacts (will be rebuilt by Vercel)
 .vite/
+.cache/
 
 # Git
 .git/

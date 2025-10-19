@@ -410,8 +410,8 @@ app.use((req, res, next) => {
   // Use environment port for production deployment or default to 5000
   const port = process.env.PORT || 5000;
   
-  // Export serverless handler for Vercel
-  const handler = serverless(app);
+  // Create serverless handler for Vercel
+  const serverlessHandler = serverless(app);
   
   // Determine if we're running in a serverless environment
   const isServerless = process.env.VERCEL || process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME;
@@ -431,6 +431,6 @@ app.use((req, res, next) => {
     });
   }
   
-  // Export the handler for serverless platforms
-  return { app, handler };
+  // Return exports for API handler
+  return { app, handler: serverlessHandler };
 })();
