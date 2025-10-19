@@ -138,6 +138,49 @@ WHERE email = 'shakilemon73@gmail.com';
 
 ---
 
+## ✅ OCTOBER 19, 2025 - RLS Policy Cleanup: Fixed Cross-School Data Leakage
+
+### Issue Reported:
+User could still see data from all schools (including school ID 7 and others) instead of only their assigned school
+
+### Root Cause:
+**Multiple Conflicting RLS Policies** on database tables:
+- `students` table had **15 policies**
+- `teachers` table had **15 policies**
+- `schools` table had **9 policies**
+
+When multiple RLS policies exist on a table, if ANY policy allows access, the user can see that data. Old permissive policies were overriding the strict school isolation policies.
+
+### Solution Applied:
+[x] Identified all tables with multiple conflicting policies
+[x] Dropped ALL existing policies on critical tables
+[x] Created single strict policy per table: `school_access_policy`
+[x] Policy enforces: `school_id = get_user_school_id_from_metadata()`
+[x] Applied WITH CHECK clause to prevent data insertion to wrong school
+
+**Tables Now Protected (1 Policy Each):**
+- ✅ schools, students, teachers, staff, parents, classes
+- ✅ attendance, backups, financial_transactions, fee_receipts
+- ✅ library_books, inventory_items
+
+**Verification:**
+```sql
+-- Confirmed only 1 policy per critical table
+SELECT tablename, COUNT(*) FROM pg_policies 
+WHERE tablename IN ('students', 'teachers', 'schools')
+GROUP BY tablename;
+```
+
+**Result:** All tables now have strict school isolation with no conflicting policies.
+
+**User Assignment:** shakilemon73@gmail.com → School ID 1 (Unity School)
+- Should only see 6 students from school ID 1
+- Cannot access data from school IDs 6, 7, 17, or any other school
+
+**RLS Policy Cleanup completed on October 19, 2025**
+
+---
+
 ## 🔒 OCTOBER 19, 2025 - CRITICAL SECURITY AUDIT: Multi-Tenant Data Isolation
 
 ### 🚨 SEVERITY: CRITICAL - Cross-School Data Access Vulnerabilities Detected
