@@ -2,20 +2,49 @@ import { Express, Request, Response } from "express";
 import { db } from "./db";
 import { eq, sql, count, sum, lt, and, desc } from "drizzle-orm";
 import { libraryBooks, libraryBorrowedBooks } from "../shared/schema";
+import { schoolIsolation } from "./security-middleware";
+
+// Helper to get schoolId from request (set by school isolation middleware)
+const getSchoolId = (req: Request): number | null => {
+  return (req as any).userSchoolId || null;
+};
 
 export function registerLibraryRoutes(app: Express) {
+  // Apply school isolation middleware to all library routes
+  app.use('/api/library', schoolIsolation);
+
   // Get library statistics
   app.get("/api/library/stats", async (req: Request, res: Response) => {
     try {
-      // Return working data structure while database is unavailable
+      const schoolId = getSchoolId(req);
+      if (!schoolId) {
+        return res.status(403).json({ error: 'School access required' });
+      }
+
+      // Get real stats filtered by school_id
+      const [totalBooksResult, borrowedBooksResult] = await Promise.all([
+        db.select({ count: count() })
+          .from(libraryBooks)
+          .where(eq(libraryBooks.schoolId, schoolId)),
+        db.select({ count: count() })
+          .from(libraryBorrowedBooks)
+          .where(and(
+            eq(libraryBorrowedBooks.schoolId, schoolId),
+            eq(libraryBorrowedBooks.status, 'active')
+          ))
+      ]);
+
+      const totalBooks = totalBooksResult[0]?.count || 0;
+      const borrowedBooks = borrowedBooksResult[0]?.count || 0;
+
       res.json({
-        totalBooks: 150,
-        availableBooks: 120,
-        borrowedBooks: 30,
-        activeBorrowers: 25,
-        overdueBooks: 5,
-        overdueBorrowers: 4,
-        popularBooks: 5
+        totalBooks,
+        availableBooks: totalBooks - borrowedBooks,
+        borrowedBooks,
+        activeBorrowers: borrowedBooks, // Simplified
+        overdueBooks: 0, // TODO: Calculate based on due_date
+        overdueBorrowers: 0,
+        popularBooks: 0
       });
     } catch (error) {
       console.error('Library stats error:', error);
@@ -23,38 +52,18 @@ export function registerLibraryRoutes(app: Express) {
     }
   });
 
-  // Get all books
+  // Get all books (filtered by school)
   app.get("/api/library/books", async (req: Request, res: Response) => {
     try {
-      // Return sample books while database is unavailable
-      res.json([
-        {
-          id: 1,
-          title: "বাংলা ব্যাকরণ",
-          titleBn: "বাংলা ব্যাকরণ",
-          author: "ড. মুহম্মদ শহীদুল্লাহ",
-          isbn: "978-984-123-456-7",
-          category: "ভাষা ও সাহিত্য",
-          totalCopies: 10,
-          availableCopies: 8,
-          location: "A-1-01",
-          status: "available"
-        },
-        {
-          id: 2,
-          title: "গণিত অলিম্পিয়াড",
-          titleBn: "গণিত অলিম্পিয়াড",
-          author: "ড. মাহবুব মজুমদার",
-          isbn: "978-984-123-456-8",
-          category: "গণিত",
-          totalCopies: 5,
-          availableCopies: 3,
-          location: "B-2-15",
-          status: "available"
-        }
-      ]);
-      return;
-      const books = await db.select().from(libraryBooks).orderBy(desc(libraryBooks.createdAt));
+      const schoolId = getSchoolId(req);
+      if (!schoolId) {
+        return res.status(403).json({ error: 'School access required' });
+      }
+
+      const books = await db.select()
+        .from(libraryBooks)
+        .where(eq(libraryBooks.schoolId, schoolId))
+        .orderBy(desc(libraryBooks.createdAt));
 
       const formattedBooks = books.map(book => ({
         id: book.id,
@@ -78,39 +87,34 @@ export function registerLibraryRoutes(app: Express) {
     }
   });
 
-  // Get borrowed books
+  // Get borrowed books (filtered by school)
   app.get("/api/library/borrowed", async (req: Request, res: Response) => {
     try {
-      // Return sample borrowed books while database is unavailable
-      res.json([
-        {
-          id: 1,
-          bookTitle: "বাংলা ব্যাকরণ",
-          studentId: "ST001",
-          studentName: "আহমেদ আলী",
-          borrowDate: "2024-01-15",
-          dueDate: "2024-01-29",
-          status: "active"
-        },
-        {
-          id: 2,
-          bookTitle: "গণিত অলিম্পিয়াড",
-          studentId: "ST002",
-          studentName: "ফাতিমা খান",
-          borrowDate: "2024-01-20",
-          dueDate: "2024-02-03",
-          status: "active"
-        }
-      ]);
+      const schoolId = getSchoolId(req);
+      if (!schoolId) {
+        return res.status(403).json({ error: 'School access required' });
+      }
+
+      const borrowedBooks = await db.select()
+        .from(libraryBorrowedBooks)
+        .where(eq(libraryBorrowedBooks.schoolId, schoolId))
+        .orderBy(desc(libraryBorrowedBooks.borrowDate));
+
+      res.json(borrowedBooks);
     } catch (error) {
       console.error('Error fetching borrowed books:', error);
       res.status(500).json({ error: 'Failed to fetch borrowed books' });
     }
   });
 
-  // Add a new book
+  // Add a new book (with school isolation)
   app.post("/api/library/books", async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req);
+      if (!schoolId) {
+        return res.status(403).json({ error: 'School access required' });
+      }
+
       const {
         title,
         titleBn,
@@ -124,11 +128,8 @@ export function registerLibraryRoutes(app: Express) {
         description
       } = req.body;
 
-      // Get school ID from authenticated user
-      const schoolId = (req as any).user?.user_metadata?.school_id || (req as any).user?.school_id || 1;
-
       const newBook = await db.insert(libraryBooks).values({
-        schoolId: schoolId,
+        schoolId,  // Use authenticated school ID - NO FALLBACK
         title,
         titleBn,
         author,
@@ -149,22 +150,37 @@ export function registerLibraryRoutes(app: Express) {
     }
   });
 
-  // Borrow a book
+  // Borrow a book (with school isolation)
   app.post("/api/library/borrow", async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req);
+      if (!schoolId) {
+        return res.status(403).json({ error: 'School access required' });
+      }
+
       const { bookId, studentId, dueDate } = req.body;
 
-      // Check if book is available
-      const book = await db.select().from(libraryBooks).where(eq(libraryBooks.id, bookId));
+      // Check if book exists in THIS school and is available
+      const book = await db.select()
+        .from(libraryBooks)
+        .where(and(
+          eq(libraryBooks.id, bookId),
+          eq(libraryBooks.schoolId, schoolId)  // Security: Ensure book belongs to this school
+        ));
       
-      if (!book[0] || book[0].availableCopies <= 0) {
+      if (!book[0]) {
+        return res.status(404).json({ error: 'Book not found in your school' });
+      }
+
+      if (book[0].availableCopies <= 0) {
         return res.status(400).json({ error: 'Book not available' });
       }
 
-      // Create borrow record
+      // Create borrow record with school_id
       const borrowRecord = await db.insert(libraryBorrowedBooks).values({
         bookId,
         studentId,
+        schoolId,  // Associate with school
         borrowDate: new Date().toISOString().split('T')[0],
         dueDate,
         status: 'active'
@@ -173,7 +189,10 @@ export function registerLibraryRoutes(app: Express) {
       // Update available copies
       await db.update(libraryBooks)
         .set({ availableCopies: book[0].availableCopies - 1 })
-        .where(eq(libraryBooks.id, bookId));
+        .where(and(
+          eq(libraryBooks.id, bookId),
+          eq(libraryBooks.schoolId, schoolId)  // Security check
+        ));
 
       res.json(borrowRecord[0]);
     } catch (error) {
@@ -182,18 +201,26 @@ export function registerLibraryRoutes(app: Express) {
     }
   });
 
-  // Return a book
+  // Return a book (with school isolation)
   app.post("/api/library/return", async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req);
+      if (!schoolId) {
+        return res.status(403).json({ error: 'School access required' });
+      }
+
       const { borrowId } = req.body;
 
-      // Get borrow record
+      // Get borrow record (only from this school)
       const borrowRecord = await db.select()
         .from(libraryBorrowedBooks)
-        .where(eq(libraryBorrowedBooks.id, borrowId));
+        .where(and(
+          eq(libraryBorrowedBooks.id, borrowId),
+          eq(libraryBorrowedBooks.schoolId, schoolId)  // Security: School isolation
+        ));
 
       if (!borrowRecord[0]) {
-        return res.status(404).json({ error: 'Borrow record not found' });
+        return res.status(404).json({ error: 'Borrow record not found in your school' });
       }
 
       // Update borrow status
@@ -202,15 +229,27 @@ export function registerLibraryRoutes(app: Express) {
           status: 'returned',
           returnDate: new Date().toISOString().split('T')[0]
         })
-        .where(eq(libraryBorrowedBooks.id, borrowId));
+        .where(and(
+          eq(libraryBorrowedBooks.id, borrowId),
+          eq(libraryBorrowedBooks.schoolId, schoolId)  // Security check
+        ));
 
       // Update available copies
-      const book = await db.select().from(libraryBooks)
-        .where(eq(libraryBooks.id, borrowRecord[0].bookId));
+      const book = await db.select()
+        .from(libraryBooks)
+        .where(and(
+          eq(libraryBooks.id, borrowRecord[0].bookId),
+          eq(libraryBooks.schoolId, schoolId)  // Security check
+        ));
 
-      await db.update(libraryBooks)
-        .set({ availableCopies: book[0].availableCopies + 1 })
-        .where(eq(libraryBooks.id, borrowRecord[0].bookId));
+      if (book[0]) {
+        await db.update(libraryBooks)
+          .set({ availableCopies: book[0].availableCopies + 1 })
+          .where(and(
+            eq(libraryBooks.id, borrowRecord[0].bookId),
+            eq(libraryBooks.schoolId, schoolId)  // Security check
+          ));
+      }
 
       res.json({ message: 'Book returned successfully' });
     } catch (error) {
@@ -219,19 +258,27 @@ export function registerLibraryRoutes(app: Express) {
     }
   });
 
-  // Update a book
+  // Update a book (with school isolation)
   app.patch("/api/library/books/:id", async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req);
+      if (!schoolId) {
+        return res.status(403).json({ error: 'School access required' });
+      }
+
       const bookId = parseInt(req.params.id);
       const updates = req.body;
 
       const updatedBook = await db.update(libraryBooks)
         .set(updates)
-        .where(eq(libraryBooks.id, bookId))
+        .where(and(
+          eq(libraryBooks.id, bookId),
+          eq(libraryBooks.schoolId, schoolId)  // Security: Only update books from this school
+        ))
         .returning();
 
       if (!updatedBook[0]) {
-        return res.status(404).json({ error: 'Book not found' });
+        return res.status(404).json({ error: 'Book not found in your school' });
       }
 
       res.json(updatedBook[0]);
@@ -241,16 +288,22 @@ export function registerLibraryRoutes(app: Express) {
     }
   });
 
-  // Delete a book
+  // Delete a book (with school isolation)
   app.delete("/api/library/books/:id", async (req: Request, res: Response) => {
     try {
+      const schoolId = getSchoolId(req);
+      if (!schoolId) {
+        return res.status(403).json({ error: 'School access required' });
+      }
+
       const bookId = parseInt(req.params.id);
 
-      // Check if book is currently borrowed
+      // Check if book is currently borrowed (only in this school)
       const borrowedCount = await db.select({ count: count() })
         .from(libraryBorrowedBooks)
         .where(and(
           eq(libraryBorrowedBooks.bookId, bookId),
+          eq(libraryBorrowedBooks.schoolId, schoolId),  // Security check
           eq(libraryBorrowedBooks.status, 'active')
         ));
 
@@ -258,7 +311,11 @@ export function registerLibraryRoutes(app: Express) {
         return res.status(400).json({ error: 'Cannot delete book that is currently borrowed' });
       }
 
-      await db.delete(libraryBooks).where(eq(libraryBooks.id, bookId));
+      await db.delete(libraryBooks)
+        .where(and(
+          eq(libraryBooks.id, bookId),
+          eq(libraryBooks.schoolId, schoolId)  // Security: Only delete books from this school
+        ));
 
       res.json({ message: 'Book deleted successfully' });
     } catch (error) {
