@@ -5,6 +5,59 @@
 
 ---
 
+## ✅ OCTOBER 19, 2025 - Session 9: Express API Usage Analysis
+
+### Task Requested:
+User asked to identify which Express server API endpoints are still actively used instead of serverless Supabase direct API calls (excluding unused files)
+
+### Solution:
+[x] Searched all frontend files for Express API endpoint usage
+[x] Identified 100+ active Express API endpoints across 26 categories
+[x] Analyzed 60+ frontend files making Express API calls
+[x] Categorized endpoints by feature area and priority
+[x] Created comprehensive Express API usage report
+
+### Report Created:
+✅ **File:** `.local/state/replit/agent/express_api_usage_report.md`
+
+### Key Findings:
+
+**🔴 CRITICAL - Heavily Used Express APIs:**
+1. **Admit Card System** - 10+ endpoints (fully dependent on Express)
+2. **ID Card System** - 5+ endpoints (fully dependent on Express)
+3. **Teacher Portal** - 10+ endpoints (fully dependent on Express)
+4. **Admin/Developer Portal** - 15+ endpoints (fully dependent on Express)
+5. **Library System** - 6+ endpoints (partially migrated)
+6. **Transport System** - 5+ endpoints
+7. **Inventory System** - 5+ endpoints (partially migrated)
+
+**🟡 MEDIUM PRIORITY:**
+8. **HR/Payroll System** - 8+ endpoints
+9. **Hostel Management** - 7+ endpoints
+10. **Admission System** - 5+ endpoints
+11. **Video Conference** - 3+ endpoints
+12. **Reports System** - 5+ endpoints
+13. **School Admin Panel** - 8+ endpoints
+14. **Super Admin Control** - 3+ endpoints
+
+**Plus 12 more specialized systems** (Student Import, Health/Medical, Realtime, Class Routines, Academic Years, Calendar, Notifications, Parent Portal, Bangladesh-specific, Exam Management, Public Portal, Payment/Financial)
+
+### Statistics:
+- **Total Express Endpoints:** 100+
+- **Total Backend Route Files:** 50+ registered in server/index.ts
+- **Frontend Files Using Express:** 60+
+- **Already Migrated to Supabase:** 10+ pages (Dashboard, Students, Teachers, Documents, Settings)
+
+### Migration Priority Recommended:
+**Phase 1:** Teacher Portal, Admit Cards, ID Cards, Library (highest daily usage)
+**Phase 2:** Admin Portal, HR/Payroll, Hostel, Transport
+**Phase 3:** Inventory, Admission, Reports, Video Conference
+**Phase 4:** All specialized systems
+
+**Session 9 completed on October 19, 2025**
+
+---
+
 ## ✅ OCTOBER 19, 2025 - Session 8: Dependencies Re-installed (Again)
 
 ### Issue:
