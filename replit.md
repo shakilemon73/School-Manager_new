@@ -5,38 +5,84 @@ A comprehensive multi-tenant school management system leveraging modern web tech
 
 ## Recent Changes (October 19, 2025)
 
-### Fixed: Automatic Data Loading After Login
-**Problem**: After login, dashboard data didn't load automatically - users had to refresh browser to see data.
+### Fixed: Post-Login Race Condition - Data Loading & School Name Issues (COMPREHENSIVE FIX)
+**Problem**: 
+1. After login, dashboard showed infinite loading - data never appeared until browser refresh
+2. Wrong school names appeared initially, then changed after a few seconds
 
-**Root Cause**: React Query caches were not invalidated after Supabase authentication, so queries didn't know to refetch data with the new user context.
+**Root Cause**: Race condition between authentication state (`user`) and school ID extraction (`schoolId`):
+- Auth provider set `user` and `schoolId` asynchronously in separate state updates
+- Navigation triggered immediately when `user` became truthy, before `schoolId` was set
+- Dashboard queries executed without valid `schoolId`, causing failures
+- Multiple components made redundant async calls to fetch school ID, racing with each other
+- React Query cache keys didn't include `schoolId`, allowing cross-tenant data leakage
 
-**Solution Implemented** (in `client/src/pages/auth-page.tsx`):
-1. Import `useQueryClient` from '@tanstack/react-query'
-2. Call `queryClient.invalidateQueries()` after successful `signIn()`
-3. Add 300ms delay before navigation to allow auth state to propagate
-4. Add console logging for debugging
+**Solution Implemented**:
 
-**Pattern for Other Login Pages**:
+**1. Auth Provider - Synchronized State (`client/src/hooks/use-supabase-direct-auth.tsx`)**
+- Added `authReady` boolean flag to track when BOTH `user` AND `schoolId` are available
+- Created `extractSchoolIdFromUser()` helper for synchronous school ID extraction from user metadata
+- Modified state updates to set `user`, `schoolId`, and `authReady` atomically (all together)
+- `authReady` only becomes `true` when both user and schoolId exist
+
+**2. Auth Page - Gated Navigation (`client/src/pages/auth-page.tsx`)**
+- Changed navigation trigger from `if (user)` to `if (authReady && user && schoolId)`
+- Navigation now waits until auth is fully initialized before redirecting to dashboard
+- Added logging: `console.log('✅ Auth ready - navigating to dashboard')`
+
+**3. School Context - Single Source of Truth (`client/src/hooks/use-school-context.tsx`)**
+- Removed redundant `schoolId` state and async fetch
+- Now uses `schoolId` directly from `useSupabaseDirectAuth()` (single source)
+- Eliminated race condition from multiple concurrent school ID fetches
+
+**4. Dashboard Queries - Proper Gating (`client/src/pages/responsive-dashboard.tsx`)**
+- All 9 queries updated to include `schoolId` in React Query cache keys for tenant isolation
+- Changed `enabled` flag from `!!user` to `authReady && !!schoolId && !academicYearLoading`
+- Removed redundant `getCurrentSchoolId()` async function
+- Queries now wait for `authReady` before executing
+
+**Before Fix**:
 ```typescript
-const queryClient = useQueryClient();
+// ❌ Race condition
+const { user } = useSupabaseDirectAuth();  // Only gets user
+useEffect(() => {
+  if (user) navigate('/dashboard');  // Navigates before schoolId ready
+}, [user]);
 
-const onLoginSubmit = async (data) => {
-  await signIn(data.email, data.password);
-  
-  // Invalidate all React Query caches
-  console.log('🔄 Invalidating all queries after successful login');
-  await queryClient.invalidateQueries();
-  
-  // Allow auth state to propagate
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Now safe to navigate or show success message
-};
+useQuery({
+  queryKey: ['students'],  // ❌ No tenant isolation
+  enabled: !!user  // ❌ Executes before schoolId available
+});
+```
+
+**After Fix**:
+```typescript
+// ✅ Synchronized state
+const { user, schoolId, authReady } = useSupabaseDirectAuth();
+useEffect(() => {
+  if (authReady && user && schoolId) {  // ✅ Waits for both
+    navigate('/dashboard');
+  }
+}, [authReady, user, schoolId]);
+
+useQuery({
+  queryKey: ['students', schoolId],  // ✅ Proper tenant isolation
+  enabled: authReady && !!schoolId  // ✅ Waits for authReady
+});
 ```
 
 **Files Updated**:
-- `client/src/pages/auth-page.tsx` (main login page - Bengali UI)
-- `client/src/pages/auth/unified-auth-page.tsx` (alternative login - English UI)
+- `client/src/hooks/use-supabase-direct-auth.tsx` - Added authReady flag and synchronous school ID extraction
+- `client/src/pages/auth-page.tsx` - Gated navigation on authReady
+- `client/src/hooks/use-school-context.tsx` - Use single source for schoolId
+- `client/src/pages/responsive-dashboard.tsx` - Updated all query cache keys and enabled flags
+
+**Architect Review**: ✅ PASS - "authReady synchronization eliminates post-login race condition"
+
+**Future Improvements** (suggested by architect):
+1. Add error UI for users without school_id in metadata
+2. Add loading state while authReady is initializing
+3. Add monitoring for authReady timing issues
 
 ### Previous Fixes
 - **Performance**: Changed `count: 'exact'` to `count: 'estimated'` in dashboard queries (12-30x speedup)
