@@ -6,6 +6,7 @@ import { setupAuth, seedDefaultAdminUser } from "./auth";
 import { db } from "../db/index";
 import * as schema from "@shared/schema";
 import { eq, and, desc, asc, sql, count, isNull, not, or } from "drizzle-orm";
+import { supabaseAuth, requireSchoolId, getSchoolId } from "./middleware/supabase-auth";
 
 import { registerParentRoutes } from "./parent-routes";
 import { registerPaymentRoutes } from "./payment-routes";
@@ -17,6 +18,9 @@ import { registerPublicWebsiteRoutes } from "./public-website-routes";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
   setupAuth(app);
+  
+  // Apply Supabase authentication middleware globally
+  app.use(supabaseAuth);
   
   // Admin user creation disabled - use application registration instead
   
@@ -58,9 +62,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =================================================================
   
   // Fee Receipts
-  app.get('/api/fee-receipts', async (req, res) => {
+  app.get('/api/fee-receipts', requireSchoolId, async (req, res) => {
     try {
+      const schoolId = getSchoolId(req);
       const receipts = await db.query.feeReceipts.findMany({
+        where: eq(schema.feeReceipts.schoolId, schoolId),
         with: {
           feeItems: true,
           student: true
@@ -73,11 +79,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/fee-receipts/:id', async (req, res) => {
+  app.get('/api/fee-receipts/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const receipt = await db.query.feeReceipts.findFirst({
-        where: eq(schema.feeReceipts.id, parseInt(id)),
+        where: and(
+          eq(schema.feeReceipts.id, parseInt(id)),
+          eq(schema.feeReceipts.schoolId, schoolId)
+        ),
         with: {
           feeItems: true,
           student: true
@@ -94,9 +104,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/fee-receipts', async (req, res) => {
+  app.post('/api/fee-receipts', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.feeReceiptInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.feeReceiptInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newReceipt] = await db.insert(schema.feeReceipts)
         .values(validatedData)
@@ -127,11 +141,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/fee-receipts/:id', async (req, res) => {
+  app.put('/api/fee-receipts/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const receipt = await db.query.feeReceipts.findFirst({
-        where: eq(schema.feeReceipts.id, parseInt(id))
+        where: and(
+          eq(schema.feeReceipts.id, parseInt(id)),
+          eq(schema.feeReceipts.schoolId, schoolId)
+        )
       });
       
       if (!receipt) {
@@ -145,7 +163,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...validatedData,
           updatedAt: new Date()
         })
-        .where(eq(schema.feeReceipts.id, parseInt(id)));
+        .where(and(
+          eq(schema.feeReceipts.id, parseInt(id)),
+          eq(schema.feeReceipts.schoolId, schoolId)
+        ));
       
       const updatedReceipt = await db.query.feeReceipts.findFirst({
         where: eq(schema.feeReceipts.id, parseInt(id)),
@@ -161,11 +182,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/fee-receipts/:id', async (req, res) => {
+  app.delete('/api/fee-receipts/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const receipt = await db.query.feeReceipts.findFirst({
-        where: eq(schema.feeReceipts.id, parseInt(id))
+        where: and(
+          eq(schema.feeReceipts.id, parseInt(id)),
+          eq(schema.feeReceipts.schoolId, schoolId)
+        )
       });
       
       if (!receipt) {
@@ -178,7 +203,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
       // Then delete the receipt
       await db.delete(schema.feeReceipts)
-        .where(eq(schema.feeReceipts.id, parseInt(id)));
+        .where(and(
+          eq(schema.feeReceipts.id, parseInt(id)),
+          eq(schema.feeReceipts.schoolId, schoolId)
+        ));
       
       return res.status(200).json({ message: 'Receipt deleted successfully' });
     } catch (error) {
@@ -187,9 +215,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Testimonials
-  app.get('/api/testimonials', async (req, res) => {
+  app.get('/api/testimonials', requireSchoolId, async (req, res) => {
     try {
+      const schoolId = getSchoolId(req);
       const testimonials = await db.query.testimonials.findMany({
+        where: eq(schema.testimonials.schoolId, schoolId),
         with: {
           student: true,
           signedByTeacher: true
@@ -202,11 +232,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/testimonials/:id', async (req, res) => {
+  app.get('/api/testimonials/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const testimonial = await db.query.testimonials.findFirst({
-        where: eq(schema.testimonials.id, parseInt(id)),
+        where: and(
+          eq(schema.testimonials.id, parseInt(id)),
+          eq(schema.testimonials.schoolId, schoolId)
+        ),
         with: {
           student: true,
           signedByTeacher: true,
@@ -224,9 +258,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/testimonials', async (req, res) => {
+  app.post('/api/testimonials', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.testimonialInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.testimonialInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newTestimonial] = await db.insert(schema.testimonials)
         .values(validatedData)
@@ -248,9 +286,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admission Forms
-  app.get('/api/admission-forms', async (req, res) => {
+  app.get('/api/admission-forms', requireSchoolId, async (req, res) => {
     try {
+      const schoolId = getSchoolId(req);
       const forms = await db.query.admissionForms.findMany({
+        where: eq(schema.admissionForms.schoolId, schoolId),
         orderBy: desc(schema.admissionForms.createdAt)
       });
       return res.json(forms);
@@ -259,11 +299,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admission-forms/:id', async (req, res) => {
+  app.get('/api/admission-forms/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const form = await db.query.admissionForms.findFirst({
-        where: eq(schema.admissionForms.id, parseInt(id))
+        where: and(
+          eq(schema.admissionForms.id, parseInt(id)),
+          eq(schema.admissionForms.schoolId, schoolId)
+        )
       });
       
       if (!form) {
@@ -276,9 +320,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admission-forms', async (req, res) => {
+  app.post('/api/admission-forms', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.admissionFormInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.admissionFormInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newForm] = await db.insert(schema.admissionForms)
         .values(validatedData)
@@ -290,17 +338,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/admission-forms/:id/status', async (req, res) => {
+  app.put('/api/admission-forms/:id/status', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
+      const schoolId = getSchoolId(req);
       
       if (!['pending', 'approved', 'rejected'].includes(status)) {
         return res.status(400).json({ error: 'Invalid status value' });
       }
       
       const form = await db.query.admissionForms.findFirst({
-        where: eq(schema.admissionForms.id, parseInt(id))
+        where: and(
+          eq(schema.admissionForms.id, parseInt(id)),
+          eq(schema.admissionForms.schoolId, schoolId)
+        )
       });
       
       if (!form) {
@@ -312,7 +364,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status,
           updatedAt: new Date()
         })
-        .where(eq(schema.admissionForms.id, parseInt(id)));
+        .where(and(
+          eq(schema.admissionForms.id, parseInt(id)),
+          eq(schema.admissionForms.schoolId, schoolId)
+        ));
       
       const updatedForm = await db.query.admissionForms.findFirst({
         where: eq(schema.admissionForms.id, parseInt(id))
@@ -328,39 +383,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =================================================================
   
   // Students
-  app.get('/api/students', async (req, res) => {
+  app.get('/api/students', requireSchoolId, async (req, res) => {
     try {
       const { class: studentClass, status, search } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.students);
+      let conditions = [eq(schema.students.schoolId, schoolId)];
       
       if (studentClass) {
-        query = query.where(eq(schema.students.class, studentClass as string));
+        conditions.push(eq(schema.students.class, studentClass as string));
       }
       
       if (status) {
-        query = query.where(eq(schema.students.status, status as string));
+        conditions.push(eq(schema.students.status, status as string));
       }
       
       if (search) {
         const searchPattern = `%${search}%`;
-        query = query.where(
+        conditions.push(
           sql`${schema.students.name} ILIKE ${searchPattern} OR ${schema.students.studentId} ILIKE ${searchPattern}`
         );
       }
       
-      const students = await query;
+      const students = await db.select().from(schema.students)
+        .where(and(...conditions));
       return res.json(students);
     } catch (error) {
       return handleError(error, res, 'fetching students');
     }
   });
 
-  app.get('/api/students/:id', async (req, res) => {
+  app.get('/api/students/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const student = await db.query.students.findFirst({
-        where: eq(schema.students.id, parseInt(id)),
+        where: and(
+          eq(schema.students.id, parseInt(id)),
+          eq(schema.students.schoolId, schoolId)
+        ),
         with: {
           feeReceipts: true
         }
@@ -376,14 +437,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/students', async (req, res) => {
+  app.post('/api/students', requireSchoolId, async (req, res) => {
     try {
       const data = req.body;
+      const schoolId = getSchoolId(req);
       
       // Clean up data - convert empty strings to null for date fields
       if (data.dateOfBirth === '') data.dateOfBirth = null;
       
-      const validatedData = schema.studentInsertSchema.parse(data);
+      const validatedData = schema.studentInsertSchema.parse({
+        ...data,
+        schoolId
+      });
       
       const [newStudent] = await db.insert(schema.students)
         .values(validatedData)
@@ -395,11 +460,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/students/:id', async (req, res) => {
+  app.put('/api/students/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const student = await db.query.students.findFirst({
-        where: eq(schema.students.id, parseInt(id))
+        where: and(
+          eq(schema.students.id, parseInt(id)),
+          eq(schema.students.schoolId, schoolId)
+        )
       });
       
       if (!student) {
@@ -410,7 +479,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await db.update(schema.students)
         .set(validatedData)
-        .where(eq(schema.students.id, parseInt(id)));
+        .where(and(
+          eq(schema.students.id, parseInt(id)),
+          eq(schema.students.schoolId, schoolId)
+        ));
       
       const updatedStudent = await db.query.students.findFirst({
         where: eq(schema.students.id, parseInt(id))
@@ -423,11 +495,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Also support PATCH method for partial updates
-  app.patch('/api/students/:id', async (req, res) => {
+  app.patch('/api/students/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const student = await db.query.students.findFirst({
-        where: eq(schema.students.id, parseInt(id))
+        where: and(
+          eq(schema.students.id, parseInt(id)),
+          eq(schema.students.schoolId, schoolId)
+        )
       });
       
       if (!student) {
@@ -438,7 +514,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await db.update(schema.students)
         .set(validatedData)
-        .where(eq(schema.students.id, parseInt(id)));
+        .where(and(
+          eq(schema.students.id, parseInt(id)),
+          eq(schema.students.schoolId, schoolId)
+        ));
       
       const updatedStudent = await db.query.students.findFirst({
         where: eq(schema.students.id, parseInt(id))
@@ -450,13 +529,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/students/:id', async (req, res) => {
+  app.delete('/api/students/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
       const studentId = parseInt(id);
+      const schoolId = getSchoolId(req);
       
       const student = await db.query.students.findFirst({
-        where: eq(schema.students.id, studentId)
+        where: and(
+          eq(schema.students.id, studentId),
+          eq(schema.students.schoolId, schoolId)
+        )
       });
       
       if (!student) {
@@ -489,7 +572,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // 6. Finally delete the student
         await tx.delete(schema.students)
-          .where(eq(schema.students.id, studentId));
+          .where(and(
+            eq(schema.students.id, studentId),
+            eq(schema.students.schoolId, schoolId)
+          ));
       });
       
       return res.status(200).json({ message: 'Student deleted successfully' });
@@ -500,41 +586,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Attendance
-  app.get('/api/attendance', async (req, res) => {
+  app.get('/api/attendance', requireSchoolId, async (req, res) => {
     try {
       const { date, classId, studentId } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.attendance);
+      let conditions = [eq(schema.attendance.schoolId, schoolId)];
       
       if (date) {
-        query = query.where(eq(schema.attendance.date, date as string));
+        conditions.push(eq(schema.attendance.date, date as string));
       }
       
       if (classId) {
-        query = query.where(eq(schema.attendance.classId, parseInt(classId as string)));
+        conditions.push(eq(schema.attendance.classId, parseInt(classId as string)));
       }
       
       if (studentId) {
-        query = query.where(eq(schema.attendance.studentId, parseInt(studentId as string)));
+        conditions.push(eq(schema.attendance.studentId, parseInt(studentId as string)));
       }
       
-      const attendanceRecords = await query;
+      const attendanceRecords = await db.select().from(schema.attendance)
+        .where(and(...conditions));
       return res.json(attendanceRecords);
     } catch (error) {
       return handleError(error, res, 'fetching attendance records');
     }
   });
 
-  app.post('/api/attendance', async (req, res) => {
+  app.post('/api/attendance', requireSchoolId, async (req, res) => {
     try {
       const records = req.body;
+      const schoolId = getSchoolId(req);
       
       if (!Array.isArray(records)) {
         return res.status(400).json({ error: 'Expected an array of attendance records' });
       }
       
       const validatedRecords = records.map(record => 
-        schema.attendanceInsertSchema.parse(record)
+        schema.attendanceInsertSchema.parse({
+          ...record,
+          schoolId
+        })
       );
       
       const insertedRecords = await db.insert(schema.attendance)
@@ -547,11 +639,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/attendance/:id', async (req, res) => {
+  app.put('/api/attendance/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const attendance = await db.query.attendance.findFirst({
-        where: eq(schema.attendance.id, parseInt(id))
+        where: and(
+          eq(schema.attendance.id, parseInt(id)),
+          eq(schema.attendance.schoolId, schoolId)
+        )
       });
       
       if (!attendance) {
@@ -562,7 +658,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await db.update(schema.attendance)
         .set(validatedData)
-        .where(eq(schema.attendance.id, parseInt(id)));
+        .where(and(
+          eq(schema.attendance.id, parseInt(id)),
+          eq(schema.attendance.schoolId, schoolId)
+        ));
       
       const updatedAttendance = await db.query.attendance.findFirst({
         where: eq(schema.attendance.id, parseInt(id))
@@ -578,45 +677,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =================================================================
   
   // Teachers
-  app.get('/api/teachers', async (req, res) => {
+  app.get('/api/teachers', requireSchoolId, async (req, res) => {
     try {
       const { subject, status, search } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.teachers);
+      let conditions = [eq(schema.teachers.schoolId, schoolId)];
       
       if (subject) {
-        query = query.where(eq(schema.teachers.subject, subject as string));
+        conditions.push(eq(schema.teachers.subject, subject as string));
       }
       
       if (status) {
-        query = query.where(eq(schema.teachers.status, status as string));
+        conditions.push(eq(schema.teachers.status, status as string));
       }
       
       if (search) {
         const searchPattern = `%${search}%`;
-        query = query.where(
+        conditions.push(
           sql`${schema.teachers.name} ILIKE ${searchPattern} OR ${schema.teachers.teacherId} ILIKE ${searchPattern}`
         );
       }
       
-      const teachers = await query;
+      const teachers = await db.select().from(schema.teachers)
+        .where(and(...conditions));
       return res.json(teachers);
     } catch (error) {
       return handleError(error, res, 'fetching teachers');
     }
   });
 
-  app.get('/api/teachers/:id', async (req, res) => {
+  app.get('/api/teachers/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
       const teacherId = parseInt(id);
+      const schoolId = getSchoolId(req);
       
       if (isNaN(teacherId)) {
         return res.status(400).json({ error: 'Invalid teacher ID' });
       }
       
       const teacher = await db.query.teachers.findFirst({
-        where: eq(schema.teachers.id, teacherId)
+        where: and(
+          eq(schema.teachers.id, teacherId),
+          eq(schema.teachers.schoolId, schoolId)
+        )
       });
       
       if (!teacher) {
@@ -629,9 +734,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/teachers', async (req, res) => {
+  app.post('/api/teachers', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.teacherInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.teacherInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newTeacher] = await db.insert(schema.teachers)
         .values(validatedData)
@@ -643,17 +752,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/teachers/:id', async (req, res) => {
+  app.put('/api/teachers/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
       const teacherId = parseInt(id);
+      const schoolId = getSchoolId(req);
       
       if (isNaN(teacherId)) {
         return res.status(400).json({ error: 'Invalid teacher ID' });
       }
       
       const teacher = await db.query.teachers.findFirst({
-        where: eq(schema.teachers.id, teacherId)
+        where: and(
+          eq(schema.teachers.id, teacherId),
+          eq(schema.teachers.schoolId, schoolId)
+        )
       });
       
       if (!teacher) {
@@ -664,7 +777,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await db.update(schema.teachers)
         .set(validatedData)
-        .where(eq(schema.teachers.id, teacherId));
+        .where(and(
+          eq(schema.teachers.id, teacherId),
+          eq(schema.teachers.schoolId, schoolId)
+        ));
       
       const updatedTeacher = await db.query.teachers.findFirst({
         where: eq(schema.teachers.id, teacherId)
@@ -676,10 +792,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/teachers/:id', async (req, res) => {
+  app.delete('/api/teachers/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
       const teacherId = parseInt(id);
+      const schoolId = getSchoolId(req);
       
       if (isNaN(teacherId)) {
         return res.status(400).json({ error: 'Invalid teacher ID' });
@@ -689,7 +806,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if teacher exists
       const teacher = await db.query.teachers.findFirst({
-        where: eq(schema.teachers.id, teacherId)
+        where: and(
+          eq(schema.teachers.id, teacherId),
+          eq(schema.teachers.schoolId, schoolId)
+        )
       });
       
       if (!teacher) {
@@ -700,7 +820,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Delete the teacher
       const deleteResult = await db.delete(schema.teachers)
-        .where(eq(schema.teachers.id, teacherId));
+        .where(and(
+          eq(schema.teachers.id, teacherId),
+          eq(schema.teachers.schoolId, schoolId)
+        ));
       
       console.log('Teacher deletion completed successfully');
       
@@ -716,9 +839,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =================================================================
   
   // Staff
-  app.get('/api/staff', async (req, res) => {
+  app.get('/api/staff', requireSchoolId, async (req, res) => {
     try {
+      const schoolId = getSchoolId(req);
       const staff = await db.query.staff.findMany({
+        where: eq(schema.staff.schoolId, schoolId),
         orderBy: [schema.staff.name]
       });
       return res.json(staff);
@@ -732,11 +857,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/staff/:id', async (req, res) => {
+  app.get('/api/staff/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const staffMember = await db.query.staff.findFirst({
-        where: eq(schema.staff.id, parseInt(id))
+        where: and(
+          eq(schema.staff.id, parseInt(id)),
+          eq(schema.staff.schoolId, schoolId)
+        )
       });
       
       if (!staffMember) {
@@ -752,9 +881,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/staff', async (req, res) => {
+  app.post('/api/staff', requireSchoolId, async (req, res) => {
     try {
       const staffData = req.body;
+      const schoolId = getSchoolId(req);
       
       // Generate staff ID if not provided
       if (!staffData.staffId) {
@@ -764,7 +894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate using schema but make staffId optional since we generate it
       const validatedData = schema.staffInsertSchema.omit({ staffId: true }).parse(staffData);
-      const finalData = { ...validatedData, staffId: staffData.staffId };
+      const finalData = { ...validatedData, staffId: staffData.staffId, schoolId };
       
       const newStaff = await db.insert(schema.staff)
         .values(finalData)
@@ -779,11 +909,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/staff/:id', async (req, res) => {
+  app.patch('/api/staff/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
       const staffId = parseInt(id);
       const updateData = req.body;
+      const schoolId = getSchoolId(req);
       
       if (isNaN(staffId)) {
         return res.status(400).json({ error: 'Invalid staff ID' });
@@ -791,7 +922,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedStaff = await db.update(schema.staff)
         .set({ ...updateData, updatedAt: new Date() })
-        .where(eq(schema.staff.id, staffId))
+        .where(and(
+          eq(schema.staff.id, staffId),
+          eq(schema.staff.schoolId, schoolId)
+        ))
         .returning();
       
       if (updatedStaff.length === 0) {
@@ -807,10 +941,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/staff/:id', async (req, res) => {
+  app.delete('/api/staff/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
       const staffId = parseInt(id);
+      const schoolId = getSchoolId(req);
       
       if (isNaN(staffId)) {
         return res.status(400).json({ error: 'Invalid staff ID' });
@@ -818,7 +953,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if staff member exists
       const staffMember = await db.query.staff.findFirst({
-        where: eq(schema.staff.id, staffId)
+        where: and(
+          eq(schema.staff.id, staffId),
+          eq(schema.staff.schoolId, schoolId)
+        )
       });
       
       if (!staffMember) {
@@ -827,7 +965,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Delete the staff member
       await db.delete(schema.staff)
-        .where(eq(schema.staff.id, staffId));
+        .where(and(
+          eq(schema.staff.id, staffId),
+          eq(schema.staff.schoolId, schoolId)
+        ));
       
       return res.json({ message: 'Staff member deleted successfully' });
     } catch (error: any) {
@@ -842,20 +983,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =================================================================
   
   // Parents
-  app.get('/api/parents', async (req, res) => {
+  app.get('/api/parents', requireSchoolId, async (req, res) => {
     try {
-      const parents = await db.select().from(schema.parents).orderBy(schema.parents.name);
+      const schoolId = getSchoolId(req);
+      const parents = await db.select().from(schema.parents)
+        .where(eq(schema.parents.schoolId, schoolId))
+        .orderBy(schema.parents.name);
       return res.json(parents);
     } catch (error) {
       return handleError(error, res, 'fetching parents');
     }
   });
 
-  app.get('/api/parents/:id', async (req, res) => {
+  app.get('/api/parents/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const parent = await db.select().from(schema.parents)
-        .where(eq(schema.parents.id, parseInt(id)))
+        .where(and(
+          eq(schema.parents.id, parseInt(id)),
+          eq(schema.parents.schoolId, schoolId)
+        ))
         .limit(1);
       
       if (!parent || parent.length === 0) {
@@ -868,9 +1016,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/parents', async (req, res) => {
+  app.post('/api/parents', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.parentInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.parentInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newParent] = await db.insert(schema.parents)
         .values(validatedData)
@@ -882,12 +1034,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/parents/:id', async (req, res) => {
+  app.patch('/api/parents/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       
       const parent = await db.query.parents.findFirst({
-        where: eq(schema.parents.id, parseInt(id))
+        where: and(
+          eq(schema.parents.id, parseInt(id)),
+          eq(schema.parents.schoolId, schoolId)
+        )
       });
       
       if (!parent) {
@@ -898,7 +1054,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await db.update(schema.parents)
         .set(validatedData)
-        .where(eq(schema.parents.id, parseInt(id)));
+        .where(and(
+          eq(schema.parents.id, parseInt(id)),
+          eq(schema.parents.schoolId, schoolId)
+        ));
       
       const updatedParent = await db.query.parents.findFirst({
         where: eq(schema.parents.id, parseInt(id))
@@ -910,13 +1069,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/parents/:id', async (req, res) => {
+  app.delete('/api/parents/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       
       // Check if parent exists
       const parent = await db.query.parents.findFirst({
-        where: eq(schema.parents.id, parseInt(id))
+        where: and(
+          eq(schema.parents.id, parseInt(id)),
+          eq(schema.parents.schoolId, schoolId)
+        )
       });
       
       if (!parent) {
@@ -925,7 +1088,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Delete the parent
       await db.delete(schema.parents)
-        .where(eq(schema.parents.id, parseInt(id)));
+        .where(and(
+          eq(schema.parents.id, parseInt(id)),
+          eq(schema.parents.schoolId, schoolId)
+        ));
       
       return res.json({ message: 'Parent deleted successfully' });
     } catch (error) {
@@ -937,9 +1103,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =================================================================
   
   // Classes
-  app.get('/api/classes', async (req, res) => {
+  app.get('/api/classes', requireSchoolId, async (req, res) => {
     try {
+      const schoolId = getSchoolId(req);
       const classes = await db.query.classes.findMany({
+        where: eq(schema.classes.schoolId, schoolId),
         with: {
           teacher: true
         }
@@ -950,11 +1118,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/classes/:id', async (req, res) => {
+  app.get('/api/classes/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const classData = await db.query.classes.findFirst({
-        where: eq(schema.classes.id, parseInt(id)),
+        where: and(
+          eq(schema.classes.id, parseInt(id)),
+          eq(schema.classes.schoolId, schoolId)
+        ),
         with: {
           teacher: true
         }
@@ -970,9 +1142,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/classes', async (req, res) => {
+  app.post('/api/classes', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.classInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.classInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newClass] = await db.insert(schema.classes)
         .values(validatedData)
@@ -985,30 +1161,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Class Routines (Periods)
-  app.get('/api/periods', async (req, res) => {
+  app.get('/api/periods', requireSchoolId, async (req, res) => {
     try {
       const { classId, dayOfWeek } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.periods);
+      let conditions = [eq(schema.periods.schoolId, schoolId)];
       
       if (classId) {
-        query = query.where(eq(schema.periods.classId, parseInt(classId as string)));
+        conditions.push(eq(schema.periods.classId, parseInt(classId as string)));
       }
       
       if (dayOfWeek) {
-        query = query.where(eq(schema.periods.dayOfWeek, dayOfWeek as string));
+        conditions.push(eq(schema.periods.dayOfWeek, dayOfWeek as string));
       }
       
-      const periods = await query;
+      const periods = await db.select().from(schema.periods)
+        .where(and(...conditions));
       return res.json(periods);
     } catch (error) {
       return handleError(error, res, 'fetching periods');
     }
   });
 
-  app.post('/api/periods', async (req, res) => {
+  app.post('/api/periods', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.periodInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.periodInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newPeriod] = await db.insert(schema.periods)
         .values(validatedData)
@@ -1024,9 +1206,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =================================================================
   
   // Academic Years
-  app.get('/api/academic-years', async (req, res) => {
+  app.get('/api/academic-years', requireSchoolId, async (req, res) => {
     try {
+      const schoolId = getSchoolId(req);
       const academicYears = await db.query.academicYears.findMany({
+        where: eq(schema.academicYears.schoolId, schoolId),
         orderBy: desc(schema.academicYears.startDate)
       });
       return res.json(academicYears);
@@ -1035,15 +1219,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/academic-years', async (req, res) => {
+  app.post('/api/academic-years', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.academicYearInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.academicYearInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
-      // If setting this as current, unset any existing current years
+      // If setting this as current, unset any existing current years for this school
       if (validatedData.isCurrent) {
         await db.update(schema.academicYears)
           .set({ isCurrent: false })
-          .where(eq(schema.academicYears.isCurrent, true));
+          .where(and(
+            eq(schema.academicYears.isCurrent, true),
+            eq(schema.academicYears.schoolId, schoolId)
+          ));
       }
       
       const [newAcademicYear] = await db.insert(schema.academicYears)
@@ -1057,39 +1248,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Exams
-  app.get('/api/exams', async (req, res) => {
+  app.get('/api/exams', requireSchoolId, async (req, res) => {
     try {
       const { academicYearId } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.query.exams.findMany({
+      let conditions = [eq(schema.exams.schoolId, schoolId)];
+      
+      if (academicYearId) {
+        conditions.push(eq(schema.exams.academicYearId, parseInt(academicYearId as string)));
+      }
+      
+      const exams = await db.query.exams.findMany({
+        where: and(...conditions),
         with: {
           academicYear: true
         },
         orderBy: desc(schema.exams.startDate)
       });
       
-      if (academicYearId) {
-        query = db.query.exams.findMany({
-          where: eq(schema.exams.academicYearId, parseInt(academicYearId as string)),
-          with: {
-            academicYear: true
-          },
-          orderBy: desc(schema.exams.startDate)
-        });
-      }
-      
-      const exams = await query;
       return res.json(exams);
     } catch (error) {
       return handleError(error, res, 'fetching exams');
     }
   });
 
-  app.get('/api/exams/:id', async (req, res) => {
+  app.get('/api/exams/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const exam = await db.query.exams.findFirst({
-        where: eq(schema.exams.id, parseInt(id)),
+        where: and(
+          eq(schema.exams.id, parseInt(id)),
+          eq(schema.exams.schoolId, schoolId)
+        ),
         with: {
           academicYear: true,
           schedules: true
@@ -1106,9 +1298,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/exams', async (req, res) => {
+  app.post('/api/exams', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.examInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.examInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newExam] = await db.insert(schema.exams)
         .values(validatedData)
@@ -1121,30 +1317,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Exam Schedules
-  app.get('/api/exam-schedules', async (req, res) => {
+  app.get('/api/exam-schedules', requireSchoolId, async (req, res) => {
     try {
       const { examId, classId } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.examSchedules);
+      let conditions = [eq(schema.examSchedules.schoolId, schoolId)];
       
       if (examId) {
-        query = query.where(eq(schema.examSchedules.examId, parseInt(examId as string)));
+        conditions.push(eq(schema.examSchedules.examId, parseInt(examId as string)));
       }
       
       if (classId) {
-        query = query.where(eq(schema.examSchedules.classId, parseInt(classId as string)));
+        conditions.push(eq(schema.examSchedules.classId, parseInt(classId as string)));
       }
       
-      const schedules = await query;
+      const schedules = await db.select().from(schema.examSchedules)
+        .where(and(...conditions));
       return res.json(schedules);
     } catch (error) {
       return handleError(error, res, 'fetching exam schedules');
     }
   });
 
-  app.post('/api/exam-schedules', async (req, res) => {
+  app.post('/api/exam-schedules', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.examScheduleInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.examScheduleInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newSchedule] = await db.insert(schema.examSchedules)
         .values(validatedData)
@@ -1157,37 +1359,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Exam Results
-  app.get('/api/exam-results', async (req, res) => {
+  app.get('/api/exam-results', requireSchoolId, async (req, res) => {
     try {
       const { examId, studentId } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.examResults);
+      let conditions = [eq(schema.examResults.schoolId, schoolId)];
       
       if (examId) {
-        query = query.where(eq(schema.examResults.examId, parseInt(examId as string)));
+        conditions.push(eq(schema.examResults.examId, parseInt(examId as string)));
       }
       
       if (studentId) {
-        query = query.where(eq(schema.examResults.studentId, parseInt(studentId as string)));
+        conditions.push(eq(schema.examResults.studentId, parseInt(studentId as string)));
       }
       
-      const results = await query;
+      const results = await db.select().from(schema.examResults)
+        .where(and(...conditions));
       return res.json(results);
     } catch (error) {
       return handleError(error, res, 'fetching exam results');
     }
   });
 
-  app.post('/api/exam-results', async (req, res) => {
+  app.post('/api/exam-results', requireSchoolId, async (req, res) => {
     try {
       const records = req.body;
+      const schoolId = getSchoolId(req);
       
       if (!Array.isArray(records)) {
         return res.status(400).json({ error: 'Expected an array of exam results' });
       }
       
       const validatedRecords = records.map(record => 
-        schema.examResultInsertSchema.parse(record)
+        schema.examResultInsertSchema.parse({
+          ...record,
+          schoolId
+        })
       );
       
       const insertedRecords = await db.insert(schema.examResults)
@@ -1204,35 +1412,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =================================================================
   
   // Books
-  app.get('/api/books', async (req, res) => {
+  app.get('/api/books', requireSchoolId, async (req, res) => {
     try {
       const { category, search } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.books);
+      let conditions = [eq(schema.books.schoolId, schoolId)];
       
       if (category) {
-        query = query.where(eq(schema.books.category, category as string));
+        conditions.push(eq(schema.books.category, category as string));
       }
       
       if (search) {
         const searchPattern = `%${search}%`;
-        query = query.where(
+        conditions.push(
           sql`${schema.books.title} ILIKE ${searchPattern} OR ${schema.books.author} ILIKE ${searchPattern} OR ${schema.books.isbn} ILIKE ${searchPattern}`
         );
       }
       
-      const books = await query;
+      const books = await db.select().from(schema.books)
+        .where(and(...conditions));
       return res.json(books);
     } catch (error) {
       return handleError(error, res, 'fetching books');
     }
   });
 
-  app.get('/api/books/:id', async (req, res) => {
+  app.get('/api/books/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const book = await db.query.books.findFirst({
-        where: eq(schema.books.id, parseInt(id))
+        where: and(
+          eq(schema.books.id, parseInt(id)),
+          eq(schema.books.schoolId, schoolId)
+        )
       });
       
       if (!book) {
@@ -1245,9 +1459,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/books', async (req, res) => {
+  app.post('/api/books', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.bookInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.bookInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newBook] = await db.insert(schema.books)
         .values({
@@ -1263,38 +1481,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Book Issues
-  app.get('/api/book-issues', async (req, res) => {
+  app.get('/api/book-issues', requireSchoolId, async (req, res) => {
     try {
       const { status, studentId, bookId } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.bookIssues);
+      let conditions = [eq(schema.bookIssues.schoolId, schoolId)];
       
       if (status) {
-        query = query.where(eq(schema.bookIssues.status, status as string));
+        conditions.push(eq(schema.bookIssues.status, status as string));
       }
       
       if (studentId) {
-        query = query.where(eq(schema.bookIssues.studentId, parseInt(studentId as string)));
+        conditions.push(eq(schema.bookIssues.studentId, parseInt(studentId as string)));
       }
       
       if (bookId) {
-        query = query.where(eq(schema.bookIssues.bookId, parseInt(bookId as string)));
+        conditions.push(eq(schema.bookIssues.bookId, parseInt(bookId as string)));
       }
       
-      const bookIssues = await query;
+      const bookIssues = await db.select().from(schema.bookIssues)
+        .where(and(...conditions));
       return res.json(bookIssues);
     } catch (error) {
       return handleError(error, res, 'fetching book issues');
     }
   });
 
-  app.post('/api/book-issues', async (req, res) => {
+  app.post('/api/book-issues', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.bookIssueInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.bookIssueInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       // Check if book is available
       const book = await db.query.books.findFirst({
-        where: eq(schema.books.id, validatedData.bookId)
+        where: and(
+          eq(schema.books.id, validatedData.bookId),
+          eq(schema.books.schoolId, schoolId)
+        )
       });
       
       if (!book) {
@@ -1318,7 +1545,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({
           availableCopies: book.availableCopies - 1
         })
-        .where(eq(schema.books.id, validatedData.bookId));
+        .where(and(
+          eq(schema.books.id, validatedData.bookId),
+          eq(schema.books.schoolId, schoolId)
+        ));
       
       return res.status(201).json(newIssue);
     } catch (error) {
@@ -1326,13 +1556,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/book-issues/:id/return', async (req, res) => {
+  app.put('/api/book-issues/:id/return', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
       const { returnDate, fine } = req.body;
+      const schoolId = getSchoolId(req);
       
       const issue = await db.query.bookIssues.findFirst({
-        where: eq(schema.bookIssues.id, parseInt(id))
+        where: and(
+          eq(schema.bookIssues.id, parseInt(id)),
+          eq(schema.bookIssues.schoolId, schoolId)
+        )
       });
       
       if (!issue) {
@@ -1351,11 +1585,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fine: fine || 0,
           updatedAt: new Date()
         })
-        .where(eq(schema.bookIssues.id, parseInt(id)));
+        .where(and(
+          eq(schema.bookIssues.id, parseInt(id)),
+          eq(schema.bookIssues.schoolId, schoolId)
+        ));
       
       // Update book available copies
       const book = await db.query.books.findFirst({
-        where: eq(schema.books.id, issue.bookId)
+        where: and(
+          eq(schema.books.id, issue.bookId),
+          eq(schema.books.schoolId, schoolId)
+        )
       });
       
       if (book) {
@@ -1363,7 +1603,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .set({
             availableCopies: book.availableCopies + 1
           })
-          .where(eq(schema.books.id, issue.bookId));
+          .where(and(
+            eq(schema.books.id, issue.bookId),
+            eq(schema.books.schoolId, schoolId)
+          ));
       }
       
       const updatedIssue = await db.query.bookIssues.findFirst({
@@ -1380,18 +1623,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =================================================================
   
   // Inventory Categories
-  app.get('/api/inventory-categories', async (req, res) => {
+  app.get('/api/inventory-categories', requireSchoolId, async (req, res) => {
     try {
-      const categories = await db.query.inventoryCategories.findMany();
+      const schoolId = getSchoolId(req);
+      const categories = await db.query.inventoryCategories.findMany({
+        where: eq(schema.inventoryCategories.schoolId, schoolId)
+      });
       return res.json(categories);
     } catch (error) {
       return handleError(error, res, 'fetching inventory categories');
     }
   });
 
-  app.post('/api/inventory-categories', async (req, res) => {
+  app.post('/api/inventory-categories', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.inventoryCategoryInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.inventoryCategoryInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newCategory] = await db.insert(schema.inventoryCategories)
         .values(validatedData)
@@ -1404,45 +1654,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Inventory Items
-  app.get('/api/inventory-items', async (req, res) => {
+  app.get('/api/inventory-items', requireSchoolId, async (req, res) => {
     try {
       const { categoryId, search } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.query.inventoryItems.findMany({
+      let conditions = [eq(schema.inventoryItems.schoolId, schoolId)];
+      
+      if (categoryId) {
+        conditions.push(eq(schema.inventoryItems.categoryId, parseInt(categoryId as string)));
+      }
+      
+      if (search) {
+        const searchPattern = `%${search}%`;
+        conditions.push(sql`${schema.inventoryItems.name} ILIKE ${searchPattern}`);
+      }
+      
+      const items = await db.query.inventoryItems.findMany({
+        where: and(...conditions),
         with: {
           category: true
         }
       });
       
-      if (categoryId) {
-        query = db.query.inventoryItems.findMany({
-          where: eq(schema.inventoryItems.categoryId, parseInt(categoryId as string)),
-          with: {
-            category: true
-          }
-        });
-      }
-      
-      if (search) {
-        const searchPattern = `%${search}%`;
-        query = db.query.inventoryItems.findMany({
-          where: sql`${schema.inventoryItems.name} ILIKE ${searchPattern}`,
-          with: {
-            category: true
-          }
-        });
-      }
-      
-      const items = await query;
       return res.json(items);
     } catch (error) {
       return handleError(error, res, 'fetching inventory items');
     }
   });
 
-  app.post('/api/inventory-items', async (req, res) => {
+  app.post('/api/inventory-items', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.inventoryItemInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.inventoryItemInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newItem] = await db.insert(schema.inventoryItems)
         .values(validatedData)
@@ -1454,17 +1701,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/inventory-items/:id/quantity', async (req, res) => {
+  app.put('/api/inventory-items/:id/quantity', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
       const { quantity, operation = 'set' } = req.body;
+      const schoolId = getSchoolId(req);
       
       if (typeof quantity !== 'number' || quantity < 0) {
         return res.status(400).json({ error: 'Invalid quantity value' });
       }
       
       const item = await db.query.inventoryItems.findFirst({
-        where: eq(schema.inventoryItems.id, parseInt(id))
+        where: and(
+          eq(schema.inventoryItems.id, parseInt(id)),
+          eq(schema.inventoryItems.schoolId, schoolId)
+        )
       });
       
       if (!item) {
@@ -1483,7 +1734,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity: newQuantity,
           updatedAt: new Date()
         })
-        .where(eq(schema.inventoryItems.id, parseInt(id)));
+        .where(and(
+          eq(schema.inventoryItems.id, parseInt(id)),
+          eq(schema.inventoryItems.schoolId, schoolId)
+        ));
       
       const updatedItem = await db.query.inventoryItems.findFirst({
         where: eq(schema.inventoryItems.id, parseInt(id))
@@ -1499,30 +1753,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =================================================================
   
   // Vehicles
-  app.get('/api/vehicles', async (req, res) => {
+  app.get('/api/vehicles', requireSchoolId, async (req, res) => {
     try {
       const { status, type } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.vehicles);
+      let conditions = [eq(schema.vehicles.schoolId, schoolId)];
       
       if (status) {
-        query = query.where(eq(schema.vehicles.status, status as string));
+        conditions.push(eq(schema.vehicles.status, status as string));
       }
       
       if (type) {
-        query = query.where(eq(schema.vehicles.type, type as string));
+        conditions.push(eq(schema.vehicles.type, type as string));
       }
       
-      const vehicles = await query;
+      const vehicles = await db.select().from(schema.vehicles)
+        .where(and(...conditions));
       return res.json(vehicles);
     } catch (error) {
       return handleError(error, res, 'fetching vehicles');
     }
   });
 
-  app.post('/api/vehicles', async (req, res) => {
+  app.post('/api/vehicles', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.vehicleInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.vehicleInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newVehicle] = await db.insert(schema.vehicles)
         .values(validatedData)
@@ -1535,35 +1795,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Transport Routes
-  app.get('/api/transport-routes', async (req, res) => {
+  app.get('/api/transport-routes', requireSchoolId, async (req, res) => {
     try {
       const { vehicleId } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.query.transportRoutes.findMany({
+      let conditions = [eq(schema.transportRoutes.schoolId, schoolId)];
+      
+      if (vehicleId) {
+        conditions.push(eq(schema.transportRoutes.vehicleId, parseInt(vehicleId as string)));
+      }
+      
+      const routes = await db.query.transportRoutes.findMany({
+        where: and(...conditions),
         with: {
           vehicle: true
         }
       });
       
-      if (vehicleId) {
-        query = db.query.transportRoutes.findMany({
-          where: eq(schema.transportRoutes.vehicleId, parseInt(vehicleId as string)),
-          with: {
-            vehicle: true
-          }
-        });
-      }
-      
-      const routes = await query;
       return res.json(routes);
     } catch (error) {
       return handleError(error, res, 'fetching transport routes');
     }
   });
 
-  app.post('/api/transport-routes', async (req, res) => {
+  app.post('/api/transport-routes', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.transportRouteInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.transportRouteInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newRoute] = await db.insert(schema.transportRoutes)
         .values(validatedData)
@@ -1576,11 +1838,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Transport Assignments
-  app.get('/api/transport-assignments', async (req, res) => {
+  app.get('/api/transport-assignments', requireSchoolId, async (req, res) => {
     try {
       const { routeId, studentId, status } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.query.transportAssignments.findMany({
+      let conditions = [eq(schema.transportAssignments.schoolId, schoolId)];
+      
+      if (routeId) {
+        conditions.push(eq(schema.transportAssignments.routeId, parseInt(routeId as string)));
+      }
+      
+      if (studentId) {
+        conditions.push(eq(schema.transportAssignments.studentId, parseInt(studentId as string)));
+      }
+      
+      if (status) {
+        conditions.push(eq(schema.transportAssignments.status, status as string));
+      }
+      
+      const assignments = await db.query.transportAssignments.findMany({
+        where: and(...conditions),
         with: {
           student: true,
           route: {
@@ -1591,58 +1869,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      if (routeId) {
-        query = db.query.transportAssignments.findMany({
-          where: eq(schema.transportAssignments.routeId, parseInt(routeId as string)),
-          with: {
-            student: true,
-            route: {
-              with: {
-                vehicle: true
-              }
-            }
-          }
-        });
-      }
-      
-      if (studentId) {
-        query = db.query.transportAssignments.findMany({
-          where: eq(schema.transportAssignments.studentId, parseInt(studentId as string)),
-          with: {
-            student: true,
-            route: {
-              with: {
-                vehicle: true
-              }
-            }
-          }
-        });
-      }
-      
-      if (status) {
-        query = db.query.transportAssignments.findMany({
-          where: eq(schema.transportAssignments.status, status as string),
-          with: {
-            student: true,
-            route: {
-              with: {
-                vehicle: true
-              }
-            }
-          }
-        });
-      }
-      
-      const assignments = await query;
       return res.json(assignments);
     } catch (error) {
       return handleError(error, res, 'fetching transport assignments');
     }
   });
 
-  app.post('/api/transport-assignments', async (req, res) => {
+  app.post('/api/transport-assignments', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.transportAssignmentInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.transportAssignmentInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newAssignment] = await db.insert(schema.transportAssignments)
         .values(validatedData)
@@ -1657,35 +1896,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CALENDAR & EVENTS
   // =================================================================
   
-  app.get('/api/events', async (req, res) => {
+  app.get('/api/events', requireSchoolId, async (req, res) => {
     try {
       const { startDate, endDate, eventType } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.events);
+      let conditions = [eq(schema.events.schoolId, schoolId)];
       
       if (startDate && endDate) {
-        query = query.where(
-          and(
-            sql`${schema.events.startDate} >= ${startDate}`,
-            sql`${schema.events.startDate} <= ${endDate}`
-          )
+        conditions.push(
+          sql`${schema.events.startDate} >= ${startDate}`,
+          sql`${schema.events.startDate} <= ${endDate}`
         );
       }
       
       if (eventType) {
-        query = query.where(eq(schema.events.eventType, eventType as string));
+        conditions.push(eq(schema.events.eventType, eventType as string));
       }
       
-      const events = await query.orderBy(asc(schema.events.startDate));
+      const events = await db.select().from(schema.events)
+        .where(and(...conditions))
+        .orderBy(asc(schema.events.startDate));
       return res.json(events);
     } catch (error) {
       return handleError(error, res, 'fetching events');
     }
   });
 
-  app.post('/api/events', async (req, res) => {
+  app.post('/api/events', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.eventInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.eventInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newEvent] = await db.insert(schema.events)
         .values(validatedData)
@@ -1700,14 +1944,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // NOTIFICATIONS
   // =================================================================
   
-  app.get('/api/notifications', async (req, res) => {
+  app.get('/api/notifications', requireSchoolId, async (req, res) => {
     try {
       const { userId, read } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.notifications);
+      let conditions = [eq(schema.notifications.schoolId, schoolId)];
       
       if (userId) {
-        query = query.where(
+        conditions.push(
           or(
             eq(schema.notifications.targetUserId, parseInt(userId as string)),
             isNull(schema.notifications.targetUserId)
@@ -1716,19 +1961,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (read !== undefined) {
-        query = query.where(eq(schema.notifications.read, read === 'true'));
+        conditions.push(eq(schema.notifications.read, read === 'true'));
       }
       
-      const notifications = await query.orderBy(desc(schema.notifications.createdAt));
+      const notifications = await db.select().from(schema.notifications)
+        .where(and(...conditions))
+        .orderBy(desc(schema.notifications.createdAt));
       return res.json(notifications);
     } catch (error) {
       return handleError(error, res, 'fetching notifications');
     }
   });
 
-  app.post('/api/notifications', async (req, res) => {
+  app.post('/api/notifications', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.notificationInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.notificationInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newNotification] = await db.insert(schema.notifications)
         .values(validatedData)
@@ -1740,12 +1991,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/notifications/:id/read', async (req, res) => {
+  app.put('/api/notifications/:id/read', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       
       const notification = await db.query.notifications.findFirst({
-        where: eq(schema.notifications.id, parseInt(id))
+        where: and(
+          eq(schema.notifications.id, parseInt(id)),
+          eq(schema.notifications.schoolId, schoolId)
+        )
       });
       
       if (!notification) {
@@ -1756,7 +2011,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({
           read: true
         })
-        .where(eq(schema.notifications.id, parseInt(id)));
+        .where(and(
+          eq(schema.notifications.id, parseInt(id)),
+          eq(schema.notifications.schoolId, schoolId)
+        ));
       
       const updatedNotification = await db.query.notifications.findFirst({
         where: eq(schema.notifications.id, parseInt(id))
@@ -1771,39 +2029,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // FINANCIAL MANAGEMENT
   // =================================================================
   
-  app.get('/api/financial-transactions', async (req, res) => {
+  app.get('/api/financial-transactions', requireSchoolId, async (req, res) => {
     try {
       const { transactionType, category, startDate, endDate } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.financialTransactions);
+      let conditions = [eq(schema.financialTransactions.schoolId, schoolId)];
       
       if (transactionType) {
-        query = query.where(eq(schema.financialTransactions.transactionType, transactionType as string));
+        conditions.push(eq(schema.financialTransactions.transactionType, transactionType as string));
       }
       
       if (category) {
-        query = query.where(eq(schema.financialTransactions.category, category as string));
+        conditions.push(eq(schema.financialTransactions.category, category as string));
       }
       
       if (startDate && endDate) {
-        query = query.where(
-          and(
-            sql`${schema.financialTransactions.date} >= ${startDate}`,
-            sql`${schema.financialTransactions.date} <= ${endDate}`
-          )
+        conditions.push(
+          sql`${schema.financialTransactions.date} >= ${startDate}`,
+          sql`${schema.financialTransactions.date} <= ${endDate}`
         );
       }
       
-      const transactions = await query.orderBy(desc(schema.financialTransactions.date));
+      const transactions = await db.select().from(schema.financialTransactions)
+        .where(and(...conditions))
+        .orderBy(desc(schema.financialTransactions.date));
       return res.json(transactions);
     } catch (error) {
       return handleError(error, res, 'fetching financial transactions');
     }
   });
 
-  app.post('/api/financial-transactions', async (req, res) => {
+  app.post('/api/financial-transactions', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.financialTransactionInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.financialTransactionInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
       const [newTransaction] = await db.insert(schema.financialTransactions)
         .values(validatedData)
@@ -1818,32 +2081,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TEMPLATE MANAGEMENT
   // =================================================================
   
-  app.get('/api/templates', async (req, res) => {
+  app.get('/api/templates', requireSchoolId, async (req, res) => {
     try {
       const { type, isDefault } = req.query;
+      const schoolId = getSchoolId(req);
       
-      let query = db.select().from(schema.templates);
+      let conditions = [eq(schema.templates.schoolId, schoolId)];
       
       if (type) {
-        query = query.where(eq(schema.templates.type, type as string));
+        conditions.push(eq(schema.templates.type, type as string));
       }
       
       if (isDefault !== undefined) {
-        query = query.where(eq(schema.templates.isDefault, isDefault === 'true'));
+        conditions.push(eq(schema.templates.isDefault, isDefault === 'true'));
       }
       
-      const templates = await query;
+      const templates = await db.select().from(schema.templates)
+        .where(and(...conditions));
       return res.json(templates);
     } catch (error) {
       return handleError(error, res, 'fetching templates');
     }
   });
 
-  app.get('/api/templates/:id', async (req, res) => {
+  app.get('/api/templates/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const template = await db.query.templates.findFirst({
-        where: eq(schema.templates.id, parseInt(id))
+        where: and(
+          eq(schema.templates.id, parseInt(id)),
+          eq(schema.templates.schoolId, schoolId)
+        )
       });
       
       if (!template) {
@@ -1856,18 +2125,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/templates', async (req, res) => {
+  app.post('/api/templates', requireSchoolId, async (req, res) => {
     try {
-      const validatedData = schema.templateInsertSchema.parse(req.body);
+      const schoolId = getSchoolId(req);
+      const validatedData = schema.templateInsertSchema.parse({
+        ...req.body,
+        schoolId
+      });
       
-      // If setting as default, unset any existing default templates of the same type
+      // If setting as default, unset any existing default templates of the same type for this school
       if (validatedData.isDefault) {
         await db.update(schema.templates)
           .set({ isDefault: false })
           .where(
             and(
               eq(schema.templates.type, validatedData.type),
-              eq(schema.templates.isDefault, true)
+              eq(schema.templates.isDefault, true),
+              eq(schema.templates.schoolId, schoolId)
             )
           );
       }
@@ -1882,11 +2156,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/templates/:id', async (req, res) => {
+  app.put('/api/templates/:id', requireSchoolId, async (req, res) => {
     try {
       const { id } = req.params;
+      const schoolId = getSchoolId(req);
       const template = await db.query.templates.findFirst({
-        where: eq(schema.templates.id, parseInt(id))
+        where: and(
+          eq(schema.templates.id, parseInt(id)),
+          eq(schema.templates.schoolId, schoolId)
+        )
       });
       
       if (!template) {
@@ -1895,7 +2173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = schema.templateInsertSchema.partial().parse(req.body);
       
-      // If setting as default, unset any existing default templates of the same type
+      // If setting as default, unset any existing default templates of the same type for this school
       if (validatedData.isDefault) {
         await db.update(schema.templates)
           .set({ isDefault: false })
@@ -1903,6 +2181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             and(
               eq(schema.templates.type, template.type),
               eq(schema.templates.isDefault, true),
+              eq(schema.templates.schoolId, schoolId),
               not(eq(schema.templates.id, parseInt(id)))
             )
           );
@@ -1913,7 +2192,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...validatedData,
           updatedAt: new Date()
         })
-        .where(eq(schema.templates.id, parseInt(id)));
+        .where(and(
+          eq(schema.templates.id, parseInt(id)),
+          eq(schema.templates.schoolId, schoolId)
+        ));
       
       const updatedTemplate = await db.query.templates.findFirst({
         where: eq(schema.templates.id, parseInt(id))
