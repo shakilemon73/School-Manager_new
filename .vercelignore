@@ -1,4 +1,67 @@
-node_modules
+# Dependencies
+node_modules/
+.npm/
+
+# Environment files  
 .env
-.git
+.env.local
+.env.*.local
+
+# Development files
+.replit
+.replit.nix
+replit.nix
+.config/
+
+# Server files (not needed for SPA deployment)
+server/
+api/
+
+# Database files
+db/
+*.db
+*.db-*
+
+# Build artifacts (Vercel will rebuild)
+public/
+dist/
+.vite/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
 *.md
+!README.md
+
+# SQL files
+sql/
+*.sql
+
+# Scripts
+scripts/
+
+# Test files
+**/*.test.*
+**/*.spec.*
+
+# Temporary files
+.DS_Store
+*.log
+*.lock
+session_cookies.txt
+
+# Other hosting configs
+netlify.toml
+render.yaml
+wrangler.toml
+Dockerfile
+deployment/
+
+# Attached assets (large files)
+attached_assets/
+
+# Shared folder (if not needed for build)
+# shared/
