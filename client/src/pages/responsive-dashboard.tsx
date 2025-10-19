@@ -121,12 +121,12 @@ export default function ResponsiveDashboard() {
       console.log('📊 Fetching dashboard stats with direct Supabase calls for academic year:', currentAcademicYear?.name);
       const schoolId = await getCurrentSchoolId();
       
-      // Build queries - students table doesn't have academic_year_id column
+      // Build queries - using estimated counts for better performance
       const [studentsCount, teachersCount, booksCount, inventoryCount] = await Promise.all([
-        supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), // Students filtered by school only
-        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), // Teachers not year-specific
-        supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), // Books not year-specific
-        supabase.from('inventory_items').select('id', { count: 'exact', head: true }).eq('school_id', schoolId) // Inventory not year-specific
+        supabase.from('students').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId), // Students filtered by school only
+        supabase.from('teachers').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId), // Teachers not year-specific
+        supabase.from('library_books').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId), // Books not year-specific
+        supabase.from('inventory_items').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId) // Inventory not year-specific
       ]);
 
       // Log any errors
@@ -402,7 +402,7 @@ export default function ResponsiveDashboard() {
         // Marks entered today
         supabase
           .from('exam_results')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'estimated', head: true })
           .eq('school_id', schoolId)
           .gte('created_at', today.toISOString())
           .lt('created_at', tomorrow.toISOString()),
@@ -410,20 +410,20 @@ export default function ResponsiveDashboard() {
         // Attendance rate (simplified - from attendance records)
         supabase
           .from('attendance_records')
-          .select('status', { count: 'exact' })
+          .select('status', { count: 'estimated' })
           .eq('school_id', schoolId)
           .gte('date', today.toISOString().split('T')[0]),
         
         // Active exams
         supabase
           .from('exams')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'estimated', head: true })
           .eq('school_id', schoolId),
         
         // Pending approvals count
         supabase
           .from('exam_results')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'estimated', head: true })
           .eq('school_id', schoolId)
           .is('verified_by', null)
       ]);
@@ -440,8 +440,8 @@ export default function ResponsiveDashboard() {
       };
     },
     enabled: !!user && !academicYearLoading,
-    staleTime: 30000,
-    refetchInterval: 30000
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
   // Format numbers for display

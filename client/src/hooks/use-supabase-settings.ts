@@ -306,11 +306,11 @@ export function useSupabaseSettings() {
         throw new Error('User school ID not found');
       }
       
-      // Get basic stats from multiple tables
+      // Get basic stats from multiple tables - using estimated counts for better performance
       const [studentsResult, teachersResult, backupsResult] = await Promise.all([
-        supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', userSchoolId),
-        supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', userSchoolId),
-        supabase.from('backups').select('id', { count: 'exact', head: true }).eq('school_id', userSchoolId)
+        supabase.from('students').select('id', { count: 'estimated', head: true }).eq('school_id', userSchoolId),
+        supabase.from('teachers').select('id', { count: 'estimated', head: true }).eq('school_id', userSchoolId),
+        supabase.from('backups').select('id', { count: 'estimated', head: true }).eq('school_id', userSchoolId)
       ]);
       
       // Log any errors from the queries
@@ -347,7 +347,8 @@ export function useSupabaseSettings() {
       };
     },
     enabled: !!user && !!userSchoolId,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
   const systemStats = statsResponse?.stats;
