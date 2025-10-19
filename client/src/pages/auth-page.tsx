@@ -79,19 +79,25 @@ export default function AuthPage() {
 
   const onLoginSubmit = async (data: LoginFormValues) => {
     try {
-      await signIn(data.email, data.password);
+      const result = await signIn(data.email, data.password);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Login failed');
+      }
       
       // Invalidate all React Query caches to force data refetch after login
       console.log('🔄 Invalidating all queries after successful login');
       await queryClient.invalidateQueries();
       
-      // Small delay to allow auth state to propagate through the app
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Reset query client to clear all cache and force fresh fetch on next mount
+      queryClient.clear();
       
       toast({
         title: "স্বাগতম!",
         description: "সফলভাবে লগইন হয়েছে",
       });
+      
+      // Navigation will happen via useEffect when supabaseUser updates
     } catch (error: any) {
       const errorMsg = error.message || "অনুগ্রহ করে আবার চেষ্টা করুন";
       const isBadCredentials = errorMsg.includes("Invalid") || errorMsg.includes("credentials") || errorMsg.includes("invalid_credentials");

@@ -148,6 +148,7 @@ export default function ResponsiveDashboard() {
     enabled: !!user && !academicYearLoading,
     retry: 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: true, // Always refetch when component mounts after login
   });
 
   const { data: notifications, isLoading: notificationsLoading } = useQuery<NotificationItem[]>({
@@ -180,6 +181,7 @@ export default function ResponsiveDashboard() {
     },
     enabled: !!user && !academicYearLoading,
     retry: 2,
+    refetchOnMount: true,
   });
 
   const { data: documentTemplates, isLoading: documentsLoading } = useQuery<DocumentTemplate[]>({
@@ -213,6 +215,7 @@ export default function ResponsiveDashboard() {
     },
     enabled: !!user && !academicYearLoading,
     retry: 2,
+    refetchOnMount: true,
   });
 
   const { data: calendarEvents, isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
@@ -245,6 +248,7 @@ export default function ResponsiveDashboard() {
     },
     enabled: !!user && !academicYearLoading,
     retry: 2,
+    refetchOnMount: true,
   });
 
   // Super Admin: Teacher Activity Log
@@ -442,6 +446,7 @@ export default function ResponsiveDashboard() {
     enabled: !!user && !academicYearLoading,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnMount: true, // Always refetch when component mounts after login
   });
 
   // Format numbers for display
