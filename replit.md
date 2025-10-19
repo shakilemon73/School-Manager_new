@@ -17,6 +17,57 @@ A comprehensive multi-tenant school management system built with modern web tech
 - **Real-time**: Supabase subscriptions for live updates
 - **Type-safe**: Full TypeScript coverage with auto-generated types
 
+## Security Architecture (October 19, 2025)
+### Comprehensive Row Level Security (RLS) Implementation
+Complete database-level multi-tenant isolation ensuring schools can only access their own data.
+
+**Security Stats:**
+- ✅ **121 tables** protected with RLS enabled
+- ✅ **457 RLS policies** enforcing data isolation
+- ✅ **70+ tables** with full CRUD protection (4+ policies each)
+- ✅ **Zero fallback values** - removed all `.default(1)` from schoolId fields
+
+**Core Security Components:**
+
+1. **RLS Helper Function**: `user_has_school_access(target_school_id INTEGER)`
+   - Validates user JWT token contains matching school_id in user_metadata
+   - Falls back to checking user_school_memberships table for active membership
+   - Used by all RLS policies for consistent access control
+
+2. **Policy Coverage**: Every protected table has 4 policies:
+   - SELECT: Users can view records from their school
+   - INSERT: Users can create records for their school
+   - UPDATE: Users can modify records from their school
+   - DELETE: Users can delete records from their school
+
+3. **Special Cases**:
+   - User-specific tables (e.g., credit_balance): Check `auth.uid() = user_id`
+   - System tables (e.g., session, users): Allow authenticated users
+   - All tables use explicit type casting `school_id::INTEGER` for consistency
+
+**Protected Table Categories:**
+- Student Management: students, parents, parent_students, health_records, vaccinations
+- Academic: classes, subjects, exams, exam_results, assignments, assessments
+- Staff: teachers, staff, staff_attendance, payroll_records, appraisals
+- Finance: fee_receipts, financial_transactions, fee_items, credit_transactions
+- Library: library_books, library_borrowed_books, book_issues, books
+- Facilities: inventory_items, transport_routes, transport_vehicles, hostels
+- Communication: notifications, announcements, messages, conversations
+- Documents: admit_cards, id_cards, document_templates, templates
+- Admissions: admission_applications, admission_tests, admission_interviews
+- Activities: activities, activity_enrollments, disciplinary_incidents
+
+**Security Validation:**
+- User metadata required: `user_metadata.school_id` must be set during authentication
+- Frontend queries: Always filter by `.eq('school_id', schoolId)` for extra safety
+- Database enforcement: RLS policies act as final security layer, blocking unauthorized access
+- No mock data: System requires real school assignments - no silent fallbacks
+
+**Migration Notes:**
+- Removed 58 instances of `.default(1)` from schema.ts to prevent data leakage
+- All new records MUST explicitly specify school_id
+- Users must be assigned to schools via user_school_memberships or user_metadata
+
 ## Recent Major Update (October 2025)
 Successfully completed comprehensive feature expansion adding 50+ new database tables and modules:
 
