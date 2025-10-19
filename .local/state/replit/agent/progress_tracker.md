@@ -914,6 +914,74 @@ The School Management System dashboard has been thoroughly audited across archit
 
 ---
 
+## ✅ OCTOBER 19, 2025 - DASHBOARD BUG FIX: Students Not Showing
+
+### Issue Reported:
+**Problem:** Dashboard displaying 0 students despite having 6 students in database (school_id = 1)
+- Teachers: 4 ✅ (working)
+- Books: 5 ✅ (working)
+- Inventory: 8 ✅ (working)  
+- Students: 0 ❌ (broken)
+
+### Diagnosis Process:
+1. ✅ Verified RLS policies identical for all tables
+2. ✅ Confirmed 6 students exist in database for school 1
+3. ✅ Added enhanced error logging to dashboard queries
+4. ✅ Discovered: `students` query returning error with empty message `{"message":""}`
+5. ✅ Checked table schema - **FOUND ROOT CAUSE**
+
+### Root Cause:
+**Dashboard query was filtering by non-existent column**
+```typescript
+// BROKEN CODE:
+const academicYearFilters = { 
+  school_id: 1, 
+  academic_year_id: 1133  // ❌ This column doesn't exist in students table!
+};
+supabase.from('students').select('*').match(academicYearFilters)
+```
+
+**Analysis:**
+- `students` table has **NO `academic_year_id` column** in schema
+- Query failed silently with empty error message
+- Other tables (teachers, books, inventory) don't use academic year filter, so they worked
+
+### Solution Implemented:
+✅ **Fixed dashboard query to only filter by `school_id`**
+```typescript
+// FIXED CODE:
+supabase.from('students').select('id', { count: 'exact', head: true })
+  .eq('school_id', schoolId)  // ✅ Only filter by school_id
+```
+
+### Files Modified:
+- `client/src/pages/responsive-dashboard.tsx` (Lines 127-133)
+  - Removed `academicYearFilters` logic with non-existent `academic_year_id`
+  - Simplified students query to match teachers/books/inventory pattern
+  - Cleaned up debug logging
+
+### Verification:
+✅ **Dashboard now shows correct stats:**
+```json
+{
+  "students": 6,    // ✅ FIXED! (was 0)
+  "teachers": 4,    // ✅ Still working
+  "books": 5,       // ✅ Still working
+  "inventory": 8    // ✅ Still working
+}
+```
+
+**Console logs confirm:** No errors, all queries successful
+
+### Key Learnings:
+1. **Schema validation critical** - Always verify column exists before filtering
+2. **Empty error messages** - Usually indicate schema mismatch or permission issues
+3. **Consistent patterns** - All count queries should use same filter approach
+
+**Dashboard students display FIXED on October 19, 2025**
+
+---
+
 ## ✅ MIGRATION COMPLETED - October 12, 2025
 
 [Previous content continues...]

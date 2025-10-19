@@ -121,18 +121,19 @@ export default function ResponsiveDashboard() {
       console.log('📊 Fetching dashboard stats with direct Supabase calls for academic year:', currentAcademicYear?.name);
       const schoolId = await getCurrentSchoolId();
       
-      // Build queries with academic year filtering
-      const baseFilters = { school_id: schoolId };
-      const academicYearFilters = currentAcademicYear?.id 
-        ? { ...baseFilters, academic_year_id: currentAcademicYear.id }
-        : baseFilters;
-      
+      // Build queries - students table doesn't have academic_year_id column
       const [studentsCount, teachersCount, booksCount, inventoryCount] = await Promise.all([
-        supabase.from('students').select('id', { count: 'exact', head: true }).match(academicYearFilters),
+        supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), // Students filtered by school only
         supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), // Teachers not year-specific
         supabase.from('library_books').select('id', { count: 'exact', head: true }).eq('school_id', schoolId), // Books not year-specific
         supabase.from('inventory_items').select('id', { count: 'exact', head: true }).eq('school_id', schoolId) // Inventory not year-specific
       ]);
+
+      // Log any errors
+      if (studentsCount.error) console.error('❌ Students query error:', studentsCount.error);
+      if (teachersCount.error) console.error('❌ Teachers query error:', teachersCount.error);
+      if (booksCount.error) console.error('❌ Books query error:', booksCount.error);
+      if (inventoryCount.error) console.error('❌ Inventory query error:', inventoryCount.error);
 
       return {
         students: studentsCount.count || 0,
