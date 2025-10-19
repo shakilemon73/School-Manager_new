@@ -5,6 +5,115 @@
 
 ---
 
+## ✅ OCTOBER 19, 2025 - POST-LOGIN DATA LOADING FIX
+
+### Issue Reported:
+**Problem:** After successful login, dashboard pages show loading states but never display data from Supabase
+
+### Root Cause Analysis:
+1. **Race Condition:** React Query cache was not fully initialized before redirect after login
+2. **Query Timing:** Dashboard queries were not refetching on mount, relying only on stale cache
+3. **Navigation Delay:** Immediate redirect prevented cache invalidation from completing
+
+### Solution Implemented:
+
+#### ✅ Fix 1: Enhanced Login Flow in auth-page.tsx
+**Changes Made:**
+1. ✅ Added `await signIn(...)` to ensure login completes before redirect
+2. ✅ Added `queryClient.clear()` to wipe any stale cache data
+3. ✅ Added **500ms delay** after cache clear to allow invalidation to complete
+4. ✅ Then navigate to dashboard
+
+**Code Pattern:**
+```typescript
+await signIn(email, password);  // ✅ Wait for login
+queryClient.clear();  // ✅ Clear stale cache
+await new Promise(resolve => setTimeout(resolve, 500));  // ✅ Allow cleanup
+navigate('/');  // ✅ Now navigate
+```
+
+#### ✅ Fix 2: Dashboard Query Configuration
+**File:** `client/src/pages/responsive-dashboard.tsx`
+
+**Changes Made:**
+1. ✅ Added `refetchOnMount: true` to all critical dashboard queries
+2. ✅ Added `staleTime: 5 * 60 * 1000` (5 minutes) for fresh data
+3. ✅ Ensures queries always refetch when dashboard mounts
+
+**Queries Updated:**
+- Total students count
+- Total teachers count
+- Total staff count
+- Students by class query
+- And all other dashboard data queries
+
+**Before (Unreliable):**
+```typescript
+const { data: students } = useQuery({
+  queryKey: ['/api/students']
+  // No refetchOnMount - relied on stale cache
+});
+```
+
+**After (Reliable):**
+```typescript
+const { data: students } = useQuery({
+  queryKey: ['/api/students'],
+  refetchOnMount: true,  // ✅ Always refetch on mount
+  staleTime: 5 * 60 * 1000  // ✅ Keep fresh for 5 minutes
+});
+```
+
+### ✅ Fix 3: Account Switching Cache Issue - Defense in Depth
+**File:** `client/src/hooks/use-supabase-direct-auth.tsx`
+
+**Problem:** When User A logs out and User B logs in, User B briefly sees User A's cached data
+
+**Solution:** Added `queryClient.clear()` to signOut function
+
+**Code Changes:**
+```typescript
+const signOut = async () => {
+  // ... Supabase signout ...
+  
+  // ✅ Clear all React Query cache to prevent showing previous user's data
+  console.log('🔄 Clearing query cache on logout');
+  queryClient.clear();
+  
+  setUser(null);
+  setSchoolId(null);
+};
+```
+
+**Defense-in-Depth Approach:**
+- Cache cleared on **login** (in auth-page.tsx)
+- Cache cleared on **logout** (in use-supabase-direct-auth.tsx)
+- Dashboard queries use `refetchOnMount: true`
+
+This ensures:
+1. No stale data from previous sessions
+2. No cached data leakage between users
+3. Fresh data always loads on dashboard mount
+
+### Verification:
+✅ Login flow: User logs in → cache cleared → 500ms delay → redirect → dashboard queries refetch → data displays
+✅ Logout flow: User logs out → cache cleared → no stale data for next user
+✅ Account switching: User A → logout (cache clear) → User B → login (cache clear) → fresh data
+
+### Architect Review:
+✅ **Login Fix:** "awaiting signIn and clearing QueryClient ensures fresh data load"
+✅ **Dashboard Fix:** "refetchOnMount on critical queries yields desired fresh load"
+✅ **Logout Fix:** "Clearing cache in signOut prevents stale tenant data leakage. Defense-in-depth approach is sound."
+
+### Files Modified:
+[x] `client/src/pages/auth-page.tsx` - Added await, cache clear, and delay before redirect
+[x] `client/src/pages/responsive-dashboard.tsx` - Added refetchOnMount and staleTime to queries
+[x] `client/src/hooks/use-supabase-direct-auth.tsx` - Added queryClient.clear() in signOut
+
+**Post-Login Data Loading Fix completed on October 19, 2025**
+
+---
+
 ## ✅ OCTOBER 19, 2025 - Re-installation of Dependencies (Session 1)
 
 ### Issue:
