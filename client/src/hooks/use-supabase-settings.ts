@@ -21,6 +21,7 @@ export function useSupabaseSettings() {
       console.log('🔧 Fetching school settings with direct Supabase calls for school:', userSchoolId);
       
       if (!userSchoolId) {
+        console.error('❌ User school ID not found');
         throw new Error('User school ID not found');
       }
       
@@ -31,10 +32,12 @@ export function useSupabaseSettings() {
         .single();
       
       if (error) {
-        console.error('School settings fetch error:', error);
+        console.error('❌ School settings fetch error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         throw error;
       }
       
+      console.log('✅ School settings fetched successfully:', data);
       return { data };
     },
     enabled: !!user && !!userSchoolId
@@ -299,6 +302,7 @@ export function useSupabaseSettings() {
       console.log('🔧 Fetching system stats with direct Supabase calls for school:', userSchoolId);
       
       if (!userSchoolId) {
+        console.error('❌ User school ID not found for stats');
         throw new Error('User school ID not found');
       }
       
@@ -308,6 +312,11 @@ export function useSupabaseSettings() {
         supabase.from('teachers').select('id', { count: 'exact', head: true }).eq('school_id', userSchoolId),
         supabase.from('backups').select('id', { count: 'exact', head: true }).eq('school_id', userSchoolId)
       ]);
+      
+      // Log any errors from the queries
+      if (studentsResult.error) console.error('❌ Students count error:', studentsResult.error);
+      if (teachersResult.error) console.error('❌ Teachers count error:', teachersResult.error);
+      if (backupsResult.error) console.error('❌ Backups count error:', backupsResult.error);
       
       return {
         stats: {
