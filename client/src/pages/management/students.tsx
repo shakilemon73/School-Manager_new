@@ -77,29 +77,29 @@ export default function StudentsPage() {
     dateOfBirth: '',
   });
 
-  // Fetch students via direct Supabase calls - filtered by current academic year
+  // Fetch students via direct Supabase calls - filtered by school only
+  // Note: students table does NOT have academic_year_id column
   const { data: studentsData = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['students', schoolId, currentAcademicYear?.id],
+    queryKey: ['students', schoolId],
     queryFn: async () => {
-      console.log('🎓 Fetching students with direct Supabase calls for school:', schoolId, 'academic year:', currentAcademicYear?.name);
+      console.log('🎓 Fetching students with direct Supabase calls for school:', schoolId);
       
-      // Build query with school_id and academic year filtering
-      let query = supabase
+      // Build query with school_id filtering only
+      const { data, error } = await supabase
         .from('students')
         .select('*')
-        .eq('school_id', schoolId);
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
       
-      // Add academic year filter if available
-      if (currentAcademicYear?.id) {
-        query = query.eq('academic_year_id', currentAcademicYear.id);
+      if (error) {
+        console.error('❌ Students query error:', error);
+        throw error;
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) throw error;
+      console.log('✅ Students fetched successfully:', data?.length || 0, 'students');
       return data || [];
     },
-    enabled: !academicYearLoading, // Only fetch when academic year is loaded
+    enabled: !!schoolId, // Only fetch when school ID is available
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
