@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { Link } from 'wouter';
 import { LanguageText } from '@/components/ui/language-text';
 import { useState } from 'react';
+import { useNavigationCounts } from '@/hooks/use-navigation-counts';
 import { 
   Home, 
   Users, 
@@ -23,7 +24,28 @@ import {
   Shield,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  ClipboardCheck,
+  Wallet,
+  Megaphone,
+  MessageSquare,
+  Trophy,
+  AlertTriangle,
+  Heart,
+  Syringe,
+  Activity,
+  ShieldCheck,
+  BarChart,
+  Building2,
+  Utensils,
+  BedDouble,
+  ClipboardList,
+  UserCog,
+  Truck,
+  ShoppingCart,
+  Award,
+  Globe,
+  Key
 } from 'lucide-react';
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 
@@ -49,6 +71,7 @@ export function MobileNav() {
   const [location] = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user } = useSupabaseDirectAuth();
+  const { counts } = useNavigationCounts();
 
   const isActive = (path: string) => {
     if (path === '/' && location === '/') return true;
@@ -68,7 +91,37 @@ export function MobileNav() {
       items: [
         { path: "/", icon: Home, textEn: "Dashboard", textBn: "ড্যাশবোর্ড", textAr: "لوحة التحكم", badge: null },
         { path: "/calendar", icon: Calendar, textEn: "Calendar", textBn: "ক্যালেন্ডার", textAr: "التقويم", badge: null },
-        { path: "/notifications", icon: Bell, textEn: "Notifications", textBn: "নোটিফিকেশন", textAr: "الإشعارات", badge: 3 }
+        { path: "/notifications", icon: Bell, textEn: "Notifications", textBn: "নোটিফিকেশন", textAr: "الإشعارات", badge: counts.notifications || null }
+      ]
+    },
+    {
+      id: "academic",
+      titleEn: "Academic Management",
+      titleBn: "একাডেমিক ব্যবস্থাপনা",
+      titleAr: "الإدارة الأكاديمية",
+      icon: GraduationCap,
+      color: "purple",
+      items: [
+        { path: "/academic/subjects", icon: BookOpen, textEn: "Subjects", textBn: "বিষয়সমূহ", textAr: "المواد", badge: null },
+        { path: "/academic/gradebook", icon: ClipboardList, textEn: "Gradebook", textBn: "গ্রেডবুক", textAr: "سجل الدرجات", badge: null },
+        { path: "/academic/results-management", icon: Award, textEn: "Results Management", textBn: "ফলাফল ব্যবস্থাপনা", textAr: "إدارة النتائج", badge: null },
+        { path: "/academic/attendance-management", icon: UserCheck, textEn: "Attendance Management", textBn: "উপস্থিতি ব্যবস্থাপনা", textAr: "إدارة الحضور", badge: null },
+        { path: "/academic/assignments", icon: FileText, textEn: "Assignments", textBn: "অ্যাসাইনমেন্ট", textAr: "الواجبات", badge: null },
+        { path: "/academic/timetable", icon: Calendar, textEn: "Timetable", textBn: "সময়সূচী", textAr: "الجدول", badge: null }
+      ]
+    },
+    {
+      id: "exam-management",
+      titleEn: "Exam Management",
+      titleBn: "পরীক্ষা ব্যবস্থাপনা",
+      titleAr: "إدارة الامتحانات",
+      icon: ClipboardCheck,
+      color: "violet",
+      items: [
+        { path: "/exam-management/scheduling", icon: Calendar, textEn: "Exam Scheduling", textBn: "পরীক্ষার সময়সূচী", textAr: "جدولة الامتحانات", badge: null },
+        { path: "/exam-management/seating-arrangements", icon: Users, textEn: "Seating Arrangements", textBn: "আসন বিন্যাস", textAr: "ترتيب المقاعد", badge: null },
+        { path: "/exam-management/invigilation-duties", icon: ShieldCheck, textEn: "Invigilation Duties", textBn: "তত্ত্বাবধান দায়িত্ব", textAr: "واجبات المراقبة", badge: null },
+        { path: "/exam-management/public-portal-settings", icon: Globe, textEn: "Public Portal Settings", textBn: "পাবলিক পোর্টাল সেটিংস", textAr: "إعدادات البوابة العامة", badge: null }
       ]
     },
     {
@@ -79,10 +132,11 @@ export function MobileNav() {
       icon: Users,
       color: "green",
       items: [
-        { path: "/management/students", icon: GraduationCap, textEn: "Students", textBn: "শিক্ষার্থী", textAr: "الطلاب", badge: 245 },
-        { path: "/management/teachers", icon: UserCheck, textEn: "Teachers", textBn: "শিক্ষক", textAr: "المعلمون", badge: 18 },
-        { path: "/management/staff", icon: Briefcase, textEn: "Staff", textBn: "কর্মচারী", textAr: "الموظفون", badge: 12 },
-        { path: "/management/parents", icon: Users2, textEn: "Parents", textBn: "অভিভাবক", textAr: "أولياء الأمور", badge: null }
+        { path: "/management/students", icon: GraduationCap, textEn: "Students", textBn: "শিক্ষার্থী", textAr: "الطلاب", badge: counts.students || null },
+        { path: "/management/teachers", icon: UserCheck, textEn: "Teachers", textBn: "শিক্ষক", textAr: "المعلمون", badge: counts.teachers || null },
+        { path: "/management/staff", icon: Briefcase, textEn: "Staff", textBn: "কর্মচারী", textAr: "الموظفون", badge: counts.staff || null },
+        { path: "/management/parents", icon: Users2, textEn: "Parents", textBn: "অভিভাবক", textAr: "أولياء الأمور", badge: counts.parents || null },
+        { path: "/portal-users", icon: Key, textEn: "Portal Users", textBn: "পোর্টাল ইউজার", textAr: "مستخدمي البوابة", badge: null }
       ]
     },
     {
@@ -113,8 +167,11 @@ export function MobileNav() {
       icon: Package,
       color: "teal",
       items: [
-        { path: "/management/library", icon: BookOpen, textEn: "Library", textBn: "লাইব্রেরী", textAr: "المكتبة", badge: 5 },
-        { path: "/management/inventory", icon: Package, textEn: "Inventory", textBn: "ইনভেন্টরি", textAr: "المخزون", badge: 8 },
+        { path: "/management/library", icon: BookOpen, textEn: "Library", textBn: "লাইব্রেরী", textAr: "المكتبة", badge: counts.library_books || null },
+        { path: "/management/inventory", icon: Package, textEn: "Inventory", textBn: "ইনভেন্টরি", textAr: "المخزون", badge: counts.inventory_items || null },
+        { path: "/inventory/vendors", icon: Truck, textEn: "Vendors", textBn: "সরবরাহকারী", textAr: "الموردون", badge: null },
+        { path: "/inventory/purchase-orders", icon: ShoppingCart, textEn: "Purchase Orders", textBn: "ক্রয় আদেশ", textAr: "أوامر الشراء", badge: null },
+        { path: "/inventory/stock-alerts", icon: Bell, textEn: "Stock Alerts", textBn: "স্টক সতর্কতা", textAr: "تنبيهات المخزون", badge: null },
         { path: "/management/transport", icon: Bus, textEn: "Transport", textBn: "ট্রান্সপোর্ট", textAr: "النقل", badge: null }
       ]
     },
@@ -139,6 +196,87 @@ export function MobileNav() {
       items: []
     },
     {
+      id: "hr",
+      titleEn: "HR & Staff",
+      titleBn: "এইচআর ও কর্মীবৃন্দ",
+      titleAr: "الموارد البشرية",
+      icon: Briefcase,
+      color: "indigo",
+      items: [
+        { path: "/hr/leave-management", icon: Calendar, textEn: "Leave Management", textBn: "ছুটি ব্যবস্থাপনা", textAr: "إدارة الإجازات", badge: null },
+        { path: "/hr/staff-attendance", icon: ClipboardCheck, textEn: "Staff Attendance", textBn: "কর্মচারী উপস্থিতি", textAr: "حضور الموظفين", badge: null },
+        { path: "/hr/payroll", icon: Wallet, textEn: "Payroll System", textBn: "বেতন ব্যবস্থা", textAr: "نظام الرواتب", badge: null },
+        { path: "/hr/performance-appraisal", icon: UserCog, textEn: "Performance Appraisal", textBn: "কর্মক্ষমতা মূল্যায়ন", textAr: "تقييم الأداء", badge: null }
+      ]
+    },
+    {
+      id: "communication",
+      titleEn: "Communication",
+      titleBn: "যোগাযোগ",
+      titleAr: "الاتصالات",
+      icon: MessageSquare,
+      color: "blue",
+      items: [
+        { path: "/communication/announcements", icon: Megaphone, textEn: "Announcements", textBn: "ঘোষণা", textAr: "الإعلانات", badge: null },
+        { path: "/communication/notifications", icon: Bell, textEn: "Notifications", textBn: "বিজ্ঞপ্তি", textAr: "الإشعارات", badge: null },
+        { path: "/communication/messaging", icon: MessageSquare, textEn: "Parent-Teacher Messaging", textBn: "অভিভাবক-শিক্ষক বার্তা", textAr: "رسائل أولياء الأمور والمعلمين", badge: null }
+      ]
+    },
+    {
+      id: "student-welfare",
+      titleEn: "Student Welfare",
+      titleBn: "শিক্ষার্থী কল্যাণ",
+      titleAr: "رعاية الطلاب",
+      icon: Trophy,
+      color: "rose",
+      items: [
+        { path: "/student-welfare/activities", icon: Trophy, textEn: "Co-curricular Activities", textBn: "সহশিক্ষা কার্যক্রম", textAr: "الأنشطة اللامنهجية", badge: null },
+        { path: "/student-welfare/disciplinary", icon: AlertTriangle, textEn: "Disciplinary Records", textBn: "শৃঙ্খলা রেকর্ড", textAr: "السجلات التأديبية", badge: null },
+        { path: "/student-welfare/health", icon: Heart, textEn: "Health Records", textBn: "স্বাস্থ্য রেকর্ড", textAr: "السجلات الصحية", badge: null },
+        { path: "/student-welfare/medical-checkups", icon: Activity, textEn: "Medical Checkups", textBn: "চিকিৎসা পরীক্ষা", textAr: "الفحوصات الطبية", badge: null },
+        { path: "/student-welfare/vaccinations", icon: Syringe, textEn: "Vaccinations", textBn: "টিকাকরণ", textAr: "التطعيمات", badge: null }
+      ]
+    },
+    {
+      id: "reports",
+      titleEn: "Reports & Analytics",
+      titleBn: "রিপোর্ট ও বিশ্লেষণ",
+      titleAr: "التقارير والتحليلات",
+      icon: BarChart,
+      color: "yellow",
+      items: [
+        { path: "/reports", icon: BarChart, textEn: "Reports Dashboard", textBn: "রিপোর্ট ড্যাশবোর্ড", textAr: "لوحة التقارير", badge: null },
+        { path: "/reports/custom-builder", icon: ClipboardList, textEn: "Custom Report Builder", textBn: "কাস্টম রিপোর্ট তৈরি", textAr: "منشئ التقارير المخصص", badge: null }
+      ]
+    },
+    {
+      id: "hostel",
+      titleEn: "Hostel Management",
+      titleBn: "হোস্টেল ব্যবস্থাপনা",
+      titleAr: "إدارة السكن",
+      icon: Home,
+      color: "pink",
+      items: [
+        { path: "/hostel", icon: Building2, textEn: "Hostel Overview", textBn: "হোস্টেল ওভারভিউ", textAr: "نظرة عامة على السكن", badge: null },
+        { path: "/hostel/rooms", icon: BedDouble, textEn: "Room Management", textBn: "রুম ব্যবস্থাপনা", textAr: "إدارة الغرف", badge: null },
+        { path: "/hostel/meals", icon: Utensils, textEn: "Meal Management", textBn: "খাবার ব্যবস্থাপনা", textAr: "إدارة الوجبات", badge: null },
+        { path: "/hostel/attendance", icon: ClipboardCheck, textEn: "Hostel Attendance", textBn: "হোস্টেল উপস্থিতি", textAr: "حضور السكن", badge: null }
+      ]
+    },
+    {
+      id: "admission",
+      titleEn: "Admission Portal",
+      titleBn: "ভর্তি পোর্টাল",
+      titleAr: "بوابة القبول",
+      icon: Users,
+      color: "cyan",
+      items: [
+        { path: "/admission", icon: FileText, textEn: "Admission Portal", textBn: "ভর্তি পোর্টাল", textAr: "بوابة القبول", badge: null },
+        { path: "/admission/tests", icon: ClipboardList, textEn: "Admission Tests", textBn: "ভর্তি পরীক্ষা", textAr: "اختبارات القبول", badge: null },
+        { path: "/admission/interviews", icon: Users2, textEn: "Interviews", textBn: "সাক্ষাৎকার", textAr: "المقابلات", badge: null }
+      ]
+    },
+    {
       id: "settings",
       titleEn: "System Settings",
       titleBn: "সিস্টেম সেটিংস",
@@ -159,10 +297,17 @@ export function MobileNav() {
       blue: active ? 'bg-blue-50 text-blue-700 border-blue-200' : 'hover:bg-blue-50 hover:text-blue-700',
       green: active ? 'bg-green-50 text-green-700 border-green-200' : 'hover:bg-green-50 hover:text-green-700',
       purple: active ? 'bg-purple-50 text-purple-700 border-purple-200' : 'hover:bg-purple-50 hover:text-purple-700',
+      violet: active ? 'bg-violet-50 text-violet-700 border-violet-200' : 'hover:bg-violet-50 hover:text-violet-700',
       orange: active ? 'bg-orange-50 text-orange-700 border-orange-200' : 'hover:bg-orange-50 hover:text-orange-700',
       teal: active ? 'bg-teal-50 text-teal-700 border-teal-200' : 'hover:bg-teal-50 hover:text-teal-700',
       slate: active ? 'bg-slate-50 text-slate-700 border-slate-200' : 'hover:bg-slate-50 hover:text-slate-700',
-      gray: active ? 'bg-gray-50 text-gray-700 border-gray-200' : 'hover:bg-gray-50 hover:text-gray-700'
+      gray: active ? 'bg-gray-50 text-gray-700 border-gray-200' : 'hover:bg-gray-50 hover:text-gray-700',
+      emerald: active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'hover:bg-emerald-50 hover:text-emerald-700',
+      indigo: active ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'hover:bg-indigo-50 hover:text-indigo-700',
+      rose: active ? 'bg-rose-50 text-rose-700 border-rose-200' : 'hover:bg-rose-50 hover:text-rose-700',
+      cyan: active ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'hover:bg-cyan-50 hover:text-cyan-700',
+      yellow: active ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'hover:bg-yellow-50 hover:text-yellow-700',
+      pink: active ? 'bg-pink-50 text-pink-700 border-pink-200' : 'hover:bg-pink-50 hover:text-pink-700'
     };
     return colors[color as keyof typeof colors] || colors.blue;
   };

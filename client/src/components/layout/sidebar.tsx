@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { LanguageText } from '@/components/ui/language-text';
 import { useUXNav } from '@/hooks/use-design-system';
+import { useNavigationCounts } from '@/hooks/use-navigation-counts';
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -58,16 +59,55 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user } = useSupabaseDirectAuth();
   const navRef = useUXNav();
+  const { counts } = useNavigationCounts();
+  const sidebarRef = useRef<HTMLElement>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['dashboard', 'people']));
   const [searchTerm, setSearchTerm] = useState('');
   const [recentlyUsed, setRecentlyUsed] = useState<string[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const scrollPositionRef = useRef<number>(0);
 
   // Track navigation usage for recent items
   useEffect(() => {
     if (location !== '/') {
       const newRecent = [location, ...recentlyUsed.filter(path => path !== location)].slice(0, 3);
       setRecentlyUsed(newRecent);
+    }
+  }, [location]);
+
+  // Save scroll position continuously
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+
+    const handleScroll = () => {
+      scrollPositionRef.current = sidebar.scrollTop;
+    };
+
+    sidebar.addEventListener('scroll', handleScroll, { passive: true });
+    return () => sidebar.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Auto-expand groups that contain the active menu item and restore scroll
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    
+    navGroups.forEach((group) => {
+      if (group.items.length > 0) {
+        const hasActiveItem = group.items.some(item => isActive(item.path));
+        if (hasActiveItem && !expandedGroups.has(group.id)) {
+          setExpandedGroups(prev => new Set([...prev, group.id]));
+        }
+      }
+    });
+
+    // Restore scroll position using requestAnimationFrame for perfect timing
+    if (sidebar && scrollPositionRef.current > 0) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          sidebar.scrollTop = scrollPositionRef.current;
+        });
+      });
     }
   }, [location]);
 
@@ -112,6 +152,19 @@ export function Sidebar() {
     setExpandedGroups(newExpanded);
   };
 
+  // Prevent scroll-to-view behavior when clicking links
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // Save current scroll position before navigation
+    if (sidebarRef.current) {
+      scrollPositionRef.current = sidebarRef.current.scrollTop;
+    }
+    
+    // Blur the link after click to prevent focus-related scrolling
+    setTimeout(() => {
+      (e.currentTarget as HTMLAnchorElement).blur();
+    }, 0);
+  };
+
   // Enhanced navigation structure following UX principles
   const navGroups = [
     {
@@ -125,7 +178,7 @@ export function Sidebar() {
       items: [
         { path: "/", icon: Home, textEn: "Dashboard", textBn: "ড্যাশবোর্ড", textAr: "لوحة التحكم", badge: null, shortcut: "⌘1" },
         { path: "/calendar", icon: Calendar, textEn: "Calendar", textBn: "ক্যালেন্ডার", textAr: "التقويم", badge: null },
-        { path: "/notifications", icon: Bell, textEn: "Notifications", textBn: "নোটিফিকেশন", textAr: "الإشعارات", badge: 3 }
+        { path: "/notifications", icon: Bell, textEn: "Notifications", textBn: "নোটিফিকেশন", textAr: "الإشعارات", badge: counts.notifications || null }
       ]
     },
     {
@@ -169,10 +222,10 @@ export function Sidebar() {
       priority: "high",
       color: "green",
       items: [
-        { path: "/management/students", icon: GraduationCap, textEn: "Students", textBn: "শিক্ষার্থী", textAr: "الطلاب", badge: 245 },
-        { path: "/management/teachers", icon: UserCheck, textEn: "Teachers", textBn: "শিক্ষক", textAr: "المعلمون", badge: 18 },
-        { path: "/management/staff", icon: Briefcase, textEn: "Staff", textBn: "কর্মচারী", textAr: "الموظفون", badge: 12 },
-        { path: "/management/parents", icon: Users2, textEn: "Parents", textBn: "অভিভাবক", textAr: "أولياء الأمور", badge: null },
+        { path: "/management/students", icon: GraduationCap, textEn: "Students", textBn: "শিক্ষার্থী", textAr: "الطلاب", badge: counts.students || null },
+        { path: "/management/teachers", icon: UserCheck, textEn: "Teachers", textBn: "শিক্ষক", textAr: "المعلمون", badge: counts.teachers || null },
+        { path: "/management/staff", icon: Briefcase, textEn: "Staff", textBn: "কর্মচারী", textAr: "الموظفون", badge: counts.staff || null },
+        { path: "/management/parents", icon: Users2, textEn: "Parents", textBn: "অভিভাবক", textAr: "أولياء الأمور", badge: counts.parents || null },
         { path: "/portal-users", icon: Key, textEn: "Portal Users", textBn: "পোর্টাল ইউজার", textAr: "مستخدمي البوابة", badge: null }
       ]
     },
@@ -207,8 +260,8 @@ export function Sidebar() {
       priority: "medium",
       color: "teal",
       items: [
-        { path: "/management/library", icon: BookOpen, textEn: "Library", textBn: "লাইব্রেরী", textAr: "المكتبة", badge: 5 },
-        { path: "/management/inventory", icon: Package, textEn: "Inventory", textBn: "ইনভেন্টরি", textAr: "المخزون", badge: 8 },
+        { path: "/management/library", icon: BookOpen, textEn: "Library", textBn: "লাইব্রেরী", textAr: "المكتبة", badge: counts.library_books || null },
+        { path: "/management/inventory", icon: Package, textEn: "Inventory", textBn: "ইনভেন্টরি", textAr: "المخزون", badge: counts.inventory_items || null },
         { path: "/inventory/vendors", icon: Truck, textEn: "Vendors", textBn: "সরবরাহকারী", textAr: "الموردون", badge: null },
         { path: "/inventory/purchase-orders", icon: ShoppingCart, textEn: "Purchase Orders", textBn: "ক্রয় আদেশ", textAr: "أوامر الشراء", badge: null },
         { path: "/inventory/stock-alerts", icon: Bell, textEn: "Stock Alerts", textBn: "স্টক সতর্কতা", textAr: "تنبيهات المخزون", badge: null },
@@ -377,8 +430,9 @@ export function Sidebar() {
 
   return (
     <aside 
-      ref={navRef}
+      ref={sidebarRef}
       className="w-72 bg-white border-r border-gray-200 hidden md:block overflow-y-auto h-screen"
+      style={{ overflowAnchor: 'none' }}
       role="navigation"
       aria-label="Main navigation"
     >
@@ -430,6 +484,7 @@ export function Sidebar() {
         <div className="grid grid-cols-2 gap-2">
           <Link
             href="/"
+            onClick={handleLinkClick}
             className={cn(
               "flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200 group",
               isActive("/") 
@@ -444,6 +499,7 @@ export function Sidebar() {
           </Link>
           <Link
             href="/documents"
+            onClick={handleLinkClick}
             className={cn(
               "flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200 group",
               isActive("/documents") 
@@ -478,6 +534,7 @@ export function Sidebar() {
                 <Link
                   key={index}
                   href={path}
+                  onClick={handleLinkClick}
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <IconComponent className="w-4 h-4 text-gray-500" />
@@ -502,6 +559,7 @@ export function Sidebar() {
             {group.directLink ? (
               <Link
                 href={group.directLink}
+                onClick={handleLinkClick}
                 data-testid={`link-${group.id}`}
                 className={cn(
                   "w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 group",
@@ -569,7 +627,9 @@ export function Sidebar() {
                         <Link
                           key={item.path}
                           href={item.path}
+                          onClick={handleLinkClick}
                           data-testid={`link-${pageName}`}
+                          data-active={isActive(item.path)}
                           className={cn(
                             "flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 group",
                             isActive(item.path)

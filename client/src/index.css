@@ -7,6 +7,15 @@
   --primary-color-dark: #0e8541;
 }
 
+/* Prevent scroll jumping on navigation */
+* {
+  scroll-behavior: auto !important;
+}
+
+aside, main {
+  overflow-anchor: none !important;
+}
+
 /* Hide scrollbars for mobile experience */
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {

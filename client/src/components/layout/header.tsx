@@ -1,11 +1,15 @@
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useSchoolBranding, useCurrentAcademicYear } from '@/hooks/use-school-context';
+import { useNavigationCounts } from '@/hooks/use-navigation-counts';
 import { LanguageSelector } from './language-selector';
 import Logo from '@/components/ui/logo';
 import { Button } from '@/components/ui/button';
 import { useMobile } from '@/hooks/use-mobile';
 import { SearchInput } from '@/components/ui/search-input';
 import { LanguageText } from '@/components/ui/language-text';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { Link } from 'wouter';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,10 +19,32 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export function Header() {
-  const { user, signOut, loading } = useSupabaseDirectAuth();
+  const { user, signOut, loading, schoolId, authReady } = useSupabaseDirectAuth();
   const { schoolName, schoolNameBn, schoolLogo, schoolColors } = useSchoolBranding();
   const { currentAcademicYear } = useCurrentAcademicYear();
+  const { counts } = useNavigationCounts();
   const isMobile = useMobile();
+
+  // Fetch real notifications from database
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['header-notifications', schoolId],
+    queryFn: async () => {
+      if (!schoolId) return [];
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .eq('is_read', false)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      return data || [];
+    },
+    enabled: authReady && !!schoolId,
+    staleTime: 60 * 1000, // 1 minute
+  });
+
+  const unreadCount = notifications.length;
 
   const handleLogout = async () => {
     try {
@@ -112,21 +138,24 @@ export function Header() {
             
             {/* Quick action buttons */}
             <div className="flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="flex items-center gap-2 text-slate-600 hover:text-primary hover:bg-primary/5 rounded-lg px-3 py-2"
-                title="Quick document generation"
-              >
-                <span className="material-icons text-base">add_circle_outline</span>
-                <span className="hidden lg:inline text-sm font-medium">
-                  <LanguageText
-                    en="New Document"
-                    bn="নতুন ডকুমেন্ট"
-                    ar="مستند جديد"
-                  />
-                </span>
-              </Button>
+              <Link href="/admin/documents">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="flex items-center gap-2 text-slate-600 hover:text-primary hover:bg-primary/5 rounded-lg px-3 py-2"
+                  title="Quick document generation"
+                  data-testid="button-new-document"
+                >
+                  <span className="material-icons text-base">add_circle_outline</span>
+                  <span className="hidden lg:inline text-sm font-medium">
+                    <LanguageText
+                      en="New Document"
+                      bn="নতুন ডকুমেন্ট"
+                      ar="مستند جديد"
+                    />
+                  </span>
+                </Button>
+              </Link>
             </div>
           </div>
         )}
@@ -154,39 +183,47 @@ export function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem>
-                  <span className="material-icons text-base mr-3">description</span>
-                  <LanguageText
-                    en="New Document"
-                    bn="নতুন ডকুমেন্ট"
-                    ar="مستند جديد"
-                  />
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span className="material-icons text-base mr-3">people</span>
-                  <LanguageText
-                    en="Add Student"
-                    bn="শিক্ষার্থী যোগ"
-                    ar="إضافة طالب"
-                  />
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span className="material-icons text-base mr-3">school</span>
-                  <LanguageText
-                    en="Add Teacher"
-                    bn="শিক্ষক যোগ"
-                    ar="إضافة معلم"
-                  />
-                </DropdownMenuItem>
+                <Link href="/admin/documents">
+                  <DropdownMenuItem data-testid="menu-new-document">
+                    <span className="material-icons text-base mr-3">description</span>
+                    <LanguageText
+                      en="New Document"
+                      bn="নতুন ডকুমেন্ট"
+                      ar="مستند جديد"
+                    />
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/students">
+                  <DropdownMenuItem data-testid="menu-add-student">
+                    <span className="material-icons text-base mr-3">people</span>
+                    <LanguageText
+                      en="Add Student"
+                      bn="শিক্ষার্থী যোগ"
+                      ar="إضافة طالب"
+                    />
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/teachers">
+                  <DropdownMenuItem data-testid="menu-add-teacher">
+                    <span className="material-icons text-base mr-3">school</span>
+                    <LanguageText
+                      en="Add Teacher"
+                      bn="শিক্ষক যোগ"
+                      ar="إضافة معلم"
+                    />
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <span className="material-icons text-base mr-3">event</span>
-                  <LanguageText
-                    en="Calendar Event"
-                    bn="ক্যালেন্ডার ইভেন্ট"
-                    ar="حدث التقويم"
-                  />
-                </DropdownMenuItem>
+                <Link href="/calendar">
+                  <DropdownMenuItem data-testid="menu-calendar-event">
+                    <span className="material-icons text-base mr-3">event</span>
+                    <LanguageText
+                      en="Calendar Event"
+                      bn="ক্যালেন্ডার ইভেন্ট"
+                      ar="حدث التقويم"
+                    />
+                  </DropdownMenuItem>
+                </Link>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -216,15 +253,19 @@ export function Header() {
                 variant="ghost" 
                 size="icon"
                 className="relative rounded-lg h-10 w-10 hover:bg-slate-100/80 border border-transparent hover:border-slate-200/60 transition-all duration-200"
-                aria-label="Notifications (3 unread)"
+                aria-label={`Notifications (${unreadCount} unread)`}
+                data-testid="button-notifications"
               >
                 <span className="material-icons text-slate-600" aria-hidden="true">notifications</span>
-                <span 
-                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white shadow-sm"
-                  aria-label="3 unread notifications"
-                >
-                  3
-                </span>
+                {unreadCount > 0 && (
+                  <span 
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                    aria-label={`${unreadCount} unread notifications`}
+                    data-testid="text-notification-count"
+                  >
+                    {unreadCount}
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-96 shadow-lg border border-slate-200/80">
@@ -237,71 +278,106 @@ export function Header() {
                       ar="الإشعارات"
                     />
                   </h3>
-                  <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium">3</span>
+                  {unreadCount > 0 && (
+                    <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium">
+                      {unreadCount}
+                    </span>
+                  )}
                 </div>
-                <Button variant="ghost" size="sm" className="text-primary text-xs hover:bg-primary/5">
-                  <LanguageText
-                    en="Mark All Read"
-                    bn="সব পড়া হয়েছে"
-                    ar="تحديد الكل كمقروء"
-                  />
-                </Button>
+                {unreadCount > 0 && (
+                  <Button variant="ghost" size="sm" className="text-primary text-xs hover:bg-primary/5" data-testid="button-mark-all-read">
+                    <LanguageText
+                      en="Mark All Read"
+                      bn="সব পড়া হয়েছে"
+                      ar="تحديد الكل كمقروء"
+                    />
+                  </Button>
+                )}
               </div>
               <div className="max-h-80 overflow-y-auto">
-                <div className="px-4 py-3 hover:bg-slate-50/80 border-l-4 border-l-blue-400 bg-blue-50/30 transition-colors">
-                  <div className="flex gap-3">
-                    <div className="mt-0.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg h-10 w-10 flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <span className="material-icons text-sm">assignment</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">অর্ধ-বার্ষিক পরীক্ষা নোটিশ</p>
-                      <p className="text-xs text-slate-600 mt-0.5">পরীক্ষার রুটিন প্রকাশিত হয়েছে এবং সকল শিক্ষার্থীদের জানানো হচ্ছে</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-slate-500 font-medium">১ ঘন্টা আগে</span>
-                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span className="text-xs text-blue-600 font-medium">নতুন</span>
+                {notifications.length > 0 ? (
+                  notifications.map((notification, index) => {
+                    const getNotificationIcon = (type: string) => {
+                      switch (type) {
+                        case 'exam': return 'assignment';
+                        case 'fee': return 'receipt';
+                        case 'admission': return 'group';
+                        case 'event': return 'event';
+                        default: return 'notifications';
+                      }
+                    };
+                    
+                    const getNotificationColor = (priority: string) => {
+                      switch (priority) {
+                        case 'high': return 'blue';
+                        case 'urgent': return 'red';
+                        case 'medium': return 'green';
+                        default: return 'slate';
+                      }
+                    };
+                    
+                    const color = getNotificationColor(notification.priority || 'medium');
+                    const icon = getNotificationIcon(notification.type || 'info');
+                    
+                    return (
+                      <div 
+                        key={notification.id} 
+                        className={`px-4 py-3 hover:bg-slate-50/80 ${index === 0 ? `border-l-4 border-l-${color}-400 bg-${color}-50/30` : ''} transition-colors`}
+                        data-testid={`notification-${notification.id}`}
+                      >
+                        <div className="flex gap-3">
+                          <div className={`mt-0.5 bg-gradient-to-br from-${color}-500 to-${color}-600 text-white rounded-lg h-10 w-10 flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                            <span className="material-icons text-sm">{icon}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 truncate">
+                              {notification.title_bn || notification.title}
+                            </p>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                              {notification.message_bn || notification.message}
+                            </p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-xs text-slate-500 font-medium">
+                                {new Date(notification.created_at).toLocaleDateString('bn-BD')}
+                              </span>
+                              {index === 0 && (
+                                <>
+                                  <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                  <span className={`text-xs text-${color}-600 font-medium`}>
+                                    <LanguageText en="New" bn="নতুন" ar="جديد" />
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })
+                ) : (
+                  <div className="px-4 py-8 text-center">
+                    <span className="material-icons text-4xl text-slate-300">notifications_none</span>
+                    <p className="text-sm text-slate-500 mt-2">
+                      <LanguageText
+                        en="No new notifications"
+                        bn="কোন নতুন নোটিফিকেশন নেই"
+                        ar="لا توجد إشعارات جديدة"
+                      />
+                    </p>
                   </div>
-                </div>
-                <div className="px-4 py-3 hover:bg-slate-50/80 border-l-4 border-l-green-400 bg-green-50/30 transition-colors">
-                  <div className="flex gap-3">
-                    <div className="mt-0.5 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg h-10 w-10 flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <span className="material-icons text-sm">receipt</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">ফি প্রদান নোটিশ</p>
-                      <p className="text-xs text-slate-600 mt-0.5">মে মাসের ফি প্রদানের শেষ তারিখ আগামীকাল</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-slate-500 font-medium">৩ ঘন্টা আগে</span>
-                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span className="text-xs text-orange-600 font-medium">জরুরি</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="px-4 py-3 hover:bg-slate-50/80 transition-colors">
-                  <div className="flex gap-3">
-                    <div className="mt-0.5 bg-slate-100 text-slate-600 rounded-lg h-10 w-10 flex items-center justify-center flex-shrink-0">
-                      <span className="material-icons text-sm">group</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">নতুন শিক্ষার্থী নিবন্ধন</p>
-                      <p className="text-xs text-slate-600 mt-0.5">৫ জন নতুন শিক্ষার্থী আজ ভর্তি হয়েছে</p>
-                      <span className="text-xs text-slate-500 font-medium mt-2 inline-block">৬ ঘন্টা আগে</span>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
               <div className="border-t border-slate-200/60 p-3 bg-slate-50/50">
-                <Button variant="ghost" size="sm" className="w-full justify-center text-primary hover:bg-primary/5 font-medium">
-                  <span className="material-icons text-base mr-2">visibility</span>
-                  <LanguageText
-                    en="View All Notifications"
-                    bn="সকল নোটিফিকেশন দেখুন"
-                    ar="عرض جميع الإشعارات"
-                  />
-                </Button>
+                <Link href="/notifications">
+                  <Button variant="ghost" size="sm" className="w-full justify-center text-primary hover:bg-primary/5 font-medium" data-testid="button-view-all-notifications">
+                    <span className="material-icons text-base mr-2">visibility</span>
+                    <LanguageText
+                      en="View All Notifications"
+                      bn="সকল নোটিফিকেশন দেখুন"
+                      ar="عرض جميع الإشعارات"
+                    />
+                  </Button>
+                </Link>
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -372,29 +448,33 @@ export function Header() {
                     </div>
                   </div>
 
-                  {/* Quick stats */}
+                  {/* Quick stats with real data */}
                   <div className="px-4 py-3 border-b border-slate-200/60">
                     <div className="grid grid-cols-2 gap-3 text-center">
-                      <div className="bg-blue-50/80 rounded-lg py-2 px-3">
-                        <div className="text-lg font-bold text-blue-600">245</div>
-                        <div className="text-xs text-blue-700 font-medium">
-                          <LanguageText
-                            en="Students"
-                            bn="শিক্ষার্থী"
-                            ar="الطلاب"
-                          />
+                      <Link href="/students">
+                        <div className="bg-blue-50/80 rounded-lg py-2 px-3 cursor-pointer hover:bg-blue-100/80 transition-colors" data-testid="stat-students">
+                          <div className="text-lg font-bold text-blue-600">{counts.students || 0}</div>
+                          <div className="text-xs text-blue-700 font-medium">
+                            <LanguageText
+                              en="Students"
+                              bn="শিক্ষার্থী"
+                              ar="الطلاب"
+                            />
+                          </div>
                         </div>
-                      </div>
-                      <div className="bg-green-50/80 rounded-lg py-2 px-3">
-                        <div className="text-lg font-bold text-green-600">18</div>
-                        <div className="text-xs text-green-700 font-medium">
-                          <LanguageText
-                            en="Teachers"
-                            bn="শিক্ষক"
-                            ar="المعلمون"
-                          />
+                      </Link>
+                      <Link href="/teachers">
+                        <div className="bg-green-50/80 rounded-lg py-2 px-3 cursor-pointer hover:bg-green-100/80 transition-colors" data-testid="stat-teachers">
+                          <div className="text-lg font-bold text-green-600">{counts.teachers || 0}</div>
+                          <div className="text-xs text-green-700 font-medium">
+                            <LanguageText
+                              en="Teachers"
+                              bn="শিক্ষক"
+                              ar="المعلمون"
+                            />
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     </div>
                   </div>
 
