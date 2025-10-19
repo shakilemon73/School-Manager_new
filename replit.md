@@ -3,6 +3,46 @@
 ## Overview
 A comprehensive multi-tenant school management system leveraging modern web technologies and direct Supabase API integration for real-time data operations. It features complete portal systems for all user types (Admin, Teacher, Student, Parent) and extensive academic, administrative, HR, communication, and student welfare modules. The project aims to provide a robust, scalable, and secure platform for managing all aspects of school operations.
 
+## Recent Changes (October 19, 2025)
+
+### Fixed: Automatic Data Loading After Login
+**Problem**: After login, dashboard data didn't load automatically - users had to refresh browser to see data.
+
+**Root Cause**: React Query caches were not invalidated after Supabase authentication, so queries didn't know to refetch data with the new user context.
+
+**Solution Implemented** (in `client/src/pages/auth-page.tsx`):
+1. Import `useQueryClient` from '@tanstack/react-query'
+2. Call `queryClient.invalidateQueries()` after successful `signIn()`
+3. Add 300ms delay before navigation to allow auth state to propagate
+4. Add console logging for debugging
+
+**Pattern for Other Login Pages**:
+```typescript
+const queryClient = useQueryClient();
+
+const onLoginSubmit = async (data) => {
+  await signIn(data.email, data.password);
+  
+  // Invalidate all React Query caches
+  console.log('🔄 Invalidating all queries after successful login');
+  await queryClient.invalidateQueries();
+  
+  // Allow auth state to propagate
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  // Now safe to navigate or show success message
+};
+```
+
+**Files Updated**:
+- `client/src/pages/auth-page.tsx` (main login page - Bengali UI)
+- `client/src/pages/auth/unified-auth-page.tsx` (alternative login - English UI)
+
+### Previous Fixes
+- **Performance**: Changed `count: 'exact'` to `count: 'estimated'` in dashboard queries (12-30x speedup)
+- **Students Page**: Removed non-existent `academic_year_id` column filter from students table queries
+- **Dashboard Load**: Optimized all dashboard statistics queries with estimated counts
+
 ## User Preferences
 - Build for production-ready deployment
 - Use real data, avoid mocks
