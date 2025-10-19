@@ -321,6 +321,346 @@ const attendanceRecordFieldMapping = {
   createdAt: 'created_at',
 };
 
+// Lesson Plan field mapping: UI camelCase -> DB snake_case
+const lessonPlanFieldMapping = {
+  teacherId: 'teacher_id',
+  subjectId: 'subject_id',
+  classId: 'class_id',
+  titleBn: 'title_bn',
+  dueDate: 'due_date',
+  mainContent: 'main_content',
+  academicYearId: 'academic_year_id',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// ============================================================================
+// ADMISSION SYSTEM FIELD MAPPINGS
+// ============================================================================
+
+// Admission Application field mapping: UI camelCase -> DB snake_case
+const admissionApplicationFieldMapping = {
+  studentName: 'student_name',
+  studentNameBn: 'student_name_bn',
+  dateOfBirth: 'date_of_birth',
+  fatherName: 'father_name',
+  motherName: 'mother_name',
+  guardianPhone: 'guardian_phone',
+  previousSchool: 'previous_school',
+  applicationNumber: 'application_number',
+  reviewedAt: 'reviewed_at',
+  reviewedBy: 'reviewed_by',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Admission Test field mapping: UI camelCase -> DB snake_case
+const admissionTestFieldMapping = {
+  sessionId: 'session_id',
+  testName: 'test_name',
+  testNameBn: 'test_name_bn',
+  testDate: 'test_date',
+  testTime: 'test_time',
+  durationMinutes: 'duration_minutes',
+  totalMarks: 'total_marks',
+  passMarks: 'pass_marks',
+  studentId: 'student_id',
+  obtainedMarks: 'obtained_marks',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Admission Interview field mapping: UI camelCase -> DB snake_case
+const admissionInterviewFieldMapping = {
+  applicationId: 'application_id',
+  studentId: 'student_id',
+  interviewDate: 'interview_date',
+  interviewTime: 'interview_time',
+  panelMembers: 'panel_members',
+  durationMinutes: 'duration_minutes',
+  interviewerId: 'interviewer_id',
+  interviewerName: 'interviewer_name',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// ============================================================================
+// REPORTS SYSTEM FIELD MAPPINGS
+// ============================================================================
+
+// Report Template field mapping: UI camelCase -> DB snake_case
+const reportTemplateFieldMapping = {
+  nameBn: 'name_bn',
+  dataSource: 'data_source',
+  chartConfig: 'chart_config',
+  isPublic: 'is_public',
+  createdBy: 'created_by',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// ============================================================================
+// ACADEMIC SYSTEM FIELD MAPPINGS
+// ============================================================================
+
+// Academic Year field mapping: UI camelCase -> DB snake_case
+const academicYearFieldMapping = {
+  nameBn: 'name_bn',
+  startDate: 'start_date',
+  endDate: 'end_date',
+  isActive: 'is_active',
+  isCurrent: 'is_current',
+  descriptionBn: 'description_bn',
+  totalStudents: 'total_students',
+  totalClasses: 'total_classes',
+  totalTerms: 'total_terms',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Academic Term field mapping: UI camelCase -> DB snake_case
+const academicTermFieldMapping = {
+  nameBn: 'name_bn',
+  academicYearId: 'academic_year_id',
+  startDate: 'start_date',
+  endDate: 'end_date',
+  isActive: 'is_active',
+  descriptionBn: 'description_bn',
+  examScheduled: 'exam_scheduled',
+  resultPublished: 'result_published',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Calendar Event field mapping: UI camelCase -> DB snake_case
+const calendarEventFieldMapping = {
+  titleBn: 'title_bn',
+  descriptionBn: 'description_bn',
+  startDate: 'start_date',
+  endDate: 'end_date',
+  startTime: 'start_time',
+  endTime: 'end_time',
+  isActive: 'is_active',
+  isPublic: 'is_public',
+  createdBy: 'created_by',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// ============================================================================
+// NOTIFICATIONS SYSTEM FIELD MAPPINGS
+// ============================================================================
+
+// Notification field mapping: UI camelCase -> DB snake_case
+const notificationFieldMapping = {
+  titleBn: 'title_bn',
+  messageBn: 'message_bn',
+  notificationType: 'notification_type',
+  recipientId: 'recipient_id',
+  recipientType: 'recipient_type',
+  isRead: 'is_read',
+  readAt: 'read_at',
+  actionUrl: 'action_url',
+  iconType: 'icon_type',
+  sendEmail: 'send_email',
+  sendSms: 'send_sms',
+  sentAt: 'sent_at',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Notification Template field mapping: UI camelCase -> DB snake_case
+const notificationTemplateFieldMapping = {
+  nameBn: 'name_bn',
+  templateBody: 'template_body',
+  templateBodyBn: 'template_body_bn',
+  placeholders: 'placeholders',
+  isActive: 'is_active',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Notification Log field mapping: UI camelCase -> DB snake_case
+const notificationLogFieldMapping = {
+  templateId: 'template_id',
+  recipientId: 'recipient_id',
+  recipientType: 'recipient_type',
+  recipientEmail: 'recipient_email',
+  recipientPhone: 'recipient_phone',
+  deliveryStatus: 'delivery_status',
+  errorMessage: 'error_message',
+  sentAt: 'sent_at',
+  schoolId: 'school_id',
+};
+
+// ============================================================================
+// EXAM SYSTEM FIELD MAPPINGS
+// ============================================================================
+
+// Exam Schedule field mapping: UI camelCase -> DB snake_case
+const examScheduleFieldMapping = {
+  examId: 'exam_id',
+  subjectId: 'subject_id',
+  examDate: 'exam_date',
+  startTime: 'start_time',
+  endTime: 'end_time',
+  roomNumber: 'room_number',
+  totalMarks: 'total_marks',
+  passMarks: 'pass_marks',
+  classId: 'class_id',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Exam Result Detail field mapping: UI camelCase -> DB snake_case
+const examResultDetailFieldMapping = {
+  scheduleId: 'schedule_id',
+  studentId: 'student_id',
+  marksObtained: 'marks_obtained',
+  totalMarks: 'total_marks',
+  isAbsent: 'is_absent',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Public Access Token field mapping: UI camelCase -> DB snake_case
+const publicAccessTokenFieldMapping = {
+  studentId: 'student_id',
+  expiresAt: 'expires_at',
+  isActive: 'is_active',
+  accessCount: 'access_count',
+  lastAccessedAt: 'last_accessed_at',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Seating Arrangement field mapping: UI camelCase -> DB snake_case
+const seatingArrangementFieldMapping = {
+  examId: 'exam_id',
+  studentId: 'student_id',
+  roomNumber: 'room_number',
+  seatNumber: 'seat_number',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// ============================================================================
+// FEE SYSTEM FIELD MAPPINGS
+// ============================================================================
+
+// Fee Receipt field mapping: UI camelCase -> DB snake_case
+const feeReceiptFieldMapping = {
+  studentId: 'student_id',
+  receiptNumber: 'receipt_number',
+  totalAmount: 'total_amount',
+  paidAmount: 'paid_amount',
+  dueAmount: 'due_amount',
+  paymentMethod: 'payment_method',
+  paymentDate: 'payment_date',
+  academicYearId: 'academic_year_id',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Fee Item field mapping: UI camelCase -> DB snake_case
+const feeItemFieldMapping = {
+  receiptId: 'receipt_id',
+  feeType: 'fee_type',
+  schoolId: 'school_id',
+};
+
+// ============================================================================
+// VIDEO CONFERENCE SYSTEM FIELD MAPPINGS
+// ============================================================================
+
+// Video Conference field mapping: UI camelCase -> DB snake_case
+const videoConferenceFieldMapping = {
+  nameBn: 'name_bn',
+  startTime: 'start_time',
+  endTime: 'end_time',
+  maxParticipants: 'max_participants',
+  meetingId: 'meeting_id',
+  isRecording: 'is_recording',
+  recordingUrl: 'recording_url',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// ============================================================================
+// PAYMENT/FINANCIAL SYSTEM FIELD MAPPINGS
+// ============================================================================
+
+// Payment Transaction field mapping: UI camelCase -> DB snake_case
+const paymentTransactionFieldMapping = {
+  transactionId: 'transaction_id',
+  paymentMethod: 'payment_method',
+  payerName: 'payer_name',
+  payerPhone: 'payer_phone',
+  descriptionBn: 'description_bn',
+  studentId: 'student_id',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  completedAt: 'completed_at',
+};
+
+// ============================================================================
+// HEALTH/MEDICAL SYSTEM FIELD MAPPINGS
+// ============================================================================
+
+// Health Record field mapping: UI camelCase -> DB snake_case
+const healthRecordFieldMapping = {
+  studentId: 'student_id',
+  bloodGroup: 'blood_group',
+  chronicConditions: 'chronic_conditions',
+  currentMedications: 'current_medications',
+  emergencyContactName: 'emergency_contact_name',
+  emergencyContactRelation: 'emergency_contact_relation',
+  emergencyContactPhone: 'emergency_contact_phone',
+  familyDoctorName: 'family_doctor_name',
+  familyDoctorPhone: 'family_doctor_phone',
+  medicalNotes: 'medical_notes',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Medical Checkup field mapping: UI camelCase -> DB snake_case
+const medicalCheckupFieldMapping = {
+  studentId: 'student_id',
+  checkupDate: 'checkup_date',
+  checkupType: 'checkup_type',
+  bloodPressure: 'blood_pressure',
+  visionLeft: 'vision_left',
+  visionRight: 'vision_right',
+  dentalStatus: 'dental_status',
+  generalHealthStatus: 'general_health_status',
+  examinedBy: 'examined_by',
+  nextCheckupDate: 'next_checkup_date',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Vaccination field mapping: UI camelCase -> DB snake_case
+const vaccinationFieldMapping = {
+  studentId: 'student_id',
+  vaccineName: 'vaccine_name',
+  vaccineNameBn: 'vaccine_name_bn',
+  doseNumber: 'dose_number',
+  vaccinationDate: 'vaccination_date',
+  nextDoseDate: 'next_dose_date',
+  batchNumber: 'batch_number',
+  administeredBy: 'administered_by',
+  sideEffects: 'side_effects',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
 // Convert camelCase student object to snake_case for database
 function toDbStudent(camelCaseStudent: any): Database['public']['Tables']['students']['Insert'] | Database['public']['Tables']['students']['Update'] {
   if (!camelCaseStudent) return {} as any;
@@ -549,6 +889,386 @@ function fromDbTransport(dbTransport: any): any {
   return uiTransport;
 }
 
+// Vendors field mapping: UI camelCase -> DB snake_case
+const vendorFieldMapping = {
+  vendorCode: 'vendor_code',
+  vendorName: 'vendor_name',
+  contactPerson: 'contact_person',
+  taxId: 'tax_id',
+  paymentTerms: 'payment_terms',
+  creditLimit: 'credit_limit',
+  isActive: 'is_active',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Purchase Orders field mapping: UI camelCase -> DB snake_case
+const purchaseOrderFieldMapping = {
+  poNumber: 'po_number',
+  vendorId: 'vendor_id',
+  orderDate: 'order_date',
+  expectedDeliveryDate: 'expected_delivery_date',
+  actualDeliveryDate: 'actual_delivery_date',
+  taxAmount: 'tax_amount',
+  discountAmount: 'discount_amount',
+  totalAmount: 'total_amount',
+  approvedBy: 'approved_by',
+  approvedAt: 'approved_at',
+  schoolId: 'school_id',
+  createdBy: 'created_by',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Stock Alerts field mapping: UI camelCase -> DB snake_case
+const stockAlertFieldMapping = {
+  itemId: 'item_id',
+  itemName: 'item_name',
+  alertType: 'alert_type',
+  currentQuantity: 'current_quantity',
+  reorderLevel: 'reorder_level',
+  expiryDate: 'expiry_date',
+  daysToExpiry: 'days_to_expiry',
+  isAcknowledged: 'is_acknowledged',
+  acknowledgedBy: 'acknowledged_by',
+  acknowledgedAt: 'acknowledged_at',
+  actionTaken: 'action_taken',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// ============================================================================
+// HR/PAYROLL FIELD MAPPINGS
+// ============================================================================
+
+// Staff Attendance field mapping: UI camelCase -> DB snake_case
+const staffAttendanceFieldMapping = {
+  staffId: 'staff_id',
+  checkInTime: 'check_in_time',
+  checkOutTime: 'check_out_time',
+  lateMinutes: 'late_minutes',
+  overtimeMinutes: 'overtime_minutes',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Leave Applications field mapping: UI camelCase -> DB snake_case
+const leaveApplicationFieldMapping = {
+  staffId: 'staff_id',
+  leaveTypeId: 'leave_type_id',
+  startDate: 'start_date',
+  endDate: 'end_date',
+  totalDays: 'total_days',
+  appliedDate: 'applied_date',
+  approvedBy: 'approved_by',
+  approvedDate: 'approved_date',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Leave Balances field mapping: UI camelCase -> DB snake_case
+const leaveBalanceFieldMapping = {
+  staffId: 'staff_id',
+  leaveTypeId: 'leave_type_id',
+  totalDays: 'total_days',
+  usedDays: 'used_days',
+  remainingDays: 'remaining_days',
+  schoolId: 'school_id',
+  updatedAt: 'updated_at',
+};
+
+// Payroll Records field mapping: UI camelCase -> DB snake_case
+const payrollRecordFieldMapping = {
+  staffId: 'staff_id',
+  basicSalary: 'basic_salary',
+  grossSalary: 'gross_salary',
+  totalDeductions: 'total_deductions',
+  netSalary: 'net_salary',
+  paymentDate: 'payment_date',
+  paymentMethod: 'payment_method',
+  paymentStatus: 'payment_status',
+  createdBy: 'created_by',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Salary Components field mapping: UI camelCase -> DB snake_case
+const salaryComponentFieldMapping = {
+  nameBn: 'name_bn',
+  calculationType: 'calculation_type',
+  defaultAmount: 'default_amount',
+  isTaxable: 'is_taxable',
+  isActive: 'is_active',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Appraisal field mapping: UI camelCase -> DB snake_case
+const appraisalFieldMapping = {
+  staffId: 'staff_id',
+  appraisalPeriod: 'appraisal_period',
+  reviewDate: 'review_date',
+  totalScore: 'total_score',
+  areasOfImprovement: 'areas_of_improvement',
+  reviewerId: 'reviewer_id',
+  reviewerName: 'reviewer_name',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// ============================================================================
+// HOSTEL FIELD MAPPINGS
+// ============================================================================
+
+// Hostel field mapping: UI camelCase -> DB snake_case
+const hostelFieldMapping = {
+  nameInBangla: 'name_in_bangla',
+  totalRooms: 'total_rooms',
+  totalCapacity: 'total_capacity',
+  currentOccupancy: 'current_occupancy',
+  wardenName: 'warden_name',
+  wardenPhone: 'warden_phone',
+  monthlyFee: 'monthly_fee',
+  isActive: 'is_active',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Hostel Room field mapping: UI camelCase -> DB snake_case
+const hostelRoomFieldMapping = {
+  hostelId: 'hostel_id',
+  roomNumber: 'room_number',
+  roomType: 'room_type',
+  currentOccupancy: 'current_occupancy',
+  monthlyFee: 'monthly_fee',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Hostel Room Assignment field mapping: UI camelCase -> DB snake_case
+const hostelRoomAssignmentFieldMapping = {
+  studentId: 'student_id',
+  roomId: 'room_id',
+  hostelId: 'hostel_id',
+  assignDate: 'assign_date',
+  releaseDate: 'release_date',
+  monthlyFee: 'monthly_fee',
+  isActive: 'is_active',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Hostel Attendance field mapping: UI camelCase -> DB snake_case
+const hostelAttendanceFieldMapping = {
+  studentId: 'student_id',
+  roomId: 'room_id',
+  checkInTime: 'check_in_time',
+  checkOutTime: 'check_out_time',
+  leaveType: 'leave_type',
+  leaveApprovedBy: 'leave_approved_by',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Meal Plan field mapping: UI camelCase -> DB snake_case
+const mealPlanFieldMapping = {
+  planName: 'plan_name',
+  planNameBn: 'plan_name_bn',
+  mealTypes: 'meal_types',
+  monthlyFee: 'monthly_fee',
+  isActive: 'is_active',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Meal Menu field mapping: UI camelCase -> DB snake_case
+const mealMenuFieldMapping = {
+  dayOfWeek: 'day_of_week',
+  mealType: 'meal_type',
+  menuItems: 'menu_items',
+  menuItemsBn: 'menu_items_bn',
+  specialNotes: 'special_notes',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// Meal Subscription field mapping: UI camelCase -> DB snake_case
+const mealSubscriptionFieldMapping = {
+  studentId: 'student_id',
+  planId: 'plan_id',
+  startDate: 'start_date',
+  endDate: 'end_date',
+  isActive: 'is_active',
+  monthlyFee: 'monthly_fee',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+};
+
+// Meal Transaction field mapping: UI camelCase -> DB snake_case
+const mealTransactionFieldMapping = {
+  studentId: 'student_id',
+  subscriptionId: 'subscription_id',
+  mealType: 'meal_type',
+  isConsumed: 'is_consumed',
+  consumedAt: 'consumed_at',
+  schoolId: 'school_id',
+  createdAt: 'created_at',
+};
+
+// ============================================================================
+// VIDEO CONFERENCE CONVERSION FUNCTIONS
+// ============================================================================
+
+function toDbVideoConference(camelCaseConference: any): any {
+  if (!camelCaseConference) return {} as any;
+  const dbConference: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseConference).forEach(([camelKey, value]) => {
+    const dbKey = videoConferenceFieldMapping[camelKey as keyof typeof videoConferenceFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbConference[dbKey] = value;
+    }
+  });
+  return dbConference;
+}
+
+function fromDbVideoConference(dbConference: any): any {
+  if (!dbConference) return {};
+  const uiConference: any = {};
+  const reverseVideoConferenceMapping: Record<string, string> = {};
+  Object.entries(videoConferenceFieldMapping).forEach(([camel, snake]) => {
+    reverseVideoConferenceMapping[snake] = camel;
+  });
+  Object.entries(dbConference).forEach(([snakeKey, value]) => {
+    const camelKey = reverseVideoConferenceMapping[snakeKey] || snakeKey;
+    uiConference[camelKey] = value;
+  });
+  return uiConference;
+}
+
+// ============================================================================
+// PAYMENT/FINANCIAL CONVERSION FUNCTIONS
+// ============================================================================
+
+function toDbPaymentTransaction(camelCaseTransaction: any): any {
+  if (!camelCaseTransaction) return {} as any;
+  const dbTransaction: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseTransaction).forEach(([camelKey, value]) => {
+    const dbKey = paymentTransactionFieldMapping[camelKey as keyof typeof paymentTransactionFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbTransaction[dbKey] = value;
+    }
+  });
+  return dbTransaction;
+}
+
+function fromDbPaymentTransaction(dbTransaction: any): any {
+  if (!dbTransaction) return {};
+  const uiTransaction: any = {};
+  const reversePaymentTransactionMapping: Record<string, string> = {};
+  Object.entries(paymentTransactionFieldMapping).forEach(([camel, snake]) => {
+    reversePaymentTransactionMapping[snake] = camel;
+  });
+  Object.entries(dbTransaction).forEach(([snakeKey, value]) => {
+    const camelKey = reversePaymentTransactionMapping[snakeKey] || snakeKey;
+    uiTransaction[camelKey] = value;
+  });
+  return uiTransaction;
+}
+
+// ============================================================================
+// HEALTH/MEDICAL CONVERSION FUNCTIONS
+// ============================================================================
+
+function toDbHealthRecord(camelCaseRecord: any): any {
+  if (!camelCaseRecord) return {} as any;
+  const dbRecord: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseRecord).forEach(([camelKey, value]) => {
+    const dbKey = healthRecordFieldMapping[camelKey as keyof typeof healthRecordFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbRecord[dbKey] = value;
+    }
+  });
+  return dbRecord;
+}
+
+function fromDbHealthRecord(dbRecord: any): any {
+  if (!dbRecord) return {};
+  const uiRecord: any = {};
+  const reverseHealthRecordMapping: Record<string, string> = {};
+  Object.entries(healthRecordFieldMapping).forEach(([camel, snake]) => {
+    reverseHealthRecordMapping[snake] = camel;
+  });
+  Object.entries(dbRecord).forEach(([snakeKey, value]) => {
+    const camelKey = reverseHealthRecordMapping[snakeKey] || snakeKey;
+    uiRecord[camelKey] = value;
+  });
+  return uiRecord;
+}
+
+function toDbMedicalCheckup(camelCaseCheckup: any): any {
+  if (!camelCaseCheckup) return {} as any;
+  const dbCheckup: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseCheckup).forEach(([camelKey, value]) => {
+    const dbKey = medicalCheckupFieldMapping[camelKey as keyof typeof medicalCheckupFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbCheckup[dbKey] = value;
+    }
+  });
+  return dbCheckup;
+}
+
+function fromDbMedicalCheckup(dbCheckup: any): any {
+  if (!dbCheckup) return {};
+  const uiCheckup: any = {};
+  const reverseMedicalCheckupMapping: Record<string, string> = {};
+  Object.entries(medicalCheckupFieldMapping).forEach(([camel, snake]) => {
+    reverseMedicalCheckupMapping[snake] = camel;
+  });
+  Object.entries(dbCheckup).forEach(([snakeKey, value]) => {
+    const camelKey = reverseMedicalCheckupMapping[snakeKey] || snakeKey;
+    uiCheckup[camelKey] = value;
+  });
+  return uiCheckup;
+}
+
+function toDbVaccination(camelCaseVaccination: any): any {
+  if (!camelCaseVaccination) return {} as any;
+  const dbVaccination: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseVaccination).forEach(([camelKey, value]) => {
+    const dbKey = vaccinationFieldMapping[camelKey as keyof typeof vaccinationFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbVaccination[dbKey] = value;
+    }
+  });
+  return dbVaccination;
+}
+
+function fromDbVaccination(dbVaccination: any): any {
+  if (!dbVaccination) return {};
+  const uiVaccination: any = {};
+  const reverseVaccinationMapping: Record<string, string> = {};
+  Object.entries(vaccinationFieldMapping).forEach(([camel, snake]) => {
+    reverseVaccinationMapping[snake] = camel;
+  });
+  Object.entries(dbVaccination).forEach(([snakeKey, value]) => {
+    const camelKey = reverseVaccinationMapping[snakeKey] || snakeKey;
+    uiVaccination[camelKey] = value;
+  });
+  return uiVaccination;
+}
+
 // Exam conversion functions
 function toDbExam(camelCaseExam: any): any {
   if (!camelCaseExam) return {} as any;
@@ -575,6 +1295,90 @@ function fromDbExam(dbExam: any): any {
     uiExam[camelKey] = value;
   });
   return uiExam;
+}
+
+// Vendor conversion functions
+function toDbVendor(camelCaseVendor: any): any {
+  if (!camelCaseVendor) return {} as any;
+  const dbVendor: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseVendor).forEach(([camelKey, value]) => {
+    const dbKey = vendorFieldMapping[camelKey as keyof typeof vendorFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbVendor[dbKey] = value;
+    }
+  });
+  return dbVendor;
+}
+
+function fromDbVendor(dbVendor: any): any {
+  if (!dbVendor) return {};
+  const uiVendor: any = {};
+  const reverseVendorMapping: Record<string, string> = {};
+  Object.entries(vendorFieldMapping).forEach(([camel, snake]) => {
+    reverseVendorMapping[snake] = camel;
+  });
+  Object.entries(dbVendor).forEach(([snakeKey, value]) => {
+    const camelKey = reverseVendorMapping[snakeKey] || snakeKey;
+    uiVendor[camelKey] = value;
+  });
+  return uiVendor;
+}
+
+// Purchase Order conversion functions
+function toDbPurchaseOrder(camelCaseOrder: any): any {
+  if (!camelCaseOrder) return {} as any;
+  const dbOrder: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseOrder).forEach(([camelKey, value]) => {
+    const dbKey = purchaseOrderFieldMapping[camelKey as keyof typeof purchaseOrderFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbOrder[dbKey] = value;
+    }
+  });
+  return dbOrder;
+}
+
+function fromDbPurchaseOrder(dbOrder: any): any {
+  if (!dbOrder) return {};
+  const uiOrder: any = {};
+  const reversePurchaseOrderMapping: Record<string, string> = {};
+  Object.entries(purchaseOrderFieldMapping).forEach(([camel, snake]) => {
+    reversePurchaseOrderMapping[snake] = camel;
+  });
+  Object.entries(dbOrder).forEach(([snakeKey, value]) => {
+    const camelKey = reversePurchaseOrderMapping[snakeKey] || snakeKey;
+    uiOrder[camelKey] = value;
+  });
+  return uiOrder;
+}
+
+// Stock Alert conversion functions
+function toDbStockAlert(camelCaseAlert: any): any {
+  if (!camelCaseAlert) return {} as any;
+  const dbAlert: any = {};
+  const readOnlyFields = ['id', 'created_at'];
+  Object.entries(camelCaseAlert).forEach(([camelKey, value]) => {
+    const dbKey = stockAlertFieldMapping[camelKey as keyof typeof stockAlertFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbAlert[dbKey] = value;
+    }
+  });
+  return dbAlert;
+}
+
+function fromDbStockAlert(dbAlert: any): any {
+  if (!dbAlert) return {};
+  const uiAlert: any = {};
+  const reverseStockAlertMapping: Record<string, string> = {};
+  Object.entries(stockAlertFieldMapping).forEach(([camel, snake]) => {
+    reverseStockAlertMapping[snake] = camel;
+  });
+  Object.entries(dbAlert).forEach(([snakeKey, value]) => {
+    const camelKey = reverseStockAlertMapping[snakeKey] || snakeKey;
+    uiAlert[camelKey] = value;
+  });
+  return uiAlert;
 }
 
 // Subject conversion functions
@@ -744,6 +1548,170 @@ function fromDbAttendanceRecord(dbRecord: any): any {
   });
   return uiRecord;
 }
+
+// Lesson Plan conversion functions
+function toDbLessonPlan(camelCasePlan: any): any {
+  if (!camelCasePlan) return {} as any;
+  const dbPlan: any = {};
+  const readOnlyFields = ['id', 'created_at', 'updated_at'];
+  Object.entries(camelCasePlan).forEach(([camelKey, value]) => {
+    const dbKey = lessonPlanFieldMapping[camelKey as keyof typeof lessonPlanFieldMapping] || camelKey;
+    if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+      dbPlan[dbKey] = value;
+    }
+  });
+  return dbPlan;
+}
+
+function fromDbLessonPlan(dbPlan: any): any {
+  if (!dbPlan) return {};
+  const uiPlan: any = {};
+  const reverseLessonPlanMapping: Record<string, string> = {};
+  Object.entries(lessonPlanFieldMapping).forEach(([camel, snake]) => {
+    reverseLessonPlanMapping[snake] = camel;
+  });
+  Object.entries(dbPlan).forEach(([snakeKey, value]) => {
+    const camelKey = reverseLessonPlanMapping[snakeKey] || snakeKey;
+    uiPlan[camelKey] = value;
+  });
+  return uiPlan;
+}
+
+// ============================================================================
+// HR/PAYROLL CONVERSION FUNCTIONS
+// ============================================================================
+
+// Helper function to create generic conversion functions
+function createToDbConverter(fieldMapping: Record<string, string>) {
+  return (camelCaseObj: any): any => {
+    if (!camelCaseObj) return {} as any;
+    const dbObj: any = {};
+    const readOnlyFields = ['id', 'created_at', 'updated_at'];
+    Object.entries(camelCaseObj).forEach(([camelKey, value]) => {
+      const dbKey = fieldMapping[camelKey as keyof typeof fieldMapping] || camelKey;
+      if (!readOnlyFields.includes(dbKey) && value !== undefined && value !== '' && value !== null) {
+        dbObj[dbKey] = value;
+      }
+    });
+    return dbObj;
+  };
+}
+
+function createFromDbConverter(fieldMapping: Record<string, string>) {
+  return (dbObj: any): any => {
+    if (!dbObj) return {};
+    const uiObj: any = {};
+    const reverseMapping: Record<string, string> = {};
+    Object.entries(fieldMapping).forEach(([camel, snake]) => {
+      reverseMapping[snake] = camel;
+    });
+    Object.entries(dbObj).forEach(([snakeKey, value]) => {
+      const camelKey = reverseMapping[snakeKey] || snakeKey;
+      uiObj[camelKey] = value;
+    });
+    return uiObj;
+  };
+}
+
+// Staff Attendance conversion functions
+const toDbStaffAttendance = createToDbConverter(staffAttendanceFieldMapping);
+const fromDbStaffAttendance = createFromDbConverter(staffAttendanceFieldMapping);
+
+// Leave Application conversion functions
+const toDbLeaveApplication = createToDbConverter(leaveApplicationFieldMapping);
+const fromDbLeaveApplication = createFromDbConverter(leaveApplicationFieldMapping);
+
+// Leave Balance conversion functions
+const toDbLeaveBalance = createToDbConverter(leaveBalanceFieldMapping);
+const fromDbLeaveBalance = createFromDbConverter(leaveBalanceFieldMapping);
+
+// Payroll Record conversion functions
+const toDbPayrollRecord = createToDbConverter(payrollRecordFieldMapping);
+const fromDbPayrollRecord = createFromDbConverter(payrollRecordFieldMapping);
+
+// Salary Component conversion functions
+const toDbSalaryComponent = createToDbConverter(salaryComponentFieldMapping);
+const fromDbSalaryComponent = createFromDbConverter(salaryComponentFieldMapping);
+
+// Appraisal conversion functions
+const toDbAppraisal = createToDbConverter(appraisalFieldMapping);
+const fromDbAppraisal = createFromDbConverter(appraisalFieldMapping);
+
+// ============================================================================
+// HOSTEL CONVERSION FUNCTIONS
+// ============================================================================
+
+// Hostel conversion functions
+const toDbHostel = createToDbConverter(hostelFieldMapping);
+const fromDbHostel = createFromDbConverter(hostelFieldMapping);
+
+// Hostel Room conversion functions
+const toDbHostelRoom = createToDbConverter(hostelRoomFieldMapping);
+const fromDbHostelRoom = createFromDbConverter(hostelRoomFieldMapping);
+
+// Hostel Room Assignment conversion functions
+const toDbHostelRoomAssignment = createToDbConverter(hostelRoomAssignmentFieldMapping);
+const fromDbHostelRoomAssignment = createFromDbConverter(hostelRoomAssignmentFieldMapping);
+
+// Hostel Attendance conversion functions
+const toDbHostelAttendance = createToDbConverter(hostelAttendanceFieldMapping);
+const fromDbHostelAttendance = createFromDbConverter(hostelAttendanceFieldMapping);
+
+// Meal Plan conversion functions
+const toDbMealPlan = createToDbConverter(mealPlanFieldMapping);
+const fromDbMealPlan = createFromDbConverter(mealPlanFieldMapping);
+
+// Meal Menu conversion functions
+const toDbMealMenu = createToDbConverter(mealMenuFieldMapping);
+const fromDbMealMenu = createFromDbConverter(mealMenuFieldMapping);
+
+// Meal Subscription conversion functions
+const toDbMealSubscription = createToDbConverter(mealSubscriptionFieldMapping);
+const fromDbMealSubscription = createFromDbConverter(mealSubscriptionFieldMapping);
+
+// Meal Transaction conversion functions
+const toDbMealTransaction = createToDbConverter(mealTransactionFieldMapping);
+const fromDbMealTransaction = createFromDbConverter(mealTransactionFieldMapping);
+
+// ============================================================================
+// ADMISSION SYSTEM CONVERSION FUNCTIONS
+// ============================================================================
+
+// Admission Application conversion functions
+const toDbAdmissionApplication = createToDbConverter(admissionApplicationFieldMapping);
+const fromDbAdmissionApplication = createFromDbConverter(admissionApplicationFieldMapping);
+
+// Admission Test conversion functions
+const toDbAdmissionTest = createToDbConverter(admissionTestFieldMapping);
+const fromDbAdmissionTest = createFromDbConverter(admissionTestFieldMapping);
+
+// Admission Interview conversion functions
+const toDbAdmissionInterview = createToDbConverter(admissionInterviewFieldMapping);
+const fromDbAdmissionInterview = createFromDbConverter(admissionInterviewFieldMapping);
+
+// ============================================================================
+// REPORTS SYSTEM CONVERSION FUNCTIONS
+// ============================================================================
+
+// Report Template conversion functions
+const toDbReportTemplate = createToDbConverter(reportTemplateFieldMapping);
+const fromDbReportTemplate = createFromDbConverter(reportTemplateFieldMapping);
+
+// ============================================================================
+// ACADEMIC SYSTEM CONVERSION FUNCTIONS
+// ============================================================================
+
+// Academic Year conversion functions
+const toDbAcademicYear = createToDbConverter(academicYearFieldMapping);
+const fromDbAcademicYear = createFromDbConverter(academicYearFieldMapping);
+
+// Academic Term conversion functions
+const toDbAcademicTerm = createToDbConverter(academicTermFieldMapping);
+const fromDbAcademicTerm = createFromDbConverter(academicTermFieldMapping);
+
+// Calendar Event conversion functions
+const toDbCalendarEvent = createToDbConverter(calendarEventFieldMapping);
+const fromDbCalendarEvent = createFromDbConverter(calendarEventFieldMapping);
 
 // Direct Database Query Functions (replacing Express API calls)
 export const db = {
@@ -4352,6 +5320,1357 @@ export const db = {
   }
 };
 
+// ==================== TEACHER PORTAL FUNCTIONS ====================
+// Comprehensive Teacher Portal functions for direct Supabase integration
+// All functions include school isolation and proper error handling
+
+export const teacherPortal = {
+  /**
+   * Get teacher dashboard overview data
+   * Replaces: /api/teachers/dashboard
+   */
+  async getDashboardData(teacherId: number, schoolId: number) {
+    console.log('👨‍🏫 Fetching dashboard data for teacher:', teacherId, 'school:', schoolId);
+    
+    try {
+      // Get teacher info with assigned classes and subjects
+      const { data: teacherAssignments, error: assignError } = await supabase
+        .from('teacher_assignments')
+        .select(`
+          *,
+          subjects (id, name, name_bn),
+          classes (id, name, section)
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId);
+      
+      if (assignError) throw assignError;
+      
+      // Get today's schedule
+      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const { data: todaySchedule } = await supabase
+        .from('class_schedules')
+        .select('*, subjects(name), classes(name, section)')
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId)
+        .eq('day_of_week', today)
+        .order('start_time', { ascending: true });
+      
+      // Get recent notifications
+      const { data: notifications } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      // Count assignments and lesson plans
+      const [assignmentsCount, lessonPlansCount] = await Promise.all([
+        supabase.from('assignments').select('id', { count: 'exact', head: true }).eq('teacher_id', teacherId).eq('school_id', schoolId),
+        supabase.from('lesson_plans').select('id', { count: 'exact', head: true }).eq('teacher_id', teacherId).eq('school_id', schoolId)
+      ]);
+      
+      return {
+        teacherAssignments: teacherAssignments || [],
+        todaySchedule: todaySchedule || [],
+        notifications: notifications || [],
+        assignmentsCount: assignmentsCount.count || 0,
+        lessonPlansCount: lessonPlansCount.count || 0
+      };
+    } catch (error) {
+      console.error('Error fetching teacher dashboard data:', error);
+      return {
+        teacherAssignments: [],
+        todaySchedule: [],
+        notifications: [],
+        assignmentsCount: 0,
+        lessonPlansCount: 0
+      };
+    }
+  },
+  
+  /**
+   * Get teacher statistics
+   * Replaces: /api/teachers/stats
+   */
+  async getTeacherStats(teacherId: number, schoolId: number) {
+    console.log('📊 Fetching teacher stats for:', teacherId);
+    
+    try {
+      // Get total students across all classes
+      const { data: assignments } = await supabase
+        .from('teacher_assignments')
+        .select('class_id, classes(id)')
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId);
+      
+      const classIds = assignments?.map(a => a.class_id).filter(Boolean) || [];
+      
+      let totalStudents = 0;
+      if (classIds.length > 0) {
+        const { count } = await supabase
+          .from('students')
+          .select('id', { count: 'exact', head: true })
+          .eq('school_id', schoolId)
+          .in('class_id', classIds);
+        totalStudents = count || 0;
+      }
+      
+      // Get counts
+      const [classesCount, subjectsCount, assignmentsCount, lessonPlansCount] = await Promise.all([
+        supabase.from('teacher_assignments').select('class_id', { count: 'exact', head: true }).eq('teacher_id', teacherId).eq('school_id', schoolId),
+        supabase.from('teacher_assignments').select('subject_id', { count: 'exact', head: true }).eq('teacher_id', teacherId).eq('school_id', schoolId),
+        supabase.from('assignments').select('id', { count: 'exact', head: true }).eq('teacher_id', teacherId).eq('school_id', schoolId),
+        supabase.from('lesson_plans').select('id', { count: 'exact', head: true }).eq('teacher_id', teacherId).eq('school_id', schoolId)
+      ]);
+      
+      return {
+        totalStudents,
+        totalClasses: classesCount.count || 0,
+        totalSubjects: subjectsCount.count || 0,
+        totalAssignments: assignmentsCount.count || 0,
+        totalLessonPlans: lessonPlansCount.count || 0
+      };
+    } catch (error) {
+      console.error('Error fetching teacher stats:', error);
+      return {
+        totalStudents: 0,
+        totalClasses: 0,
+        totalSubjects: 0,
+        totalAssignments: 0,
+        totalLessonPlans: 0
+      };
+    }
+  },
+  
+  /**
+   * Get teacher's class schedule
+   * Replaces: /api/teachers/schedule
+   */
+  async getTeacherSchedule(teacherId: number, schoolId: number, period?: string) {
+    console.log('📅 Fetching schedule for teacher:', teacherId, 'period:', period);
+    
+    try {
+      let query = supabase
+        .from('class_schedules')
+        .select(`
+          *,
+          subjects (id, name, name_bn),
+          classes (id, name, section)
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId);
+      
+      if (period === 'today') {
+        const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        query = query.eq('day_of_week', today);
+      }
+      
+      const { data, error } = await query.order('day_of_week').order('start_time');
+      
+      if (error) throw error;
+      
+      return (data || []).map(schedule => fromDbClassSchedule(schedule));
+    } catch (error) {
+      console.error('Error fetching teacher schedule:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * Get teacher notifications
+   * Replaces: /api/teachers/notifications
+   */
+  async getTeacherNotifications(teacherId: number, schoolId: number) {
+    console.log('🔔 Fetching notifications for teacher:', teacherId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching teacher notifications:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * Get classes taught by teacher
+   * Replaces: /api/teachers/classes
+   */
+  async getTeacherClasses(teacherId: number, schoolId: number) {
+    console.log('🏫 Fetching classes for teacher:', teacherId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('teacher_assignments')
+        .select(`
+          *,
+          classes (id, name, section, grade_level)
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      // Get unique classes
+      const uniqueClasses = new Map();
+      data?.forEach(assignment => {
+        if (assignment.classes && !uniqueClasses.has(assignment.classes.id)) {
+          uniqueClasses.set(assignment.classes.id, assignment.classes);
+        }
+      });
+      
+      return Array.from(uniqueClasses.values());
+    } catch (error) {
+      console.error('Error fetching teacher classes:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * Get subjects taught by teacher
+   * Replaces: /api/teachers/subjects
+   */
+  async getTeacherSubjects(teacherId: number, schoolId: number) {
+    console.log('📚 Fetching subjects for teacher:', teacherId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('teacher_assignments')
+        .select(`
+          *,
+          subjects (id, name, name_bn, code)
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      // Get unique subjects
+      const uniqueSubjects = new Map();
+      data?.forEach(assignment => {
+        if (assignment.subjects && !uniqueSubjects.has(assignment.subjects.id)) {
+          uniqueSubjects.set(assignment.subjects.id, fromDbSubject(assignment.subjects));
+        }
+      });
+      
+      return Array.from(uniqueSubjects.values());
+    } catch (error) {
+      console.error('Error fetching teacher subjects:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * Get lesson plans
+   * Replaces: /api/lesson-plans (GET)
+   */
+  async getLessonPlans(teacherId: number, schoolId: number, filters?: { subjectId?: number; classId?: number }) {
+    console.log('📖 Fetching lesson plans for teacher:', teacherId);
+    
+    try {
+      let query = supabase
+        .from('lesson_plans')
+        .select(`
+          *,
+          subjects (id, name, name_bn),
+          classes (id, name, section)
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId);
+      
+      if (filters?.subjectId) {
+        query = query.eq('subject_id', filters.subjectId);
+      }
+      
+      if (filters?.classId) {
+        query = query.eq('class_id', filters.classId);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return (data || []).map(plan => fromDbLessonPlan(plan));
+    } catch (error) {
+      console.error('Error fetching lesson plans:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * Create lesson plan
+   * Replaces: /api/lesson-plans (POST)
+   */
+  async createLessonPlan(plan: any, teacherId: number, schoolId: number) {
+    console.log('➕ Creating lesson plan for teacher:', teacherId);
+    
+    try {
+      const dbPlan = toDbLessonPlan({ ...plan, teacherId, schoolId });
+      
+      const { data, error } = await supabase
+        .from('lesson_plans')
+        .insert(dbPlan)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbLessonPlan(data);
+    } catch (error) {
+      console.error('Error creating lesson plan:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Update lesson plan
+   * Replaces: /api/lesson-plans/:id (PATCH)
+   */
+  async updateLessonPlan(id: number, plan: any, schoolId: number) {
+    console.log('✏️ Updating lesson plan:', id);
+    
+    try {
+      const dbPlan = toDbLessonPlan(plan);
+      
+      const { data, error } = await supabase
+        .from('lesson_plans')
+        .update(dbPlan)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbLessonPlan(data);
+    } catch (error) {
+      console.error('Error updating lesson plan:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Delete lesson plan
+   * Replaces: /api/lesson-plans/:id (DELETE)
+   */
+  async deleteLessonPlan(id: number, schoolId: number) {
+    console.log('🗑️ Deleting lesson plan:', id);
+    
+    try {
+      const { error } = await supabase
+        .from('lesson_plans')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting lesson plan:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Get assignments
+   * Replaces: /api/assignments (GET) or /api/teacher/assignments
+   */
+  async getAssignments(teacherId: number, schoolId: number, filters?: { subjectId?: number; classId?: number; status?: string }) {
+    console.log('📝 Fetching assignments for teacher:', teacherId);
+    
+    try {
+      let query = supabase
+        .from('assignments')
+        .select(`
+          *,
+          subjects (id, name, name_bn),
+          classes (id, name, section)
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId);
+      
+      if (filters?.subjectId) {
+        query = query.eq('subject_id', filters.subjectId);
+      }
+      
+      if (filters?.classId) {
+        query = query.eq('class_id', filters.classId);
+      }
+      
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return (data || []).map(assignment => fromDbAssignment(assignment));
+    } catch (error) {
+      console.error('Error fetching assignments:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * Create assignment
+   * Replaces: /api/assignments (POST) or /api/teacher/assignments
+   */
+  async createAssignment(assignment: any, teacherId: number, schoolId: number) {
+    console.log('➕ Creating assignment for teacher:', teacherId);
+    
+    try {
+      const dbAssignment = toDbAssignment({ ...assignment, teacherId, schoolId });
+      
+      const { data, error } = await supabase
+        .from('assignments')
+        .insert(dbAssignment)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbAssignment(data);
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Update assignment
+   * Replaces: /api/assignments/:id (PATCH) or /api/teacher/assignments/:id
+   */
+  async updateAssignment(id: number, assignment: any, schoolId: number) {
+    console.log('✏️ Updating assignment:', id);
+    
+    try {
+      const dbAssignment = toDbAssignment(assignment);
+      
+      const { data, error } = await supabase
+        .from('assignments')
+        .update(dbAssignment)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbAssignment(data);
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Delete assignment
+   * Replaces: /api/assignments/:id (DELETE) or /api/teacher/assignments/:id
+   */
+  async deleteAssignment(id: number, schoolId: number) {
+    console.log('🗑️ Deleting assignment:', id);
+    
+    try {
+      const { error } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting assignment:', error);
+      throw error;
+    }
+  }
+};
+
+// ============================================================================
+// LIBRARY SYSTEM API
+// ============================================================================
+export const library = {
+  /**
+   * Get all library books with optional filters
+   * Replaces: GET /api/library/books
+   */
+  async getBooks(schoolId: number, filters?: any) {
+    console.log('📚 Fetching library books for school:', schoolId, 'filters:', filters);
+    
+    try {
+      let query = supabase
+        .from('library_books')
+        .select('*')
+        .eq('school_id', schoolId);
+      
+      if (filters?.category) {
+        query = query.eq('category', filters.category);
+      }
+      
+      if (filters?.search) {
+        query = query.or(`title.ilike.%${filters.search}%,author.ilike.%${filters.search}%,isbn.ilike.%${filters.search}%`);
+      }
+      
+      if (filters?.available) {
+        query = query.gt('available_copies', 0);
+      }
+      
+      const { data, error } = await query.order('title');
+      
+      if (error) throw error;
+      
+      return (data || []).map(book => fromDbLibrary(book));
+    } catch (error) {
+      console.error('Error fetching library books:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get single book details by ID
+   * Replaces: GET /api/library/books/:id
+   */
+  async getBookById(id: number, schoolId: number) {
+    console.log('📖 Fetching book:', id);
+    
+    try {
+      const { data, error } = await supabase
+        .from('library_books')
+        .select('*')
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbLibrary(data);
+    } catch (error) {
+      console.error('Error fetching book:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get library statistics
+   * Replaces: GET /api/library/stats
+   */
+  async getLibraryStats(schoolId: number) {
+    console.log('📊 Fetching library stats for school:', schoolId);
+    
+    try {
+      // Get total books and available copies
+      const { data: books } = await supabase
+        .from('library_books')
+        .select('total_copies, available_copies')
+        .eq('school_id', schoolId);
+      
+      const totalBooks = books?.reduce((sum, book) => sum + (book.total_copies || 0), 0) || 0;
+      const availableCopies = books?.reduce((sum, book) => sum + (book.available_copies || 0), 0) || 0;
+      const borrowedBooks = totalBooks - availableCopies;
+      
+      // Get active borrowings
+      const { count: activeBorrowings } = await supabase
+        .from('library_borrowed_books')
+        .select('id', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('status', 'active');
+      
+      // Get overdue books
+      const today = new Date().toISOString().split('T')[0];
+      const { count: overdueBooks } = await supabase
+        .from('library_borrowed_books')
+        .select('id', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .lt('due_date', today);
+      
+      return {
+        totalBooks,
+        availableCopies,
+        borrowedBooks,
+        activeBorrowings: activeBorrowings || 0,
+        overdueBooks: overdueBooks || 0
+      };
+    } catch (error) {
+      console.error('Error fetching library stats:', error);
+      return {
+        totalBooks: 0,
+        availableCopies: 0,
+        borrowedBooks: 0,
+        activeBorrowings: 0,
+        overdueBooks: 0
+      };
+    }
+  },
+
+  /**
+   * Borrow a book
+   * Replaces: POST /api/library/borrow
+   */
+  async borrowBook(bookId: number, studentId: number, schoolId: number, dueDate: string) {
+    console.log('📚 Borrowing book:', bookId, 'for student:', studentId);
+    
+    try {
+      // Check if book is available
+      const { data: book } = await supabase
+        .from('library_books')
+        .select('available_copies')
+        .eq('id', bookId)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (!book || book.available_copies <= 0) {
+        throw new Error('Book not available');
+      }
+      
+      // Create borrow record
+      const { data: borrowRecord, error: borrowError } = await supabase
+        .from('library_borrowed_books')
+        .insert({
+          book_id: bookId,
+          student_id: studentId,
+          school_id: schoolId,
+          due_date: dueDate,
+          status: 'active'
+        })
+        .select()
+        .single();
+      
+      if (borrowError) throw borrowError;
+      
+      // Decrease available copies
+      const { error: updateError } = await supabase
+        .from('library_books')
+        .update({ available_copies: book.available_copies - 1 })
+        .eq('id', bookId)
+        .eq('school_id', schoolId);
+      
+      if (updateError) throw updateError;
+      
+      return borrowRecord;
+    } catch (error) {
+      console.error('Error borrowing book:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Return a borrowed book
+   * Replaces: POST /api/library/return
+   */
+  async returnBook(borrowId: number, schoolId: number) {
+    console.log('📚 Returning book, borrow ID:', borrowId);
+    
+    try {
+      // Get borrow record
+      const { data: borrowRecord } = await supabase
+        .from('library_borrowed_books')
+        .select('book_id')
+        .eq('id', borrowId)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (!borrowRecord) {
+        throw new Error('Borrow record not found');
+      }
+      
+      // Update borrow record
+      const { error: updateError } = await supabase
+        .from('library_borrowed_books')
+        .update({
+          status: 'returned',
+          return_date: new Date().toISOString().split('T')[0]
+        })
+        .eq('id', borrowId)
+        .eq('school_id', schoolId);
+      
+      if (updateError) throw updateError;
+      
+      // Increase available copies
+      const { error: bookUpdateError } = await supabase
+        .rpc('increment_available_copies', {
+          book_id: borrowRecord.book_id,
+          school_id_param: schoolId
+        });
+      
+      // If RPC doesn't exist, use manual update
+      if (bookUpdateError) {
+        const { data: book } = await supabase
+          .from('library_books')
+          .select('available_copies')
+          .eq('id', borrowRecord.book_id)
+          .eq('school_id', schoolId)
+          .single();
+        
+        if (book) {
+          await supabase
+            .from('library_books')
+            .update({ available_copies: book.available_copies + 1 })
+            .eq('id', borrowRecord.book_id)
+            .eq('school_id', schoolId);
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error returning book:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get borrowed books list
+   * Replaces: GET /api/library/borrowed
+   */
+  async getBorrowedBooks(schoolId: number, studentId?: number) {
+    console.log('📚 Fetching borrowed books, student:', studentId);
+    
+    try {
+      let query = supabase
+        .from('library_borrowed_books')
+        .select(`
+          *,
+          library_books (id, title, author, isbn),
+          students (id, name, student_id, class, section)
+        `)
+        .eq('school_id', schoolId);
+      
+      if (studentId) {
+        query = query.eq('student_id', studentId);
+      }
+      
+      const { data, error } = await query.order('borrow_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching borrowed books:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Create a new book
+   * Replaces: POST /api/library/books
+   */
+  async createBook(book: any, schoolId: number) {
+    console.log('➕ Creating library book');
+    
+    try {
+      const dbBook = toDbLibrary({ ...book, schoolId });
+      
+      const { data, error } = await supabase
+        .from('library_books')
+        .insert(dbBook)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbLibrary(data);
+    } catch (error) {
+      console.error('Error creating book:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update book details
+   * Replaces: PATCH /api/library/books/:id
+   */
+  async updateBook(id: number, book: any, schoolId: number) {
+    console.log('✏️ Updating book:', id);
+    
+    try {
+      const dbBook = toDbLibrary(book);
+      
+      const { data, error } = await supabase
+        .from('library_books')
+        .update(dbBook)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbLibrary(data);
+    } catch (error) {
+      console.error('Error updating book:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a book
+   * Replaces: DELETE /api/library/books/:id
+   */
+  async deleteBook(id: number, schoolId: number) {
+    console.log('🗑️ Deleting book:', id);
+    
+    try {
+      const { error } = await supabase
+        .from('library_books')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting book:', error);
+      throw error;
+    }
+  }
+};
+
+// ============================================================================
+// TRANSPORT SYSTEM API
+// ============================================================================
+export const transport = {
+  /**
+   * Get all transport routes
+   * Replaces: GET /api/transport/routes
+   */
+  async getRoutes(schoolId: number) {
+    console.log('🚌 Fetching transport routes for school:', schoolId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('transport_routes')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('route_name');
+      
+      if (error) throw error;
+      
+      return (data || []).map(route => fromDbTransport(route));
+    } catch (error) {
+      console.error('Error fetching routes:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get route details by ID
+   * Replaces: GET /api/transport/routes/:id
+   */
+  async getRouteById(id: number, schoolId: number) {
+    console.log('🚌 Fetching route:', id);
+    
+    try {
+      const { data, error } = await supabase
+        .from('transport_routes')
+        .select('*')
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbTransport(data);
+    } catch (error) {
+      console.error('Error fetching route:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new route
+   * Replaces: POST /api/transport/routes
+   */
+  async createRoute(route: any, schoolId: number) {
+    console.log('➕ Creating transport route');
+    
+    try {
+      const dbRoute = toDbTransport({ ...route, schoolId });
+      
+      const { data, error } = await supabase
+        .from('transport_routes')
+        .insert(dbRoute)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbTransport(data);
+    } catch (error) {
+      console.error('Error creating route:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update route details
+   * Replaces: PATCH /api/transport/routes/:id
+   */
+  async updateRoute(id: number, route: any, schoolId: number) {
+    console.log('✏️ Updating route:', id);
+    
+    try {
+      const dbRoute = toDbTransport(route);
+      
+      const { data, error } = await supabase
+        .from('transport_routes')
+        .update(dbRoute)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbTransport(data);
+    } catch (error) {
+      console.error('Error updating route:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a route
+   * Replaces: DELETE /api/transport/routes/:id
+   */
+  async deleteRoute(id: number, schoolId: number) {
+    console.log('🗑️ Deleting route:', id);
+    
+    try {
+      const { error } = await supabase
+        .from('transport_routes')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting route:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all vehicles
+   * Replaces: GET /api/transport/vehicles
+   */
+  async getVehicles(schoolId: number) {
+    console.log('🚐 Fetching transport vehicles for school:', schoolId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('transport_vehicles')
+        .select(`
+          *,
+          transport_routes (id, route_name)
+        `)
+        .eq('school_id', schoolId)
+        .order('vehicle_number');
+      
+      if (error) throw error;
+      
+      return (data || []).map(vehicle => fromDbTransport(vehicle));
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Create a new vehicle
+   * Replaces: POST /api/transport/vehicles
+   */
+  async createVehicle(vehicle: any, schoolId: number) {
+    console.log('➕ Creating transport vehicle');
+    
+    try {
+      const dbVehicle = toDbTransport({ ...vehicle, schoolId });
+      
+      const { data, error } = await supabase
+        .from('transport_vehicles')
+        .insert(dbVehicle)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbTransport(data);
+    } catch (error) {
+      console.error('Error creating vehicle:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update vehicle details
+   * Replaces: PATCH /api/transport/vehicles/:id
+   */
+  async updateVehicle(id: number, vehicle: any, schoolId: number) {
+    console.log('✏️ Updating vehicle:', id);
+    
+    try {
+      const dbVehicle = toDbTransport(vehicle);
+      
+      const { data, error } = await supabase
+        .from('transport_vehicles')
+        .update(dbVehicle)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbTransport(data);
+    } catch (error) {
+      console.error('Error updating vehicle:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a vehicle
+   * Replaces: DELETE /api/transport/vehicles/:id
+   */
+  async deleteVehicle(id: number, schoolId: number) {
+    console.log('🗑️ Deleting vehicle:', id);
+    
+    try {
+      const { error } = await supabase
+        .from('transport_vehicles')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting vehicle:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get student-route assignments
+   * Replaces: GET /api/transport/assignments
+   */
+  async getAssignments(schoolId: number) {
+    console.log('📋 Fetching transport assignments for school:', schoolId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('transport_student_assignments')
+        .select(`
+          *,
+          students (id, name, student_id, class, section),
+          transport_routes (id, route_name),
+          transport_vehicles (id, vehicle_number)
+        `)
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return (data || []).map(assignment => fromDbTransport(assignment));
+    } catch (error) {
+      console.error('Error fetching assignments:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Assign student to route
+   * Replaces: POST /api/transport/assign
+   */
+  async assignStudentToRoute(assignment: any, schoolId: number) {
+    console.log('➕ Assigning student to route');
+    
+    try {
+      const dbAssignment = toDbTransport({ ...assignment, schoolId, isActive: true });
+      
+      const { data, error } = await supabase
+        .from('transport_student_assignments')
+        .insert(dbAssignment)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbTransport(data);
+    } catch (error) {
+      console.error('Error assigning student to route:', error);
+      throw error;
+    }
+  }
+};
+
+// ============================================================================
+// INVENTORY SYSTEM API
+// ============================================================================
+export const inventory = {
+  /**
+   * Get all inventory items
+   * Replaces: GET /api/inventory/items
+   */
+  async getItems(schoolId: number) {
+    console.log('📦 Fetching inventory items for school:', schoolId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('name');
+      
+      if (error) throw error;
+      
+      return (data || []).map(item => fromDbInventory(item));
+    } catch (error) {
+      console.error('Error fetching inventory items:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get item details by ID
+   * Replaces: GET /api/inventory/items/:id
+   */
+  async getItemById(id: number, schoolId: number) {
+    console.log('📦 Fetching inventory item:', id);
+    
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbInventory(data);
+    } catch (error) {
+      console.error('Error fetching inventory item:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new inventory item
+   * Replaces: POST /api/inventory/items
+   */
+  async createItem(item: any, schoolId: number) {
+    console.log('➕ Creating inventory item');
+    
+    try {
+      const dbItem = toDbInventory({ ...item, schoolId });
+      
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .insert(dbItem)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbInventory(data);
+    } catch (error) {
+      console.error('Error creating inventory item:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update inventory item
+   * Replaces: PATCH /api/inventory/items/:id
+   */
+  async updateItem(id: number, item: any, schoolId: number) {
+    console.log('✏️ Updating inventory item:', id);
+    
+    try {
+      const dbItem = toDbInventory(item);
+      
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .update(dbItem)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbInventory(data);
+    } catch (error) {
+      console.error('Error updating inventory item:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete an inventory item
+   * Replaces: DELETE /api/inventory/items/:id
+   */
+  async deleteItem(id: number, schoolId: number) {
+    console.log('🗑️ Deleting inventory item:', id);
+    
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting inventory item:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get vendor list
+   * Replaces: GET /api/inventory/vendors
+   */
+  async getVendors(schoolId: number) {
+    console.log('🏢 Fetching vendors for school:', schoolId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('vendor_name');
+      
+      if (error) throw error;
+      
+      return (data || []).map(vendor => fromDbVendor(vendor));
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Create a new vendor
+   * Replaces: POST /api/inventory/vendors
+   */
+  async createVendor(vendor: any, schoolId: number) {
+    console.log('➕ Creating vendor');
+    
+    try {
+      const dbVendor = toDbVendor({ ...vendor, schoolId });
+      
+      const { data, error } = await supabase
+        .from('vendors')
+        .insert(dbVendor)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbVendor(data);
+    } catch (error) {
+      console.error('Error creating vendor:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get stock alerts
+   * Replaces: GET /api/inventory/stock-alerts
+   */
+  async getStockAlerts(schoolId: number) {
+    console.log('⚠️ Fetching stock alerts for school:', schoolId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('stock_alerts')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_acknowledged', false)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return (data || []).map(alert => fromDbStockAlert(alert));
+    } catch (error) {
+      console.error('Error fetching stock alerts:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get purchase orders
+   * Replaces: GET /api/inventory/purchase-orders
+   */
+  async getPurchaseOrders(schoolId: number) {
+    console.log('📝 Fetching purchase orders for school:', schoolId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('purchase_orders')
+        .select(`
+          *,
+          vendors (id, vendor_name, vendor_code)
+        `)
+        .eq('school_id', schoolId)
+        .order('order_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      return (data || []).map(order => fromDbPurchaseOrder(order));
+    } catch (error) {
+      console.error('Error fetching purchase orders:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Create purchase order
+   * Replaces: POST /api/inventory/purchase-orders
+   */
+  async createPurchaseOrder(order: any, schoolId: number) {
+    console.log('➕ Creating purchase order');
+    
+    try {
+      const dbOrder = toDbPurchaseOrder({ ...order, schoolId });
+      
+      const { data, error } = await supabase
+        .from('purchase_orders')
+        .insert(dbOrder)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return fromDbPurchaseOrder(data);
+    } catch (error) {
+      console.error('Error creating purchase order:', error);
+      throw error;
+    }
+  }
+};
+
 // Helper functions for Bengali translations and metadata
 function getBengaliName(type: string): string {
   const names: Record<string, string> = {
@@ -4460,6 +6779,3044 @@ function getEstimatedTime(type: string): string {
   };
   return times[type] || '২-৩ মিনিট';
 }
+
+// ============================================================================
+// HR/PAYROLL MANAGEMENT SYSTEM
+// Replaces Express API endpoints with direct Supabase calls
+// ============================================================================
+export const hrPayroll = {
+  /**
+   * Get all staff members for a school
+   * Replaces: GET /api/hr/staff
+   */
+  async getStaff(schoolId: number) {
+    console.log('👥 Fetching staff members for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('name');
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} staff members`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching staff:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get staff member by ID
+   * Replaces: GET /api/hr/staff/:id
+   */
+  async getStaffById(id: number, schoolId: number) {
+    console.log('👤 Fetching staff member:', id);
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Staff member fetched successfully');
+      return data;
+    } catch (error) {
+      console.error('❌ Error fetching staff member:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create new staff member
+   * Replaces: POST /api/hr/staff
+   */
+  async createStaff(staff: any, schoolId: number) {
+    console.log('➕ Creating new staff member');
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .insert([{ ...staff, school_id: schoolId }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Staff member created successfully');
+      return data;
+    } catch (error) {
+      console.error('❌ Error creating staff member:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update staff member
+   * Replaces: PUT /api/hr/staff/:id
+   */
+  async updateStaff(id: number, staff: any, schoolId: number) {
+    console.log('📝 Updating staff member:', id);
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .update(staff)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Staff member updated successfully');
+      return data;
+    } catch (error) {
+      console.error('❌ Error updating staff member:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete staff member
+   * Replaces: DELETE /api/hr/staff/:id
+   */
+  async deleteStaff(id: number, schoolId: number) {
+    console.log('🗑️ Deleting staff member:', id);
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      console.log('✅ Staff member deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error deleting staff member:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get staff attendance records
+   * Replaces: GET /api/hr/attendance
+   */
+  async getStaffAttendance(schoolId: number, date?: string) {
+    console.log('📅 Fetching staff attendance for school:', schoolId, 'date:', date);
+    try {
+      let query = supabase
+        .from('staff_attendance')
+        .select(`
+          *,
+          staff:staff_id (
+            id,
+            name,
+            employee_id,
+            department,
+            designation
+          )
+        `)
+        .eq('school_id', schoolId);
+      
+      if (date) {
+        query = query.eq('date', date);
+      }
+      
+      const { data, error } = await query.order('date', { ascending: false });
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} attendance records`);
+      return (data || []).map(fromDbStaffAttendance);
+    } catch (error) {
+      console.error('❌ Error fetching staff attendance:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Mark staff attendance
+   * Replaces: POST /api/hr/attendance
+   */
+  async markStaffAttendance(attendance: any, schoolId: number) {
+    console.log('✅ Marking staff attendance');
+    try {
+      const dbAttendance = toDbStaffAttendance({ ...attendance, schoolId });
+      const { data, error } = await supabase
+        .from('staff_attendance')
+        .insert([dbAttendance])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Attendance marked successfully');
+      return fromDbStaffAttendance(data);
+    } catch (error) {
+      console.error('❌ Error marking attendance:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get leave applications
+   * Replaces: GET /api/hr/leave-applications
+   */
+  async getLeaveApplications(schoolId: number, status?: string) {
+    console.log('📝 Fetching leave applications for school:', schoolId, 'status:', status);
+    try {
+      let query = supabase
+        .from('leave_applications')
+        .select(`
+          *,
+          staff:staff_id (
+            id,
+            name,
+            employee_id,
+            department
+          ),
+          leave_type:leave_type_id (
+            id,
+            name,
+            name_bn
+          )
+        `)
+        .eq('school_id', schoolId);
+      
+      if (status) {
+        query = query.eq('status', status);
+      }
+      
+      const { data, error } = await query.order('applied_date', { ascending: false });
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} leave applications`);
+      return (data || []).map(fromDbLeaveApplication);
+    } catch (error) {
+      console.error('❌ Error fetching leave applications:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create leave application
+   * Replaces: POST /api/hr/leave-applications
+   */
+  async createLeaveApplication(leave: any, schoolId: number) {
+    console.log('📝 Creating leave application');
+    try {
+      const dbLeave = toDbLeaveApplication({ ...leave, schoolId });
+      const { data, error } = await supabase
+        .from('leave_applications')
+        .insert([dbLeave])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Leave application created successfully');
+      return fromDbLeaveApplication(data);
+    } catch (error) {
+      console.error('❌ Error creating leave application:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update leave application status
+   * Replaces: PUT /api/hr/leave-applications/:id
+   */
+  async updateLeaveStatus(id: number, status: string, schoolId: number) {
+    console.log('📝 Updating leave application status:', id, 'to:', status);
+    try {
+      const { data, error } = await supabase
+        .from('leave_applications')
+        .update({ 
+          status,
+          approved_date: status === 'approved' ? new Date().toISOString() : null
+        })
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Leave application status updated successfully');
+      return fromDbLeaveApplication(data);
+    } catch (error) {
+      console.error('❌ Error updating leave application:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get leave balances for a staff member
+   * Replaces: GET /api/hr/leave-balances/:staffId
+   */
+  async getLeaveBalances(staffId: number, schoolId: number) {
+    console.log('📊 Fetching leave balances for staff:', staffId);
+    try {
+      const { data, error } = await supabase
+        .from('leave_balances')
+        .select(`
+          *,
+          leave_type:leave_type_id (
+            id,
+            name,
+            name_bn
+          )
+        `)
+        .eq('staff_id', staffId)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} leave balances`);
+      return (data || []).map(fromDbLeaveBalance);
+    } catch (error) {
+      console.error('❌ Error fetching leave balances:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get performance appraisals
+   * Replaces: GET /api/hr/appraisals
+   */
+  async getAppraisals(schoolId: number) {
+    console.log('📊 Fetching appraisals for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('appraisals')
+        .select(`
+          *,
+          staff:staff_id (
+            id,
+            name,
+            employee_id,
+            department,
+            designation
+          )
+        `)
+        .eq('school_id', schoolId)
+        .order('review_date', { ascending: false });
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} appraisals`);
+      return (data || []).map(fromDbAppraisal);
+    } catch (error) {
+      console.error('❌ Error fetching appraisals:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create performance appraisal
+   * Replaces: POST /api/hr/appraisals
+   */
+  async createAppraisal(appraisal: any, schoolId: number) {
+    console.log('📝 Creating appraisal');
+    try {
+      const dbAppraisal = toDbAppraisal({ ...appraisal, schoolId });
+      const { data, error } = await supabase
+        .from('appraisals')
+        .insert([dbAppraisal])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Appraisal created successfully');
+      return fromDbAppraisal(data);
+    } catch (error) {
+      console.error('❌ Error creating appraisal:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get payroll records
+   * Replaces: GET /api/hr/payroll
+   */
+  async getPayrollRecords(schoolId: number, month?: string) {
+    console.log('💰 Fetching payroll records for school:', schoolId, 'month:', month);
+    try {
+      let query = supabase
+        .from('payroll_records')
+        .select(`
+          *,
+          staff:staff_id (
+            id,
+            name,
+            employee_id,
+            department,
+            designation
+          )
+        `)
+        .eq('school_id', schoolId);
+      
+      if (month) {
+        query = query.eq('month', month);
+      }
+      
+      const { data, error } = await query.order('month', { ascending: false });
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} payroll records`);
+      return (data || []).map(fromDbPayrollRecord);
+    } catch (error) {
+      console.error('❌ Error fetching payroll records:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Generate monthly payroll
+   * Replaces: POST /api/hr/payroll/generate
+   */
+  async generatePayroll(month: string, schoolId: number) {
+    console.log('💰 Generating payroll for month:', month);
+    try {
+      // Get all active staff members
+      const { data: staff, error: staffError } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('status', 'active');
+      
+      if (staffError) throw staffError;
+
+      // Generate payroll records for each staff member
+      const payrollRecords = (staff || []).map((s: any) => ({
+        staff_id: s.id,
+        month,
+        basic_salary: s.basic_salary || 0,
+        gross_salary: s.gross_salary || s.basic_salary || 0,
+        total_deductions: 0,
+        net_salary: s.gross_salary || s.basic_salary || 0,
+        payment_status: 'pending',
+        school_id: schoolId
+      }));
+
+      const { data, error } = await supabase
+        .from('payroll_records')
+        .insert(payrollRecords)
+        .select();
+      
+      if (error) throw error;
+      console.log(`✅ Generated payroll for ${data?.length || 0} staff members`);
+      return (data || []).map(fromDbPayrollRecord);
+    } catch (error) {
+      console.error('❌ Error generating payroll:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get salary components
+   * Replaces: GET /api/hr/salary-components
+   */
+  async getSalaryComponents(schoolId: number) {
+    console.log('💰 Fetching salary components for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('salary_components')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} salary components`);
+      return (data || []).map(fromDbSalaryComponent);
+    } catch (error) {
+      console.error('❌ Error fetching salary components:', error);
+      throw error;
+    }
+  }
+};
+
+// ============================================================================
+// HOSTEL MANAGEMENT SYSTEM
+// Replaces Express API endpoints with direct Supabase calls
+// ============================================================================
+export const hostel = {
+  /**
+   * Get all hostels for a school
+   * Replaces: GET /api/hostel/hostels
+   */
+  async getHostels(schoolId: number) {
+    console.log('🏠 Fetching hostels for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('hostels')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('name');
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} hostels`);
+      return (data || []).map(fromDbHostel);
+    } catch (error) {
+      console.error('❌ Error fetching hostels:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get hostel by ID
+   * Replaces: GET /api/hostel/hostels/:id
+   */
+  async getHostelById(id: number, schoolId: number) {
+    console.log('🏠 Fetching hostel:', id);
+    try {
+      const { data, error } = await supabase
+        .from('hostels')
+        .select('*')
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Hostel fetched successfully');
+      return fromDbHostel(data);
+    } catch (error) {
+      console.error('❌ Error fetching hostel:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create new hostel
+   * Replaces: POST /api/hostel/hostels
+   */
+  async createHostel(hostel: any, schoolId: number) {
+    console.log('➕ Creating new hostel');
+    try {
+      const dbHostel = toDbHostel({ ...hostel, schoolId });
+      const { data, error } = await supabase
+        .from('hostels')
+        .insert([dbHostel])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Hostel created successfully');
+      return fromDbHostel(data);
+    } catch (error) {
+      console.error('❌ Error creating hostel:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get hostel rooms
+   * Replaces: GET /api/hostel/rooms
+   */
+  async getRooms(schoolId: number, hostelId?: number) {
+    console.log('🚪 Fetching rooms for school:', schoolId, 'hostel:', hostelId);
+    try {
+      let query = supabase
+        .from('hostel_rooms')
+        .select(`
+          *,
+          hostel:hostel_id (
+            id,
+            name,
+            name_in_bangla
+          )
+        `)
+        .eq('school_id', schoolId);
+      
+      if (hostelId) {
+        query = query.eq('hostel_id', hostelId);
+      }
+      
+      const { data, error } = await query.order('room_number');
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} rooms`);
+      return (data || []).map(fromDbHostelRoom);
+    } catch (error) {
+      console.error('❌ Error fetching rooms:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create new room
+   * Replaces: POST /api/hostel/rooms
+   */
+  async createRoom(room: any, schoolId: number) {
+    console.log('➕ Creating new room');
+    try {
+      const dbRoom = toDbHostelRoom({ ...room, schoolId });
+      const { data, error } = await supabase
+        .from('hostel_rooms')
+        .insert([dbRoom])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Room created successfully');
+      return fromDbHostelRoom(data);
+    } catch (error) {
+      console.error('❌ Error creating room:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get room assignments
+   * Replaces: GET /api/hostel/room-assignments
+   */
+  async getRoomAssignments(schoolId: number) {
+    console.log('📋 Fetching room assignments for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('hostel_room_assignments')
+        .select(`
+          *,
+          student:student_id (
+            id,
+            name,
+            student_id,
+            class,
+            section
+          ),
+          room:room_id (
+            id,
+            room_number,
+            room_type,
+            hostel:hostel_id (
+              id,
+              name,
+              name_in_bangla
+            )
+          )
+        `)
+        .eq('school_id', schoolId)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} room assignments`);
+      return (data || []).map(fromDbHostelRoomAssignment);
+    } catch (error) {
+      console.error('❌ Error fetching room assignments:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Assign student to room
+   * Replaces: POST /api/hostel/room-assignments
+   */
+  async assignStudentToRoom(assignment: any, schoolId: number) {
+    console.log('➕ Assigning student to room');
+    try {
+      const dbAssignment = toDbHostelRoomAssignment({ ...assignment, schoolId });
+      const { data, error } = await supabase
+        .from('hostel_room_assignments')
+        .insert([dbAssignment])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Student assigned to room successfully');
+      return fromDbHostelRoomAssignment(data);
+    } catch (error) {
+      console.error('❌ Error assigning student to room:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get hostel attendance
+   * Replaces: GET /api/hostel/attendance
+   */
+  async getHostelAttendance(schoolId: number, date?: string) {
+    console.log('📅 Fetching hostel attendance for school:', schoolId, 'date:', date);
+    try {
+      let query = supabase
+        .from('hostel_attendance')
+        .select(`
+          *,
+          student:student_id (
+            id,
+            name,
+            student_id,
+            class,
+            section
+          ),
+          room:room_id (
+            id,
+            room_number,
+            hostel:hostel_id (
+              id,
+              name
+            )
+          )
+        `)
+        .eq('school_id', schoolId);
+      
+      if (date) {
+        query = query.eq('date', date);
+      }
+      
+      const { data, error } = await query.order('date', { ascending: false });
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} attendance records`);
+      return (data || []).map(fromDbHostelAttendance);
+    } catch (error) {
+      console.error('❌ Error fetching hostel attendance:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Mark hostel attendance
+   * Replaces: POST /api/hostel/attendance
+   */
+  async markHostelAttendance(attendance: any, schoolId: number) {
+    console.log('✅ Marking hostel attendance');
+    try {
+      const dbAttendance = toDbHostelAttendance({ ...attendance, schoolId });
+      const { data, error } = await supabase
+        .from('hostel_attendance')
+        .insert([dbAttendance])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Hostel attendance marked successfully');
+      return fromDbHostelAttendance(data);
+    } catch (error) {
+      console.error('❌ Error marking hostel attendance:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get meal plans
+   * Replaces: GET /api/hostel/meal-plans
+   */
+  async getMealPlans(schoolId: number) {
+    console.log('🍽️ Fetching meal plans for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('meal_plans')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('plan_name');
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} meal plans`);
+      return (data || []).map(fromDbMealPlan);
+    } catch (error) {
+      console.error('❌ Error fetching meal plans:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get meal menus
+   * Replaces: GET /api/hostel/meal-menus
+   */
+  async getMealMenus(schoolId: number, date?: string) {
+    console.log('📋 Fetching meal menus for school:', schoolId, 'date:', date);
+    try {
+      let query = supabase
+        .from('meal_menu')
+        .select('*')
+        .eq('school_id', schoolId);
+      
+      if (date) {
+        const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+        query = query.eq('day_of_week', dayOfWeek);
+      }
+      
+      const { data, error } = await query.order('day_of_week');
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} meal menus`);
+      return (data || []).map(fromDbMealMenu);
+    } catch (error) {
+      console.error('❌ Error fetching meal menus:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get meal subscriptions
+   * Replaces: GET /api/hostel/meal-subscriptions
+   */
+  async getMealSubscriptions(schoolId: number) {
+    console.log('📋 Fetching meal subscriptions for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('meal_subscriptions')
+        .select(`
+          *,
+          student:student_id (
+            id,
+            name,
+            student_id,
+            class,
+            section
+          ),
+          plan:plan_id (
+            id,
+            plan_name,
+            plan_name_bn,
+            monthly_fee
+          )
+        `)
+        .eq('school_id', schoolId)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} meal subscriptions`);
+      return (data || []).map(fromDbMealSubscription);
+    } catch (error) {
+      console.error('❌ Error fetching meal subscriptions:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create meal subscription
+   * Replaces: POST /api/hostel/meal-subscriptions
+   */
+  async createMealSubscription(subscription: any, schoolId: number) {
+    console.log('➕ Creating meal subscription');
+    try {
+      const dbSubscription = toDbMealSubscription({ ...subscription, schoolId });
+      const { data, error } = await supabase
+        .from('meal_subscriptions')
+        .insert([dbSubscription])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('✅ Meal subscription created successfully');
+      return fromDbMealSubscription(data);
+    } catch (error) {
+      console.error('❌ Error creating meal subscription:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get meal transactions
+   * Replaces: GET /api/hostel/meal-transactions
+   */
+  async getMealTransactions(schoolId: number) {
+    console.log('💰 Fetching meal transactions for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('meal_transactions')
+        .select(`
+          *,
+          student:student_id (
+            id,
+            name,
+            student_id,
+            class,
+            section
+          ),
+          subscription:subscription_id (
+            id,
+            plan:plan_id (
+              id,
+              plan_name,
+              plan_name_bn
+            )
+          )
+        `)
+        .eq('school_id', schoolId)
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      console.log(`✅ Fetched ${data?.length || 0} meal transactions`);
+      return (data || []).map(fromDbMealTransaction);
+    } catch (error) {
+      console.error('❌ Error fetching meal transactions:', error);
+      throw error;
+    }
+  }
+};
+
+// ============================================================================
+// ADMISSION SYSTEM
+// ============================================================================
+
+export const admission = {
+  async getApplications(schoolId: number, status?: string) {
+    console.log('📝 Fetching admission applications for school:', schoolId, status ? `with status: ${status}` : '');
+    try {
+      let query = supabase
+        .from('admission_applications')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('application_date', { ascending: false });
+      
+      if (status) {
+        query = query.eq('status', status);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} admission applications`);
+      return (data || []).map(fromDbAdmissionApplication);
+    } catch (error) {
+      console.error('❌ Error fetching admission applications:', error);
+      throw error;
+    }
+  },
+
+  async getApplicationById(id: number, schoolId: number) {
+    console.log('📝 Fetching admission application:', id, 'for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('admission_applications')
+        .select('*')
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Fetched admission application:', id);
+      return data ? fromDbAdmissionApplication(data) : null;
+    } catch (error) {
+      console.error('❌ Error fetching admission application:', error);
+      throw error;
+    }
+  },
+
+  async createApplication(application: any, schoolId: number) {
+    console.log('➕ Creating admission application for school:', schoolId);
+    try {
+      const dbApplication = toDbAdmissionApplication(application);
+      dbApplication.school_id = schoolId;
+      dbApplication.application_date = dbApplication.application_date || new Date().toISOString();
+      dbApplication.status = dbApplication.status || 'pending';
+      
+      const { data, error } = await supabase
+        .from('admission_applications')
+        .insert([dbApplication])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created admission application:', data?.id);
+      return data ? fromDbAdmissionApplication(data) : null;
+    } catch (error) {
+      console.error('❌ Error creating admission application:', error);
+      throw error;
+    }
+  },
+
+  async updateApplication(id: number, application: any, schoolId: number) {
+    console.log('📝 Updating admission application:', id, 'for school:', schoolId);
+    try {
+      const dbApplication = toDbAdmissionApplication(application);
+      
+      const { data, error } = await supabase
+        .from('admission_applications')
+        .update(dbApplication)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Updated admission application:', id);
+      return data ? fromDbAdmissionApplication(data) : null;
+    } catch (error) {
+      console.error('❌ Error updating admission application:', error);
+      throw error;
+    }
+  },
+
+  async updateApplicationStatus(id: number, status: string, schoolId: number) {
+    console.log('🔄 Updating application status:', id, 'to:', status, 'for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('admission_applications')
+        .update({ status })
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Updated application status:', id);
+      return data ? fromDbAdmissionApplication(data) : null;
+    } catch (error) {
+      console.error('❌ Error updating application status:', error);
+      throw error;
+    }
+  },
+
+  async getTests(schoolId: number) {
+    console.log('📝 Fetching admission tests for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('admission_tests')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('test_date', { ascending: true });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} admission tests`);
+      return (data || []).map(fromDbAdmissionTest);
+    } catch (error) {
+      console.error('❌ Error fetching admission tests:', error);
+      throw error;
+    }
+  },
+
+  async createTest(test: any, schoolId: number) {
+    console.log('➕ Creating admission test for school:', schoolId);
+    try {
+      const dbTest = toDbAdmissionTest(test);
+      dbTest.school_id = schoolId;
+      
+      const { data, error } = await supabase
+        .from('admission_tests')
+        .insert([dbTest])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created admission test:', data?.id);
+      return data ? fromDbAdmissionTest(data) : null;
+    } catch (error) {
+      console.error('❌ Error creating admission test:', error);
+      throw error;
+    }
+  },
+
+  async getTestResults(schoolId: number, testId?: number) {
+    console.log('📊 Fetching test results for school:', schoolId, testId ? `test ID: ${testId}` : '');
+    try {
+      let query = supabase
+        .from('admission_tests')
+        .select(`
+          *,
+          applications:admission_applications(
+            id,
+            student_name,
+            email,
+            phone,
+            status
+          )
+        `)
+        .eq('school_id', schoolId);
+      
+      if (testId) {
+        query = query.eq('id', testId);
+      }
+      
+      const { data, error } = await query.order('test_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} test results`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching test results:', error);
+      throw error;
+    }
+  },
+
+  async getInterviews(schoolId: number) {
+    console.log('📝 Fetching interviews for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('admission_interviews')
+        .select(`
+          *,
+          application:application_id (
+            id,
+            student_name,
+            email,
+            phone
+          )
+        `)
+        .eq('school_id', schoolId)
+        .order('interview_date', { ascending: true });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} interviews`);
+      return (data || []).map(fromDbAdmissionInterview);
+    } catch (error) {
+      console.error('❌ Error fetching interviews:', error);
+      throw error;
+    }
+  },
+
+  async scheduleInterview(interview: any, schoolId: number) {
+    console.log('➕ Scheduling interview for school:', schoolId);
+    try {
+      const dbInterview = toDbAdmissionInterview(interview);
+      dbInterview.school_id = schoolId;
+      dbInterview.status = dbInterview.status || 'scheduled';
+      
+      const { data, error } = await supabase
+        .from('admission_interviews')
+        .insert([dbInterview])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Scheduled interview:', data?.id);
+      return data ? fromDbAdmissionInterview(data) : null;
+    } catch (error) {
+      console.error('❌ Error scheduling interview:', error);
+      throw error;
+    }
+  }
+};
+
+// ============================================================================
+// REPORTS SYSTEM
+// ============================================================================
+
+export const reports = {
+  async getAttendanceReport(schoolId: number, filters: any) {
+    console.log('📊 Generating attendance report for school:', schoolId, filters);
+    try {
+      let query = supabase
+        .from('attendance_records')
+        .select(`
+          *,
+          student:student_id (
+            id,
+            name,
+            student_id,
+            class,
+            section
+          )
+        `)
+        .eq('school_id', schoolId);
+      
+      if (filters?.startDate) {
+        query = query.gte('date', filters.startDate);
+      }
+      if (filters?.endDate) {
+        query = query.lte('date', filters.endDate);
+      }
+      if (filters?.class) {
+        query = query.eq('student.class', filters.class);
+      }
+      if (filters?.section) {
+        query = query.eq('student.section', filters.section);
+      }
+      
+      const { data, error } = await query.order('date', { ascending: false });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Generated attendance report with ${data?.length || 0} records`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error generating attendance report:', error);
+      throw error;
+    }
+  },
+
+  async getTeacherWorkloadReport(schoolId: number) {
+    console.log('📊 Generating teacher workload report for school:', schoolId);
+    try {
+      const { data: teachersData, error } = await supabase
+        .from('teachers')
+        .select(`
+          id,
+          name,
+          subject,
+          classes_assigned
+        `)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      const workloadReport = await Promise.all(
+        (teachersData || []).map(async (teacher) => {
+          const { data: lessonsData } = await supabase
+            .from('lesson_plans')
+            .select('id', { count: 'exact' })
+            .eq('teacher_id', teacher.id)
+            .eq('school_id', schoolId);
+          
+          const { data: assignmentsData } = await supabase
+            .from('assignments')
+            .select('id', { count: 'exact' })
+            .eq('teacher_id', teacher.id)
+            .eq('school_id', schoolId);
+          
+          return {
+            ...teacher,
+            lesson_count: lessonsData?.length || 0,
+            assignment_count: assignmentsData?.length || 0,
+            total_workload: (lessonsData?.length || 0) + (assignmentsData?.length || 0)
+          };
+        })
+      );
+      
+      console.log(`✅ Generated teacher workload report for ${workloadReport.length} teachers`);
+      return workloadReport;
+    } catch (error) {
+      console.error('❌ Error generating teacher workload report:', error);
+      throw error;
+    }
+  },
+
+  async getFeeDefaultersReport(schoolId: number) {
+    console.log('💰 Generating fee defaulters report for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select(`
+          id,
+          name,
+          student_id,
+          class,
+          section,
+          phone,
+          parent_email
+        `)
+        .eq('school_id', schoolId)
+        .eq('fee_status', 'pending');
+      
+      if (error) throw error;
+      
+      console.log(`✅ Found ${data?.length || 0} fee defaulters`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error generating fee defaulters report:', error);
+      throw error;
+    }
+  },
+
+  async getReportTemplates(schoolId: number) {
+    console.log('📄 Fetching report templates for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('report_templates')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} report templates`);
+      return (data || []).map(fromDbReportTemplate);
+    } catch (error) {
+      console.error('❌ Error fetching report templates:', error);
+      throw error;
+    }
+  },
+
+  async generateReport(templateId: number, params: any, schoolId: number) {
+    console.log('📊 Generating report from template:', templateId, 'for school:', schoolId);
+    try {
+      const { data: template, error: templateError } = await supabase
+        .from('report_templates')
+        .select('*')
+        .eq('id', templateId)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (templateError) throw templateError;
+      
+      let reportData: any = {};
+      
+      switch (template.type) {
+        case 'attendance':
+          reportData = await this.getAttendanceReport(schoolId, params);
+          break;
+        case 'teacher_workload':
+          reportData = await this.getTeacherWorkloadReport(schoolId);
+          break;
+        case 'fee_defaulters':
+          reportData = await this.getFeeDefaultersReport(schoolId);
+          break;
+        default:
+          reportData = { message: 'Custom report generation not implemented for this type' };
+      }
+      
+      console.log('✅ Generated report from template:', templateId);
+      return {
+        template: fromDbReportTemplate(template),
+        data: reportData,
+        generated_at: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('❌ Error generating report:', error);
+      throw error;
+    }
+  },
+
+  async getSavedReports(schoolId: number) {
+    console.log('📂 Fetching saved reports for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('report_templates')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_saved', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} saved reports`);
+      return (data || []).map(fromDbReportTemplate);
+    } catch (error) {
+      console.error('❌ Error fetching saved reports:', error);
+      throw error;
+    }
+  },
+
+  async saveReport(report: any, schoolId: number) {
+    console.log('💾 Saving report for school:', schoolId);
+    try {
+      const dbReport = toDbReportTemplate(report);
+      dbReport.school_id = schoolId;
+      dbReport.is_saved = true;
+      dbReport.saved_at = new Date().toISOString();
+      
+      const { data, error } = await supabase
+        .from('report_templates')
+        .insert([dbReport])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Saved report:', data?.id);
+      return data ? fromDbReportTemplate(data) : null;
+    } catch (error) {
+      console.error('❌ Error saving report:', error);
+      throw error;
+    }
+  }
+};
+
+// ============================================================================
+// ACADEMIC YEARS, CALENDAR, EVENTS SYSTEM
+// ============================================================================
+
+export const academic = {
+  async getAcademicYears(schoolId: number) {
+    console.log('📅 Fetching academic years for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('academic_years')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('start_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} academic years`);
+      return (data || []).map(fromDbAcademicYear);
+    } catch (error) {
+      console.error('❌ Error fetching academic years:', error);
+      throw error;
+    }
+  },
+
+  async getCurrentAcademicYear(schoolId: number) {
+    console.log('📅 Fetching current academic year for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('academic_years')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_current', true)
+        .single();
+      
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('⚠️ No current academic year found, fetching most recent');
+          const { data: latestData, error: latestError } = await supabase
+            .from('academic_years')
+            .select('*')
+            .eq('school_id', schoolId)
+            .order('start_date', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (latestError) throw latestError;
+          console.log('✅ Fetched most recent academic year');
+          return latestData ? fromDbAcademicYear(latestData) : null;
+        }
+        throw error;
+      }
+      
+      console.log('✅ Fetched current academic year');
+      return data ? fromDbAcademicYear(data) : null;
+    } catch (error) {
+      console.error('❌ Error fetching current academic year:', error);
+      throw error;
+    }
+  },
+
+  async createAcademicYear(year: any, schoolId: number) {
+    console.log('➕ Creating academic year for school:', schoolId);
+    try {
+      const dbYear = toDbAcademicYear(year);
+      dbYear.school_id = schoolId;
+      
+      if (dbYear.is_current) {
+        await supabase
+          .from('academic_years')
+          .update({ is_current: false })
+          .eq('school_id', schoolId);
+      }
+      
+      const { data, error } = await supabase
+        .from('academic_years')
+        .insert([dbYear])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created academic year:', data?.id);
+      return data ? fromDbAcademicYear(data) : null;
+    } catch (error) {
+      console.error('❌ Error creating academic year:', error);
+      throw error;
+    }
+  },
+
+  async updateAcademicYear(id: number, year: any, schoolId: number) {
+    console.log('📝 Updating academic year:', id, 'for school:', schoolId);
+    try {
+      const dbYear = toDbAcademicYear(year);
+      
+      if (dbYear.is_current) {
+        await supabase
+          .from('academic_years')
+          .update({ is_current: false })
+          .eq('school_id', schoolId)
+          .neq('id', id);
+      }
+      
+      const { data, error } = await supabase
+        .from('academic_years')
+        .update(dbYear)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Updated academic year:', id);
+      return data ? fromDbAcademicYear(data) : null;
+    } catch (error) {
+      console.error('❌ Error updating academic year:', error);
+      throw error;
+    }
+  },
+
+  async getCalendarEvents(schoolId: number, filters?: any) {
+    console.log('📅 Fetching calendar events for school:', schoolId, filters || '');
+    try {
+      let query = supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('school_id', schoolId);
+      
+      if (filters?.startDate) {
+        query = query.gte('start_date', filters.startDate);
+      }
+      if (filters?.endDate) {
+        query = query.lte('end_date', filters.endDate);
+      }
+      if (filters?.type) {
+        query = query.eq('event_type', filters.type);
+      }
+      
+      const { data, error } = await query.order('start_date', { ascending: true });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} calendar events`);
+      return (data || []).map(fromDbCalendarEvent);
+    } catch (error) {
+      console.error('❌ Error fetching calendar events:', error);
+      throw error;
+    }
+  },
+
+  async createCalendarEvent(event: any, schoolId: number) {
+    console.log('➕ Creating calendar event for school:', schoolId);
+    try {
+      const dbEvent = toDbCalendarEvent(event);
+      dbEvent.school_id = schoolId;
+      
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .insert([dbEvent])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created calendar event:', data?.id);
+      return data ? fromDbCalendarEvent(data) : null;
+    } catch (error) {
+      console.error('❌ Error creating calendar event:', error);
+      throw error;
+    }
+  },
+
+  async updateCalendarEvent(id: number, event: any, schoolId: number) {
+    console.log('📝 Updating calendar event:', id, 'for school:', schoolId);
+    try {
+      const dbEvent = toDbCalendarEvent(event);
+      
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .update(dbEvent)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Updated calendar event:', id);
+      return data ? fromDbCalendarEvent(data) : null;
+    } catch (error) {
+      console.error('❌ Error updating calendar event:', error);
+      throw error;
+    }
+  },
+
+  async deleteCalendarEvent(id: number, schoolId: number) {
+    console.log('🗑️ Deleting calendar event:', id, 'for school:', schoolId);
+    try {
+      const { error } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      console.log('✅ Deleted calendar event:', id);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error deleting calendar event:', error);
+      throw error;
+    }
+  },
+
+  async getAcademicTerms(schoolId: number) {
+    console.log('📚 Fetching academic terms for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('academic_terms')
+        .select(`
+          *,
+          academic_year:academic_year_id (
+            id,
+            year_name,
+            start_date,
+            end_date
+          )
+        `)
+        .eq('school_id', schoolId)
+        .order('start_date', { ascending: true });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} academic terms`);
+      return (data || []).map(fromDbAcademicTerm);
+    } catch (error) {
+      console.error('❌ Error fetching academic terms:', error);
+      throw error;
+    }
+  }
+};
+
+// ============================================================================
+// NOTIFICATIONS SYSTEM
+// ============================================================================
+
+export const notifications = {
+  async getNotifications(userId: string, schoolId: number, filters?: any) {
+    console.log('🔔 Fetching notifications for user:', userId, 'school:', schoolId);
+    try {
+      let query = supabase
+        .from('notifications')
+        .select('*')
+        .eq('school_id', schoolId);
+
+      if (userId) {
+        query = query.eq('recipient_id', userId);
+      }
+
+      if (filters?.isRead !== undefined) {
+        query = query.eq('is_read', filters.isRead);
+      }
+
+      if (filters?.notificationType) {
+        query = query.eq('notification_type', filters.notificationType);
+      }
+
+      if (filters?.recipientType) {
+        query = query.eq('recipient_type', filters.recipientType);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${data?.length || 0} notifications`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching notifications:', error);
+      throw error;
+    }
+  },
+
+  async createNotification(notification: any, schoolId: number) {
+    console.log('➕ Creating notification for school:', schoolId);
+    try {
+      const dbNotification: any = {
+        title: notification.title,
+        title_bn: notification.titleBn,
+        message: notification.message,
+        message_bn: notification.messageBn,
+        notification_type: notification.notificationType || 'general',
+        recipient_id: notification.recipientId,
+        recipient_type: notification.recipientType || 'user',
+        is_read: false,
+        action_url: notification.actionUrl,
+        icon_type: notification.iconType || 'info',
+        send_email: notification.sendEmail || false,
+        send_sms: notification.sendSms || false,
+        school_id: schoolId,
+      };
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert([dbNotification])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Created notification:', data?.id);
+      return data;
+    } catch (error) {
+      console.error('❌ Error creating notification:', error);
+      throw error;
+    }
+  },
+
+  async markAsRead(id: number, schoolId: number) {
+    console.log('✔️ Marking notification as read:', id);
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ 
+          is_read: true, 
+          read_at: new Date().toISOString() 
+        })
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Marked notification as read:', id);
+      return data;
+    } catch (error) {
+      console.error('❌ Error marking notification as read:', error);
+      throw error;
+    }
+  },
+
+  async markAllAsRead(userId: string, schoolId: number) {
+    console.log('✔️ Marking all notifications as read for user:', userId);
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ 
+          is_read: true, 
+          read_at: new Date().toISOString() 
+        })
+        .eq('recipient_id', userId)
+        .eq('school_id', schoolId)
+        .eq('is_read', false)
+        .select();
+
+      if (error) throw error;
+
+      console.log(`✅ Marked ${data?.length || 0} notifications as read`);
+      return { count: data?.length || 0 };
+    } catch (error) {
+      console.error('❌ Error marking all notifications as read:', error);
+      throw error;
+    }
+  },
+
+  async deleteNotification(id: number, schoolId: number) {
+    console.log('🗑️ Deleting notification:', id);
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+
+      if (error) throw error;
+
+      console.log('✅ Deleted notification:', id);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error deleting notification:', error);
+      throw error;
+    }
+  },
+
+  async getNotificationTemplates(schoolId: number) {
+    console.log('📋 Fetching notification templates for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('notification_templates')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${data?.length || 0} notification templates`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching notification templates:', error);
+      throw error;
+    }
+  },
+
+  async sendBulkNotification(template: any, recipients: any[], schoolId: number) {
+    console.log('📨 Sending bulk notification to', recipients.length, 'recipients');
+    try {
+      const notifications = recipients.map(recipient => ({
+        title: template.name,
+        title_bn: template.name_bn,
+        message: template.template_body,
+        message_bn: template.template_body_bn,
+        notification_type: template.category || 'general',
+        recipient_id: recipient.id,
+        recipient_type: recipient.type || 'user',
+        is_read: false,
+        send_email: template.send_email || false,
+        send_sms: template.send_sms || false,
+        school_id: schoolId,
+      }));
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert(notifications)
+        .select();
+
+      if (error) throw error;
+
+      // Log the bulk send
+      const logs = recipients.map(recipient => ({
+        template_id: template.id,
+        recipient_id: recipient.id,
+        recipient_type: recipient.type || 'user',
+        recipient_email: recipient.email,
+        recipient_phone: recipient.phone,
+        delivery_status: 'sent',
+        sent_at: new Date().toISOString(),
+        school_id: schoolId,
+      }));
+
+      await supabase
+        .from('notification_logs')
+        .insert(logs);
+
+      console.log(`✅ Sent bulk notification to ${data?.length || 0} recipients`);
+      return { count: data?.length || 0, notifications: data };
+    } catch (error) {
+      console.error('❌ Error sending bulk notification:', error);
+      throw error;
+    }
+  },
+};
+
+// ============================================================================
+// PARENT PORTAL SYSTEM
+// ============================================================================
+
+export const parentPortal = {
+  async getChildren(parentId: number, schoolId: number) {
+    console.log('👨‍👩‍👧‍👦 Fetching children for parent:', parentId, 'school:', schoolId);
+    try {
+      // Get parent info first
+      const { data: parent, error: parentError } = await supabase
+        .from('parents')
+        .select('phone, email')
+        .eq('id', parentId)
+        .eq('school_id', schoolId)
+        .single();
+
+      if (parentError) throw parentError;
+
+      // Find students matching parent's phone or email
+      let query = supabase
+        .from('students')
+        .select('*')
+        .eq('school_id', schoolId);
+
+      if (parent?.phone) {
+        query = query.or(`guardian_phone.eq.${parent.phone},phone.eq.${parent.phone}`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      console.log(`✅ Found ${data?.length || 0} children for parent`);
+      return (data || []).map(fromDbStudent);
+    } catch (error) {
+      console.error('❌ Error fetching children:', error);
+      throw error;
+    }
+  },
+
+  async getChildProgress(studentId: number, schoolId: number) {
+    console.log('📊 Fetching progress for student:', studentId);
+    try {
+      // Get exam results
+      const { data: results, error: resultsError } = await supabase
+        .from('exam_results')
+        .select(`
+          *,
+          exam_schedules (
+            *,
+            exams (
+              name,
+              name_bn,
+              start_date
+            )
+          )
+        `)
+        .eq('student_id', studentId)
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+
+      if (resultsError) throw resultsError;
+
+      // Get attendance summary
+      const { data: attendance, error: attendanceError } = await supabase
+        .from('attendance')
+        .select('status')
+        .eq('student_id', studentId)
+        .eq('school_id', schoolId);
+
+      if (attendanceError) throw attendanceError;
+
+      const totalDays = attendance?.length || 0;
+      const presentDays = attendance?.filter(a => a.status === 'present').length || 0;
+      const attendancePercentage = totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
+
+      console.log('✅ Fetched student progress');
+      return {
+        examResults: results || [],
+        attendance: {
+          totalDays,
+          presentDays,
+          absentDays: totalDays - presentDays,
+          percentage: attendancePercentage.toFixed(2),
+        },
+      };
+    } catch (error) {
+      console.error('❌ Error fetching child progress:', error);
+      throw error;
+    }
+  },
+
+  async getChildAttendance(studentId: number, schoolId: number, filters?: any) {
+    console.log('📅 Fetching attendance for student:', studentId);
+    try {
+      let query = supabase
+        .from('attendance')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('school_id', schoolId);
+
+      if (filters?.startDate) {
+        query = query.gte('date', filters.startDate);
+      }
+
+      if (filters?.endDate) {
+        query = query.lte('date', filters.endDate);
+      }
+
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+
+      const { data, error } = await query.order('date', { ascending: false });
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${data?.length || 0} attendance records`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching child attendance:', error);
+      throw error;
+    }
+  },
+
+  async getChildExamResults(studentId: number, schoolId: number) {
+    console.log('📝 Fetching exam results for student:', studentId);
+    try {
+      const { data, error } = await supabase
+        .from('exam_results')
+        .select(`
+          *,
+          exam_schedules (
+            *,
+            exams (
+              id,
+              name,
+              description,
+              start_date,
+              end_date,
+              is_published
+            )
+          )
+        `)
+        .eq('student_id', studentId)
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${data?.length || 0} exam results`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching child exam results:', error);
+      throw error;
+    }
+  },
+
+  async getParentNotifications(parentId: number, schoolId: number) {
+    console.log('🔔 Fetching parent notifications for parent:', parentId);
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('recipient_id', parentId)
+        .eq('recipient_type', 'parent')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${data?.length || 0} parent notifications`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching parent notifications:', error);
+      throw error;
+    }
+  },
+
+  async getFeeStatus(studentId: number, schoolId: number) {
+    console.log('💰 Fetching fee status for student:', studentId);
+    try {
+      const { data, error } = await supabase
+        .from('fee_receipts')
+        .select(`
+          *,
+          fee_items (*)
+        `)
+        .eq('student_id', studentId)
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Calculate totals
+      const totalAmount = data?.reduce((sum, receipt) => sum + parseFloat(receipt.total_amount || 0), 0) || 0;
+      const paidAmount = data?.reduce((sum, receipt) => sum + parseFloat(receipt.paid_amount || 0), 0) || 0;
+      const dueAmount = data?.reduce((sum, receipt) => sum + parseFloat(receipt.due_amount || 0), 0) || 0;
+
+      console.log(`✅ Fetched ${data?.length || 0} fee receipts`);
+      return {
+        receipts: data || [],
+        summary: {
+          totalAmount: totalAmount.toFixed(2),
+          paidAmount: paidAmount.toFixed(2),
+          dueAmount: dueAmount.toFixed(2),
+          percentagePaid: totalAmount > 0 ? ((paidAmount / totalAmount) * 100).toFixed(2) : '0',
+        },
+      };
+    } catch (error) {
+      console.error('❌ Error fetching fee status:', error);
+      throw error;
+    }
+  },
+};
+
+// ============================================================================
+// EXAM MANAGEMENT & PUBLIC PORTAL SYSTEM
+// ============================================================================
+
+export const examPortal = {
+  async getExams(schoolId: number) {
+    console.log('📚 Fetching exams for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('exams')
+        .select(`
+          *,
+          exam_schedules (*)
+        `)
+        .eq('school_id', schoolId)
+        .order('start_date', { ascending: false });
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${data?.length || 0} exams`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching exams:', error);
+      throw error;
+    }
+  },
+
+  async getExamById(id: number, schoolId: number) {
+    console.log('📖 Fetching exam:', id);
+    try {
+      const { data, error } = await supabase
+        .from('exams')
+        .select(`
+          *,
+          exam_schedules (
+            *,
+            exam_results (*)
+          )
+        `)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Fetched exam details');
+      return data;
+    } catch (error) {
+      console.error('❌ Error fetching exam details:', error);
+      throw error;
+    }
+  },
+
+  async getExamSchedule(examId: number, schoolId: number) {
+    console.log('🗓️ Fetching exam schedule for exam:', examId);
+    try {
+      const { data, error } = await supabase
+        .from('exam_schedules')
+        .select(`
+          *,
+          exams (
+            name,
+            description,
+            start_date,
+            end_date
+          )
+        `)
+        .eq('exam_id', examId)
+        .eq('school_id', schoolId)
+        .order('exam_date', { ascending: true });
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${data?.length || 0} exam schedules`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching exam schedule:', error);
+      throw error;
+    }
+  },
+
+  async getExamResults(schoolId: number, examId?: number, studentId?: number) {
+    console.log('📊 Fetching exam results for school:', schoolId);
+    try {
+      let query = supabase
+        .from('exam_results')
+        .select(`
+          *,
+          exam_schedules (
+            *,
+            exams (
+              id,
+              name,
+              description,
+              start_date,
+              is_published
+            )
+          ),
+          students (
+            id,
+            student_id,
+            name,
+            class,
+            section,
+            roll_number
+          )
+        `)
+        .eq('school_id', schoolId);
+
+      if (examId) {
+        query = query.eq('exam_schedules.exam_id', examId);
+      }
+
+      if (studentId) {
+        query = query.eq('student_id', studentId);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${data?.length || 0} exam results`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching exam results:', error);
+      throw error;
+    }
+  },
+
+  async publishExamResults(examId: number, schoolId: number) {
+    console.log('📢 Publishing exam results for exam:', examId);
+    try {
+      const { data, error } = await supabase
+        .from('exams')
+        .update({ is_published: true })
+        .eq('id', examId)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Published exam results');
+      return data;
+    } catch (error) {
+      console.error('❌ Error publishing exam results:', error);
+      throw error;
+    }
+  },
+
+  async getPublicExams(schoolId: number) {
+    console.log('🌐 Fetching public exams for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('exams')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_published', true)
+        .order('start_date', { ascending: false });
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${data?.length || 0} public exams`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching public exams:', error);
+      throw error;
+    }
+  },
+
+  async getPublicResults(accessToken: string) {
+    console.log('🔐 Fetching results using public access token');
+    try {
+      // Verify and get token details
+      const { data: tokenData, error: tokenError } = await supabase
+        .from('public_access_tokens')
+        .select('*')
+        .eq('token', accessToken)
+        .eq('is_active', true)
+        .eq('purpose', 'results')
+        .single();
+
+      if (tokenError) throw new Error('Invalid or expired access token');
+
+      // Check if token is expired
+      if (new Date(tokenData.expires_at) < new Date()) {
+        throw new Error('Access token has expired');
+      }
+
+      // Update access count
+      await supabase
+        .from('public_access_tokens')
+        .update({ 
+          access_count: (tokenData.access_count || 0) + 1,
+          last_accessed_at: new Date().toISOString(),
+        })
+        .eq('id', tokenData.id);
+
+      // Get exam results for the student
+      const { data, error } = await supabase
+        .from('exam_results')
+        .select(`
+          *,
+          exam_schedules (
+            *,
+            exams (
+              id,
+              name,
+              description,
+              start_date,
+              is_published
+            )
+          ),
+          students (
+            id,
+            student_id,
+            name,
+            class,
+            section
+          )
+        `)
+        .eq('student_id', tokenData.student_id)
+        .eq('school_id', tokenData.school_id);
+
+      if (error) throw error;
+
+      // Only return published results
+      const publishedResults = data?.filter(result => 
+        result.exam_schedules?.exams?.is_published === true
+      ) || [];
+
+      console.log(`✅ Fetched ${publishedResults.length} public results`);
+      return publishedResults;
+    } catch (error) {
+      console.error('❌ Error fetching public results:', error);
+      throw error;
+    }
+  },
+
+  async getPublicFees(accessToken: string) {
+    console.log('🔐 Fetching fees using public access token');
+    try {
+      // Verify and get token details
+      const { data: tokenData, error: tokenError } = await supabase
+        .from('public_access_tokens')
+        .select('*')
+        .eq('token', accessToken)
+        .eq('is_active', true)
+        .eq('purpose', 'fees')
+        .single();
+
+      if (tokenError) throw new Error('Invalid or expired access token');
+
+      // Check if token is expired
+      if (new Date(tokenData.expires_at) < new Date()) {
+        throw new Error('Access token has expired');
+      }
+
+      // Update access count
+      await supabase
+        .from('public_access_tokens')
+        .update({ 
+          access_count: (tokenData.access_count || 0) + 1,
+          last_accessed_at: new Date().toISOString(),
+        })
+        .eq('id', tokenData.id);
+
+      // Get fee receipts for the student
+      const { data, error } = await supabase
+        .from('fee_receipts')
+        .select(`
+          *,
+          fee_items (*),
+          students (
+            id,
+            student_id,
+            name,
+            class,
+            section
+          )
+        `)
+        .eq('student_id', tokenData.student_id)
+        .eq('school_id', tokenData.school_id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${data?.length || 0} fee receipts`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching public fees:', error);
+      throw error;
+    }
+  },
+
+  async generatePublicAccessToken(studentId: number, schoolId: number, purpose: string) {
+    console.log('🔑 Generating public access token for student:', studentId, 'purpose:', purpose);
+    try {
+      // Generate random token
+      const token = Math.random().toString(36).substring(2, 15) + 
+                    Math.random().toString(36).substring(2, 15) + 
+                    Date.now().toString(36);
+
+      // Set expiry to 30 days from now
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      const tokenData = {
+        student_id: studentId,
+        token: token,
+        purpose: purpose,
+        expires_at: expiresAt.toISOString(),
+        is_active: true,
+        access_count: 0,
+        school_id: schoolId,
+      };
+
+      const { data, error } = await supabase
+        .from('public_access_tokens')
+        .insert([tokenData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Generated public access token');
+      return data;
+    } catch (error) {
+      console.error('❌ Error generating public access token:', error);
+      throw error;
+    }
+  },
+};
+
+// ============================================================================
+// VIDEO CONFERENCE SYSTEM
+// ============================================================================
+
+export const videoConference = {
+  async getConferenceRooms(schoolId: number, status?: string) {
+    console.log('📹 Fetching conference rooms for school:', schoolId, status ? `with status: ${status}` : '');
+    try {
+      let query = supabase
+        .from('video_conferences')
+        .select('*')
+        .eq('school_id', schoolId);
+      
+      if (status) {
+        query = query.eq('status', status);
+      }
+      
+      const { data, error } = await query.order('start_time', { ascending: false });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} conference rooms`);
+      return (data || []).map(fromDbVideoConference);
+    } catch (error) {
+      console.error('❌ Error fetching conference rooms:', error);
+      throw error;
+    }
+  },
+
+  async getRoomById(id: number, schoolId: number) {
+    console.log('📹 Fetching conference room:', id, 'for school:', schoolId);
+    try {
+      const { data, error } = await supabase
+        .from('video_conferences')
+        .select('*')
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Fetched conference room details');
+      return data ? fromDbVideoConference(data) : null;
+    } catch (error) {
+      console.error('❌ Error fetching conference room:', error);
+      throw error;
+    }
+  },
+
+  async createConferenceRoom(room: any, schoolId: number) {
+    console.log('➕ Creating conference room for school:', schoolId);
+    try {
+      const dbRoom = toDbVideoConference(room);
+      dbRoom.school_id = schoolId;
+      
+      const { data, error } = await supabase
+        .from('video_conferences')
+        .insert([dbRoom])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created conference room:', data?.id);
+      return data ? fromDbVideoConference(data) : null;
+    } catch (error) {
+      console.error('❌ Error creating conference room:', error);
+      throw error;
+    }
+  },
+
+  async joinRoom(roomId: string, userId: string, schoolId: number) {
+    console.log('🚪 Joining conference room:', roomId, 'user:', userId);
+    try {
+      // Get current participant count
+      const { data: room, error: fetchError } = await supabase
+        .from('video_conferences')
+        .select('participants')
+        .eq('meeting_id', roomId)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      const newParticipantCount = (room?.participants || 0) + 1;
+      
+      // Increment participants
+      const { data, error } = await supabase
+        .from('video_conferences')
+        .update({ participants: newParticipantCount })
+        .eq('meeting_id', roomId)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ User joined conference room, participants:', newParticipantCount);
+      return data ? fromDbVideoConference(data) : null;
+    } catch (error) {
+      console.error('❌ Error joining conference room:', error);
+      throw error;
+    }
+  },
+
+  async leaveRoom(roomId: string, userId: string, schoolId: number) {
+    console.log('🚪 Leaving conference room:', roomId, 'user:', userId);
+    try {
+      // Get current participant count
+      const { data: room, error: fetchError } = await supabase
+        .from('video_conferences')
+        .select('participants')
+        .eq('meeting_id', roomId)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      const newParticipantCount = Math.max(0, (room?.participants || 0) - 1);
+      
+      // Decrement participants
+      const { data, error } = await supabase
+        .from('video_conferences')
+        .update({ participants: newParticipantCount })
+        .eq('meeting_id', roomId)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ User left conference room, participants:', newParticipantCount);
+      return data ? fromDbVideoConference(data) : null;
+    } catch (error) {
+      console.error('❌ Error leaving conference room:', error);
+      throw error;
+    }
+  },
+
+  async updateRoomStatus(id: number, status: string, schoolId: number) {
+    console.log('📝 Updating conference room status:', id, 'to', status);
+    try {
+      const { data, error } = await supabase
+        .from('video_conferences')
+        .update({ status, end_time: status === 'ended' ? new Date().toISOString() : undefined })
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Updated conference room status');
+      return data ? fromDbVideoConference(data) : null;
+    } catch (error) {
+      console.error('❌ Error updating conference room status:', error);
+      throw error;
+    }
+  },
+
+  async toggleRecording(id: number, isRecording: boolean, schoolId: number) {
+    console.log('🎥', isRecording ? 'Starting' : 'Stopping', 'recording for room:', id);
+    try {
+      const { data, error } = await supabase
+        .from('video_conferences')
+        .update({ is_recording: isRecording })
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅', isRecording ? 'Started' : 'Stopped', 'recording');
+      return data ? fromDbVideoConference(data) : null;
+    } catch (error) {
+      console.error('❌ Error toggling recording:', error);
+      throw error;
+    }
+  },
+};
+
+// ============================================================================
+// REALTIME/LIVE UPDATES SYSTEM
+// ============================================================================
+
+// Store active subscriptions
+const activeSubscriptions = new Map<string, any>();
+
+export const realtime = {
+  subscribeToAttendance(schoolId: number, callback: Function) {
+    console.log('🔴 Subscribing to attendance updates for school:', schoolId);
+    const channelName = `attendance_${schoolId}`;
+    
+    // Unsubscribe if already subscribed
+    if (activeSubscriptions.has(channelName)) {
+      activeSubscriptions.get(channelName).unsubscribe();
+    }
+    
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance',
+          filter: `school_id=eq.${schoolId}`,
+        },
+        (payload) => {
+          console.log('📊 Attendance update received:', payload);
+          callback(payload);
+        }
+      )
+      .subscribe();
+    
+    activeSubscriptions.set(channelName, channel);
+    console.log('✅ Subscribed to attendance updates');
+    return channel;
+  },
+
+  subscribeToExamResults(schoolId: number, callback: Function) {
+    console.log('🔴 Subscribing to exam results updates for school:', schoolId);
+    const channelName = `exam_results_${schoolId}`;
+    
+    // Unsubscribe if already subscribed
+    if (activeSubscriptions.has(channelName)) {
+      activeSubscriptions.get(channelName).unsubscribe();
+    }
+    
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'exam_results',
+          filter: `school_id=eq.${schoolId}`,
+        },
+        (payload) => {
+          console.log('📈 Exam results update received:', payload);
+          callback(payload);
+        }
+      )
+      .subscribe();
+    
+    activeSubscriptions.set(channelName, channel);
+    console.log('✅ Subscribed to exam results updates');
+    return channel;
+  },
+
+  subscribeToSchoolStats(schoolId: number, callback: Function) {
+    console.log('🔴 Subscribing to school statistics updates for school:', schoolId);
+    const channels: any[] = [];
+    
+    // Subscribe to multiple tables for comprehensive stats
+    const tables = ['students', 'teachers', 'attendance', 'exam_results', 'fee_receipts'];
+    
+    tables.forEach(table => {
+      const channelName = `stats_${table}_${schoolId}`;
+      
+      // Unsubscribe if already subscribed
+      if (activeSubscriptions.has(channelName)) {
+        activeSubscriptions.get(channelName).unsubscribe();
+      }
+      
+      const channel = supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: table,
+            filter: `school_id=eq.${schoolId}`,
+          },
+          (payload) => {
+            console.log(`📊 ${table} update received:`, payload);
+            callback({ table, payload });
+          }
+        )
+        .subscribe();
+      
+      activeSubscriptions.set(channelName, channel);
+      channels.push(channel);
+    });
+    
+    console.log('✅ Subscribed to school statistics updates');
+    return channels;
+  },
+
+  subscribeToNotifications(userId: string, callback: Function) {
+    console.log('🔴 Subscribing to notifications for user:', userId);
+    const channelName = `notifications_${userId}`;
+    
+    // Unsubscribe if already subscribed
+    if (activeSubscriptions.has(channelName)) {
+      activeSubscriptions.get(channelName).unsubscribe();
+    }
+    
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `recipient_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('🔔 New notification received:', payload);
+          callback(payload);
+        }
+      )
+      .subscribe();
+    
+    activeSubscriptions.set(channelName, channel);
+    console.log('✅ Subscribed to notification updates');
+    return channel;
+  },
+
+  async unsubscribeAll() {
+    console.log('⏹️ Unsubscribing from all realtime channels...');
+    for (const [channelName, channel] of activeSubscriptions.entries()) {
+      await channel.unsubscribe();
+      console.log('✅ Unsubscribed from:', channelName);
+    }
+    activeSubscriptions.clear();
+    console.log('✅ All subscriptions cleared');
+  },
+};
+
+// ============================================================================
+// PAYMENT/FINANCIAL SYSTEM
+// ============================================================================
+
+export const payment = {
+  async getTransactions(schoolId: number, filters?: any) {
+    console.log('💰 Fetching payment transactions for school:', schoolId);
+    try {
+      let query = supabase
+        .from('payment_transactions')
+        .select('*')
+        .eq('school_id', schoolId);
+      
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters?.paymentMethod) {
+        query = query.eq('payment_method', filters.paymentMethod);
+      }
+      if (filters?.studentId) {
+        query = query.eq('student_id', filters.studentId);
+      }
+      if (filters?.startDate) {
+        query = query.gte('created_at', filters.startDate);
+      }
+      if (filters?.endDate) {
+        query = query.lte('created_at', filters.endDate);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} payment transactions`);
+      return (data || []).map(fromDbPaymentTransaction);
+    } catch (error) {
+      console.error('❌ Error fetching payment transactions:', error);
+      throw error;
+    }
+  },
+
+  async createTransaction(transaction: any, schoolId: number) {
+    console.log('➕ Creating payment transaction for school:', schoolId);
+    try {
+      const dbTransaction = toDbPaymentTransaction(transaction);
+      dbTransaction.school_id = schoolId;
+      
+      const { data, error } = await supabase
+        .from('payment_transactions')
+        .insert([dbTransaction])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created payment transaction:', data?.id);
+      return data ? fromDbPaymentTransaction(data) : null;
+    } catch (error) {
+      console.error('❌ Error creating payment transaction:', error);
+      throw error;
+    }
+  },
+
+  async updateTransactionStatus(id: number, status: string, schoolId: number) {
+    console.log('📝 Updating transaction status:', id, 'to', status);
+    try {
+      const updates: any = { status };
+      if (status === 'success') {
+        updates.completed_at = new Date().toISOString();
+      }
+      
+      const { data, error } = await supabase
+        .from('payment_transactions')
+        .update(updates)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Updated transaction status');
+      return data ? fromDbPaymentTransaction(data) : null;
+    } catch (error) {
+      console.error('❌ Error updating transaction status:', error);
+      throw error;
+    }
+  },
+
+  async processPayment(paymentData: any, schoolId: number) {
+    console.log('⚡ Processing payment for school:', schoolId);
+    try {
+      // Create payment transaction
+      const transaction = await this.createTransaction(paymentData, schoolId);
+      
+      if (!transaction) {
+        throw new Error('Failed to create payment transaction');
+      }
+      
+      // Create fee receipt if student_id is provided
+      if (paymentData.studentId) {
+        const receiptData = {
+          student_id: paymentData.studentId,
+          receipt_number: `RCP-${Date.now()}`,
+          total_amount: paymentData.amount,
+          paid_amount: paymentData.amount,
+          due_amount: 0,
+          payment_method: paymentData.paymentMethod,
+          payment_date: new Date().toISOString(),
+          school_id: schoolId,
+        };
+        
+        const { data: receipt, error: receiptError } = await supabase
+          .from('fee_receipts')
+          .insert([receiptData])
+          .select()
+          .single();
+        
+        if (receiptError) {
+          console.warn('⚠️ Failed to create fee receipt:', receiptError);
+        } else {
+          console.log('✅ Created fee receipt:', receipt?.id);
+          return { transaction, receipt };
+        }
+      }
+      
+      console.log('✅ Payment processed successfully');
+      return { transaction };
+    } catch (error) {
+      console.error('❌ Error processing payment:', error);
+      throw error;
+    }
+  },
+
+  async getPaymentStats(schoolId: number) {
+    console.log('📊 Fetching payment statistics for school:', schoolId);
+    try {
+      const { data: transactions, error } = await supabase
+        .from('payment_transactions')
+        .select('amount, status, created_at')
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+      
+      const stats = {
+        totalTransactions: transactions?.length || 0,
+        successfulTransactions: transactions?.filter(t => t.status === 'success').length || 0,
+        pendingTransactions: transactions?.filter(t => t.status === 'pending').length || 0,
+        failedTransactions: transactions?.filter(t => t.status === 'failed').length || 0,
+        totalRevenue: transactions
+          ?.filter(t => t.status === 'success')
+          .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0) || 0,
+        pendingAmount: transactions
+          ?.filter(t => t.status === 'pending')
+          .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0) || 0,
+      };
+      
+      console.log('✅ Payment statistics:', stats);
+      return stats;
+    } catch (error) {
+      console.error('❌ Error fetching payment statistics:', error);
+      throw error;
+    }
+  },
+
+  async getFeeReceipts(schoolId: number, studentId?: number) {
+    console.log('📄 Fetching fee receipts for school:', schoolId, studentId ? `student: ${studentId}` : '');
+    try {
+      let query = supabase
+        .from('fee_receipts')
+        .select(`
+          *,
+          fee_items (*)
+        `)
+        .eq('school_id', schoolId);
+      
+      if (studentId) {
+        query = query.eq('student_id', studentId);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} fee receipts`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching fee receipts:', error);
+      throw error;
+    }
+  },
+};
+
+// ============================================================================
+// HEALTH/MEDICAL SYSTEM
+// ============================================================================
+
+export const health = {
+  async getHealthRecords(schoolId: number, studentId?: number) {
+    console.log('🏥 Fetching health records for school:', schoolId, studentId ? `student: ${studentId}` : '');
+    try {
+      let query = supabase
+        .from('health_records')
+        .select('*')
+        .eq('school_id', schoolId);
+      
+      if (studentId) {
+        query = query.eq('student_id', studentId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} health records`);
+      return (data || []).map(fromDbHealthRecord);
+    } catch (error) {
+      console.error('❌ Error fetching health records:', error);
+      throw error;
+    }
+  },
+
+  async createHealthRecord(record: any, schoolId: number) {
+    console.log('➕ Creating health record for school:', schoolId);
+    try {
+      const dbRecord = toDbHealthRecord(record);
+      dbRecord.school_id = schoolId;
+      
+      const { data, error } = await supabase
+        .from('health_records')
+        .insert([dbRecord])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created health record:', data?.id);
+      return data ? fromDbHealthRecord(data) : null;
+    } catch (error) {
+      console.error('❌ Error creating health record:', error);
+      throw error;
+    }
+  },
+
+  async updateHealthRecord(id: number, record: any, schoolId: number) {
+    console.log('📝 Updating health record:', id);
+    try {
+      const dbRecord = toDbHealthRecord(record);
+      dbRecord.updated_at = new Date().toISOString();
+      
+      const { data, error } = await supabase
+        .from('health_records')
+        .update(dbRecord)
+        .eq('id', id)
+        .eq('school_id', schoolId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Updated health record');
+      return data ? fromDbHealthRecord(data) : null;
+    } catch (error) {
+      console.error('❌ Error updating health record:', error);
+      throw error;
+    }
+  },
+
+  async getMedicalCheckups(schoolId: number, filters?: any) {
+    console.log('🩺 Fetching medical checkups for school:', schoolId);
+    try {
+      let query = supabase
+        .from('medical_checkups')
+        .select('*')
+        .eq('school_id', schoolId);
+      
+      if (filters?.studentId) {
+        query = query.eq('student_id', filters.studentId);
+      }
+      if (filters?.checkupType) {
+        query = query.eq('checkup_type', filters.checkupType);
+      }
+      if (filters?.startDate) {
+        query = query.gte('checkup_date', filters.startDate);
+      }
+      if (filters?.endDate) {
+        query = query.lte('checkup_date', filters.endDate);
+      }
+      
+      const { data, error } = await query.order('checkup_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} medical checkups`);
+      return (data || []).map(fromDbMedicalCheckup);
+    } catch (error) {
+      console.error('❌ Error fetching medical checkups:', error);
+      throw error;
+    }
+  },
+
+  async createMedicalCheckup(checkup: any, schoolId: number) {
+    console.log('➕ Creating medical checkup for school:', schoolId);
+    try {
+      const dbCheckup = toDbMedicalCheckup(checkup);
+      dbCheckup.school_id = schoolId;
+      
+      const { data, error } = await supabase
+        .from('medical_checkups')
+        .insert([dbCheckup])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created medical checkup:', data?.id);
+      return data ? fromDbMedicalCheckup(data) : null;
+    } catch (error) {
+      console.error('❌ Error creating medical checkup:', error);
+      throw error;
+    }
+  },
+
+  async getVaccinations(schoolId: number, studentId?: number) {
+    console.log('💉 Fetching vaccination records for school:', schoolId, studentId ? `student: ${studentId}` : '');
+    try {
+      let query = supabase
+        .from('vaccinations')
+        .select('*')
+        .eq('school_id', schoolId);
+      
+      if (studentId) {
+        query = query.eq('student_id', studentId);
+      }
+      
+      const { data, error } = await query.order('vaccination_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} vaccination records`);
+      return (data || []).map(fromDbVaccination);
+    } catch (error) {
+      console.error('❌ Error fetching vaccination records:', error);
+      throw error;
+    }
+  },
+
+  async createVaccination(vaccination: any, schoolId: number) {
+    console.log('➕ Creating vaccination record for school:', schoolId);
+    try {
+      const dbVaccination = toDbVaccination(vaccination);
+      dbVaccination.school_id = schoolId;
+      
+      const { data, error } = await supabase
+        .from('vaccinations')
+        .insert([dbVaccination])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created vaccination record:', data?.id);
+      return data ? fromDbVaccination(data) : null;
+    } catch (error) {
+      console.error('❌ Error creating vaccination record:', error);
+      throw error;
+    }
+  },
+};
 
 // User profile utilities
 export const userProfile = {
