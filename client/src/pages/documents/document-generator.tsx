@@ -12,6 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
+import { db, supabase } from '@/lib/supabase';
 import { 
   FileText, ArrowLeft, Download, CreditCard, Zap, 
   Clock, CheckCircle, AlertTriangle, User, Users,
@@ -26,9 +28,9 @@ interface DocumentTemplate {
   category: string;
   description: string;
   descriptionBn: string;
-  requiredCredits: number;
-  fields: string;
-  templateData: string;
+  creditsRequired: number;
+  fields?: string;
+  templateData?: string;
   isActive: boolean;
 }
 
@@ -46,62 +48,54 @@ export default function DocumentGenerator() {
   const { toast } = useToast();
   const { language } = useLanguage();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const documentId = params.id;
 
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Fetch all document templates and find by type
+  // Fetch all document templates from Supabase and find by type
   const { data: allTemplates, isLoading: templateLoading } = useQuery({
-    queryKey: ['/api/documents/templates'],
+    queryKey: ['document-templates-all', schoolId],
     queryFn: async () => {
-      const response = await fetch('/api/documents/templates');
-      if (!response.ok) {
-        throw new Error('Failed to fetch document templates');
-      }
-      return response.json();
-    }
+      return await db.getDocumentTemplatesEnhanced(schoolId);
+    },
+    enabled: !!schoolId
   });
 
   // Find the specific template by type from all templates
   const template = allTemplates?.find((t: any) => t.type === documentId || t.id.toString() === documentId);
 
-  // Get user credit balance
+  // Get user credit balance from Supabase
   const { data: creditBalance } = useQuery({
-    queryKey: ['/api/simple-credit-stats', '7324a820-4c85-4a60-b791-57b9cfad6bf9'],
+    queryKey: ['credit-stats', schoolId],
     queryFn: async () => {
-      const response = await fetch('/api/simple-credit-stats/7324a820-4c85-4a60-b791-57b9cfad6bf9');
-      if (!response.ok) throw new Error('Failed to fetch credit balance');
-      return response.json();
-    }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+      return await db.getCreditBalance(user.id, schoolId);
+    },
+    enabled: !!schoolId
   });
 
-  // Generate document mutation
+  // Generate document mutation using Supabase
   const generateMutation = useMutation({
     mutationFn: async (data: { templateId: number; formData: Record<string, string> }) => {
       setIsGenerating(true);
-      const response = await fetch('/api/document-generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          templateId: data.templateId,
-          documentType: template?.name || 'document',
-          studentIds: [1], // Sample student ID
-          metadata: data.formData
-        }),
+      return await db.generateDocument({
+        templateId: data.templateId,
+        documentType: template?.name || 'document',
+        studentIds: [1], // Sample student ID
+        schoolId: schoolId
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Generation failed');
-      }
-      return response.json();
     },
     onSuccess: (data) => {
       toast({
         title: "ডকুমেন্ট তৈরি সফল",
         description: data.message || "ডকুমেন্ট সফলভাবে তৈরি হয়েছে",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/simple-credit-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['document-user-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-documents'] });
       setIsGenerating(false);
     },
     onError: (error: any) => {
@@ -119,8 +113,17 @@ export default function DocumentGenerator() {
 
   // Handle form submission
   const handleGenerate = () => {
+    if (!template) {
+      toast({
+        title: "ত্রুটি",
+        description: "টেমপ্লেট পাওয়া যায়নি",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const currentBalance = creditBalance?.currentBalance || 0;
-    const requiredCredits = template?.requiredCredits || 1;
+    const requiredCredits = template?.creditsRequired || 1;
 
     if (currentBalance < requiredCredits) {
       toast({
@@ -219,7 +222,7 @@ export default function DocumentGenerator() {
             <div className="flex items-center space-x-4">
               <Badge variant="outline" className="font-semibold text-orange-600">
                 <CreditCard className="h-3 w-3 mr-1" />
-                {template.requiredCredits} ক্রেডিট
+                {template.creditsRequired} ক্রেডিট
               </Badge>
               <Badge variant="secondary">
                 {template.category}
@@ -228,7 +231,7 @@ export default function DocumentGenerator() {
           </div>
 
           {/* Credit Balance Warning */}
-          {creditBalance && creditBalance.currentBalance < template.requiredCredits && (
+          {creditBalance && creditBalance.currentBalance < template.creditsRequired && (
             <Card className="border-red-200 bg-red-50">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
@@ -236,7 +239,7 @@ export default function DocumentGenerator() {
                   <div>
                     <p className="text-red-800 font-semibold">অপর্যাপ্ত ক্রেডিট</p>
                     <p className="text-red-700 text-sm">
-                      আপনার কাছে {creditBalance.currentBalance} ক্রেডিট আছে, প্রয়োজন {template.requiredCredits} ক্রেডিট
+                      আপনার কাছে {creditBalance.currentBalance} ক্রেডিট আছে, প্রয়োজন {template.creditsRequired} ক্রেডিট
                     </p>
                   </div>
                   <Link href="/credits/supabase-dashboard">
@@ -334,7 +337,7 @@ export default function DocumentGenerator() {
                 {/* Generation Button */}
                 <Button
                   onClick={handleGenerate}
-                  disabled={isGenerating || generateMutation.isPending || (creditBalance?.currentBalance || 0) < template.requiredCredits}
+                  disabled={isGenerating || generateMutation.isPending || (creditBalance?.currentBalance || 0) < template.creditsRequired}
                   className="w-full"
                   size="lg"
                 >
@@ -354,7 +357,7 @@ export default function DocumentGenerator() {
                 {/* Credit Info */}
                 <div className="text-center text-sm text-gray-600">
                   <p>বর্তমান ব্যালেন্স: {creditBalance?.currentBalance || 0} ক্রেডিট</p>
-                  <p>প্রয়োজনীয়: {template.requiredCredits} ক্রেডিট</p>
+                  <p>প্রয়োজনীয়: {template.creditsRequired} ক্রেডিট</p>
                 </div>
               </CardContent>
             </Card>

@@ -12,7 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Search, Filter, Grid, List, Star, TrendingUp, Clock, Users, 
   FileText, CreditCard, Wallet, Target, ChevronRight, BookOpen,
@@ -63,6 +64,8 @@ export default function DocumentsDashboardUX() {
   const { toast } = useToast();
   const isMobile = useMobile();
   const queryClient = useQueryClient();
+  const [_, setLocation] = useLocation();
+  const schoolId = useRequireSchoolId();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -73,47 +76,53 @@ export default function DocumentsDashboardUX() {
 
   // Fetch user statistics from Supabase
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['document-user-stats', 1], // School ID 1
+    queryKey: ['document-user-stats', schoolId],
     queryFn: async () => {
-      return await db.getUserDocumentStats('current_user', 1);
-    }
+      return await db.getUserDocumentStats('current_user', schoolId);
+    },
+    enabled: !!schoolId
   });
 
   // Fetch ALL document templates for category counts (without filtering)
   const { data: allTemplatesData, isLoading: allTemplatesLoading } = useQuery({
-    queryKey: ['document-templates-all', 1, language], // School ID 1
+    queryKey: ['document-templates-all', schoolId, language],
     queryFn: async () => {
-      return await db.getDocumentTemplatesEnhanced(1); // School ID 1
-    }
+      return await db.getDocumentTemplatesEnhanced(schoolId);
+    },
+    enabled: !!schoolId
   });
 
   // Fetch filtered document templates for display
   const { data: templateData, isLoading: templatesLoading } = useQuery({
-    queryKey: ['document-templates-filtered', selectedCategory, searchQuery, 1, language], // School ID 1
+    queryKey: ['document-templates-filtered', selectedCategory, searchQuery, schoolId, language],
     queryFn: async () => {
       return await db.getDocumentTemplatesEnhanced(
-        1, // School ID 1
+        schoolId,
         selectedCategory !== 'all' ? selectedCategory : undefined,
         searchQuery || undefined
       );
-    }
+    },
+    enabled: !!schoolId
   });
 
   // Fetch recent documents
   const { data: recentDocuments, isLoading: recentLoading } = useQuery({
-    queryKey: ['recent-documents', 1], // School ID 1
+    queryKey: ['recent-documents', schoolId],
     queryFn: async () => {
-      return await db.getRecentDocuments(1); // School ID 1
-    }
+      return await db.getRecentDocuments(schoolId);
+    },
+    enabled: !!schoolId
   });
 
   // Fetch user credit balance from Supabase using authenticated user
   const { data: creditBalance, isLoading: creditLoading } = useQuery({
-    queryKey: ['credit-stats', 1], // School ID
+    queryKey: ['credit-stats', schoolId],
     queryFn: async () => {
-      // Get current user stats
-      return await db.getUserStats();
-    }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+      return await db.getCreditBalance(user.id, schoolId);
+    },
+    enabled: !!schoolId
   });
 
   // Fetch document costs from Supabase
@@ -127,7 +136,7 @@ export default function DocumentsDashboardUX() {
   // Seed templates mutation with Supabase
   const seedTemplatesMutation = useMutation({
     mutationFn: async () => {
-      return await db.seedDocumentTemplates(1); // School ID 1
+      return await db.seedDocumentTemplates(schoolId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['document-templates-all'] });
@@ -141,9 +150,7 @@ export default function DocumentsDashboardUX() {
 
   // Generate document with credit deduction using Supabase
   const generateDocumentMutation = useMutation({
-    mutationFn: async (data: { templateId: number; documentType: string; studentIds: number[]; schoolId?: number }) => {
-      const { userProfile } = await import('@/hooks/use-supabase-direct-auth');
-      const schoolId = data.schoolId || await userProfile.getCurrentUserSchoolId();
+    mutationFn: async (data: { templateId: number; documentType: string; studentIds: number[] }) => {
       return await db.generateDocument({
         ...data,
         schoolId: schoolId
@@ -208,9 +215,9 @@ export default function DocumentsDashboardUX() {
       return;
     }
     
-    // Navigate to document generation page using proper document type name
+    // Navigate to document generation page using proper document type name with SPA routing
     const route = getDocumentRoute(documentName);
-    window.location.href = route;
+    setLocation(route);
   };
 
   // Quick document generation for testing
@@ -554,7 +561,7 @@ export default function DocumentsDashboardUX() {
                     </div>
                     
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-blue-600">{creditBalance.totalUsed || 0}</div>
+                      <div className="text-lg font-semibold text-blue-600">{creditBalance.totalSpent || 0}</div>
                       <div className="text-sm text-gray-500">ব্যবহৃত ক্রেডিট</div>
                     </div>
                     
@@ -593,7 +600,7 @@ export default function DocumentsDashboardUX() {
               />
               <StatCard
                 title="ব্যবহৃত ক্রেডিট"
-                value={creditBalance?.totalUsed || stats?.creditsUsed || 0}
+                value={creditBalance?.totalSpent || stats?.creditsUsed || 0}
                 subtitle="সর্বমোট"
                 icon={CreditCard}
                 color="bg-orange-100 text-orange-600"
@@ -607,7 +614,7 @@ export default function DocumentsDashboardUX() {
               />
               <StatCard
                 title="এ মাসে ব্যবহার"
-                value={creditBalance?.thisMonthUsage || stats?.monthlyUsed || 0}
+                value={stats?.monthlyUsed || 0}
                 subtitle="চলতি মাসে"
                 icon={Target}
                 color="bg-purple-100 text-purple-600"
