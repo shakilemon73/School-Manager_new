@@ -105,7 +105,7 @@ export default function HostelAttendancePage() {
   });
 
   const { data: rooms = [] } = useQuery({
-    queryKey: ['/api/hostel-rooms', schoolId],
+    queryKey: ['hostel-rooms', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hostel_rooms')
@@ -120,7 +120,7 @@ export default function HostelAttendancePage() {
   });
 
   const { data: attendance = [], isLoading } = useQuery({
-    queryKey: ['/api/hostel-attendance', format(selectedDate, 'yyyy-MM-dd'), schoolId],
+    queryKey: ['hostel-attendance', format(selectedDate, 'yyyy-MM-dd'), schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hostel_attendance')
@@ -189,7 +189,7 @@ export default function HostelAttendancePage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hostel-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['hostel-attendance'] });
       toast({ title: 'সফল', description: 'উপস্থিতি রেকর্ড করা হয়েছে' });
       setIsDialogOpen(false);
       resetForm();
@@ -210,7 +210,7 @@ export default function HostelAttendancePage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hostel-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['hostel-attendance'] });
       toast({ title: 'সফল', description: 'উপস্থিতি রেকর্ড মুছে ফেলা হয়েছে' });
     },
     onError: (error: any) => {

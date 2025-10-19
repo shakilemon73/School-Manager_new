@@ -2431,10 +2431,30 @@ export type StockAlert = typeof stockAlerts.$inferSelect;
 // HOSTEL MANAGEMENT ENHANCEMENTS
 // ============================================================================
 
+// Hostels
+export const hostels = pgTable("hostels", {
+  id: serial("id").primaryKey(),
+  hostelName: text("hostel_name").notNull(),
+  hostelNameBn: text("hostel_name_bn"),
+  hostelType: text("hostel_type").notNull(), // boys, girls, mixed
+  totalRooms: integer("total_rooms").default(0),
+  totalCapacity: integer("total_capacity").default(0),
+  wardenId: integer("warden_id"),
+  address: text("address"),
+  facilities: text("facilities"),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const hostelsInsertSchema = createInsertSchema(hostels);
+export type InsertHostel = z.infer<typeof hostelsInsertSchema>;
+export type Hostel = typeof hostels.$inferSelect;
+
 // Hostel Rooms
 export const hostelRooms = pgTable("hostel_rooms", {
   id: serial("id").primaryKey(),
-  hostelId: integer("hostel_id"),
+  hostelId: integer("hostel_id").references(() => hostels.id),
   roomNumber: text("room_number").notNull(),
   floor: integer("floor").notNull(),
   roomType: text("room_type").notNull(),

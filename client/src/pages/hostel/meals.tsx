@@ -124,7 +124,7 @@ export default function HostelMealsPage() {
   });
 
   const { data: mealPlans = [] } = useQuery({
-    queryKey: ['/api/meal-plans', schoolId],
+    queryKey: ['meal-plans', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('meal_plans')
@@ -138,7 +138,7 @@ export default function HostelMealsPage() {
   });
 
   const { data: mealMenus = [] } = useQuery({
-    queryKey: ['/api/meal-menus', schoolId],
+    queryKey: ['meal-menus', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('meal_menu')
@@ -153,7 +153,7 @@ export default function HostelMealsPage() {
   });
 
   const { data: subscriptions = [] } = useQuery({
-    queryKey: ['/api/meal-subscriptions', schoolId],
+    queryKey: ['meal-subscriptions', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('meal_subscriptions')
@@ -171,7 +171,7 @@ export default function HostelMealsPage() {
   });
 
   const { data: transactions = [] } = useQuery({
-    queryKey: ['/api/meal-transactions', schoolId],
+    queryKey: ['meal-transactions', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('meal_transactions')
@@ -216,7 +216,7 @@ export default function HostelMealsPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/meal-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['meal-plans'] });
       toast({ title: 'সফল', description: 'মিল প্ল্যান যোগ হয়েছে' });
       setIsDialogOpen(false);
       resetPlanForm();
@@ -246,7 +246,7 @@ export default function HostelMealsPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/meal-menus'] });
+      queryClient.invalidateQueries({ queryKey: ['meal-menus'] });
       toast({ title: 'সফল', description: 'মেনু যোগ হয়েছে' });
       setIsDialogOpen(false);
       resetMenuForm();
@@ -274,7 +274,7 @@ export default function HostelMealsPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/meal-subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['meal-subscriptions'] });
       toast({ title: 'সফল', description: 'সাবস্ক্রিপশন যোগ হয়েছে' });
       setIsDialogOpen(false);
       resetSubscriptionForm();
@@ -302,7 +302,7 @@ export default function HostelMealsPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/meal-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['meal-transactions'] });
       toast({ title: 'সফল', description: 'লেনদেন রেকর্ড হয়েছে' });
       setIsDialogOpen(false);
       resetTransactionForm();

@@ -79,7 +79,7 @@ export default function HostelRoomsPage() {
   });
 
   const { data: hostels = [] } = useQuery({
-    queryKey: ['/api/hostels', schoolId],
+    queryKey: ['hostels', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hostels')
@@ -92,7 +92,7 @@ export default function HostelRoomsPage() {
   });
 
   const { data: rooms = [], isLoading } = useQuery({
-    queryKey: ['/api/hostel-rooms', schoolId],
+    queryKey: ['hostel-rooms', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hostel_rooms')
@@ -149,7 +149,7 @@ export default function HostelRoomsPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hostel-rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['hostel-rooms'] });
       toast({ 
         title: editingRoom ? 'সফল' : 'সফল', 
         description: editingRoom ? 'রুম আপডেট হয়েছে' : 'নতুন রুম যোগ হয়েছে'
@@ -173,7 +173,7 @@ export default function HostelRoomsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hostel-rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['hostel-rooms'] });
       toast({ title: 'সফল', description: 'রুম মুছে ফেলা হয়েছে' });
     },
     onError: (error: any) => {

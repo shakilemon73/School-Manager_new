@@ -50,7 +50,7 @@ export default function StockAlerts() {
 
   // Fetch stock alerts
   const { data: alerts, isLoading: alertsLoading } = useQuery({
-    queryKey: ['/api/stock-alerts', schoolId],
+    queryKey: ['stock-alerts', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('stock_alerts')
@@ -77,7 +77,7 @@ export default function StockAlerts() {
 
   // Fetch inventory items for dropdown
   const { data: inventoryItems } = useQuery({
-    queryKey: ['/api/inventory-items', schoolId],
+    queryKey: ['inventory-items', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('inventory_items')
@@ -108,7 +108,7 @@ export default function StockAlerts() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-alerts'] });
       toast({
         title: "Success",
         description: `Stock alert ${editingAlert ? 'updated' : 'created'} successfully`
@@ -136,7 +136,7 @@ export default function StockAlerts() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/stock-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-alerts'] });
       toast({
         title: "Success",
         description: "Stock alert deleted successfully"

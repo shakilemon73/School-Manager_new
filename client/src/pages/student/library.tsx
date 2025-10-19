@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useDesignSystem } from "@/hooks/use-design-system";
 import { useRequireSchoolId } from "@/hooks/use-require-school-id";
+import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
 import { useState } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -24,29 +25,29 @@ import {
 interface LibraryBook {
   id: number;
   title: string;
-  titleBn: string;
+  title_bn: string;
   author: string;
   isbn?: string;
   category: string;
   publisher?: string;
-  publishYear?: number;
-  totalCopies: number;
-  availableCopies: number;
+  publish_year?: number;
+  total_copies: number;
+  available_copies: number;
   location: string;
   description?: string;
 }
 
 interface BorrowedBook {
   id: number;
-  bookId: number;
-  studentId: number;
-  borrowDate: string;
-  dueDate: string;
-  returnDate?: string;
+  book_id: number;
+  student_id: number;
+  borrow_date: string;
+  due_date: string;
+  return_date?: string;
   status: 'active' | 'returned' | 'overdue';
   fine: string;
   notes?: string;
-  book?: LibraryBook;
+  library_books?: LibraryBook;
 }
 
 interface LibraryStats {
@@ -63,24 +64,86 @@ export default function StudentLibrary() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'returned' | 'overdue'>('all');
 
+  // Fetch current user's student record
+  const { data: currentStudent } = useQuery({
+    queryKey: ['current-student', schoolId],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      const { data, error } = await supabase
+        .from('students')
+        .select('id')
+        .eq('email', user.email)
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: borrowedBooks, isLoading: borrowedLoading } = useQuery<BorrowedBook[]>({
-    queryKey: ["/api/library/borrowed"],
+    queryKey: ['library-borrowed-books', schoolId, currentStudent?.id],
+    enabled: !!currentStudent?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('library_borrowed_books')
+        .select(`
+          *,
+          library_books (
+            id,
+            title,
+            title_bn,
+            author,
+            isbn,
+            category,
+            publisher,
+            publish_year,
+            total_copies,
+            available_copies,
+            location,
+            description
+          )
+        `)
+        .eq('school_id', schoolId)
+        .eq('student_id', currentStudent.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as any[];
+    }
   });
 
   const { data: availableBooks, isLoading: booksLoading } = useQuery<LibraryBook[]>({
-    queryKey: ["/api/library/books"],
+    queryKey: ['library-books', schoolId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('library_books')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('title');
+      
+      if (error) throw error;
+      return data;
+    }
   });
 
-  const { data: libraryStats } = useQuery<LibraryStats>({
-    queryKey: ["/api/library/stats"],
-  });
+  // Calculate stats from borrowed books
+  const libraryStats: LibraryStats = {
+    totalBorrowed: borrowedBooks?.length || 0,
+    activeBorrows: borrowedBooks?.filter(b => b.status === 'active').length || 0,
+    overdueBorrows: borrowedBooks?.filter(b => b.status === 'overdue').length || 0,
+    totalFines: borrowedBooks?.reduce((sum, book) => sum + parseFloat(book.fine || '0'), 0) || 0
+  };
 
   // Filter borrowed books
   const filteredBorrowedBooks = borrowedBooks?.filter(borrow => {
+    const book = borrow.library_books;
     const matchesSearch = !searchTerm || 
-      borrow.book?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      borrow.book?.titleBn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      borrow.book?.author?.toLowerCase().includes(searchTerm.toLowerCase());
+      book?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      book?.title_bn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      book?.author?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || borrow.status === statusFilter;
     
@@ -91,12 +154,12 @@ export default function StudentLibrary() {
   const filteredAvailableBooks = availableBooks?.filter(book => {
     const matchesSearch = !searchTerm || 
       book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.titleBn.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      book.title_bn.toLowerCase().includes(searchTerm.toLowerCase()) ||
       book.author.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
     
-    return matchesSearch && matchesCategory && book.availableCopies > 0;
+    return matchesSearch && matchesCategory && book.available_copies > 0;
   }) || [];
 
   // Get unique categories
@@ -141,7 +204,7 @@ export default function StudentLibrary() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <Link href="/student">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" data-testid="button-back-portal">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Portal
                 </Button>
@@ -163,6 +226,7 @@ export default function StudentLibrary() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-64"
+                  data-testid="input-search-books"
                 />
               </div>
             </div>
@@ -178,8 +242,8 @@ export default function StudentLibrary() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-blue-700">
-                    {libraryStats?.activeBorrows || filteredBorrowedBooks.filter(b => b.status === 'active').length}
+                  <p className="text-2xl font-bold text-blue-700" data-testid="text-active-borrows">
+                    {libraryStats.activeBorrows}
                   </p>
                   <p className="text-sm text-blue-600 font-medium">Currently Borrowed</p>
                 </div>
@@ -194,8 +258,8 @@ export default function StudentLibrary() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {libraryStats?.totalBorrowed || borrowedBooks?.length || 0}
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-total-borrowed">
+                    {libraryStats.totalBorrowed}
                   </p>
                   <p className="text-sm text-gray-600 font-medium">Total Borrowed</p>
                 </div>
@@ -208,8 +272,8 @@ export default function StudentLibrary() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-red-700">
-                    {libraryStats?.overdueBorrows || filteredBorrowedBooks.filter(b => b.status === 'overdue').length}
+                  <p className="text-2xl font-bold text-red-700" data-testid="text-overdue-books">
+                    {libraryStats.overdueBorrows}
                   </p>
                   <p className="text-sm text-red-600 font-medium">Overdue Books</p>
                 </div>
@@ -224,9 +288,8 @@ export default function StudentLibrary() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-yellow-700">
-                    ৳{libraryStats?.totalFines || 
-                       borrowedBooks?.reduce((sum, book) => sum + parseFloat(book.fine || '0'), 0) || 0}
+                  <p className="text-2xl font-bold text-yellow-700" data-testid="text-total-fines">
+                    ৳{libraryStats.totalFines.toFixed(2)}
                   </p>
                   <p className="text-sm text-yellow-600 font-medium">Total Fines</p>
                 </div>
@@ -258,6 +321,7 @@ export default function StudentLibrary() {
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as any)}
                     className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    data-testid="select-status-filter"
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
@@ -269,23 +333,24 @@ export default function StudentLibrary() {
               <CardContent>
                 <div className="space-y-4">
                   {filteredBorrowedBooks.map((borrow) => {
-                    const daysRemaining = getDaysRemaining(borrow.dueDate);
+                    const daysRemaining = getDaysRemaining(borrow.due_date);
                     const isOverdue = daysRemaining < 0;
+                    const book = borrow.library_books;
                     
                     return (
-                      <div key={borrow.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+                      <div key={borrow.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-200" data-testid={`card-borrowed-book-${borrow.id}`}>
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                              {borrow.book?.title || 'Unknown Title'}
+                              {book?.title || 'Unknown Title'}
                             </h3>
-                            {borrow.book?.titleBn && (
+                            {book?.title_bn && (
                               <p className="text-gray-600 dark:text-gray-300 text-sm mb-1">
-                                {borrow.book.titleBn}
+                                {book.title_bn}
                               </p>
                             )}
                             <p className="text-gray-600 dark:text-gray-300 text-sm">
-                              by {borrow.book?.author || 'Unknown Author'}
+                              by {book?.author || 'Unknown Author'}
                             </p>
                           </div>
                           
@@ -301,13 +366,13 @@ export default function StudentLibrary() {
                           <div>
                             <p className="text-gray-500 dark:text-gray-400">Borrowed Date</p>
                             <p className="font-medium text-gray-900 dark:text-white">
-                              {format(parseISO(borrow.borrowDate), 'MMM d, yyyy')}
+                              {format(parseISO(borrow.borrow_date), 'MMM d, yyyy')}
                             </p>
                           </div>
                           <div>
                             <p className="text-gray-500 dark:text-gray-400">Due Date</p>
                             <p className={`font-medium ${isOverdue ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
-                              {format(parseISO(borrow.dueDate), 'MMM d, yyyy')}
+                              {format(parseISO(borrow.due_date), 'MMM d, yyyy')}
                             </p>
                           </div>
                           <div>
@@ -327,10 +392,10 @@ export default function StudentLibrary() {
                           </div>
                         </div>
 
-                        {borrow.book?.location && (
+                        {book?.location && (
                           <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
                             <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <strong>Location:</strong> {borrow.book.location}
+                              <strong>Location:</strong> {book.location}
                             </p>
                           </div>
                         )}
@@ -389,6 +454,7 @@ export default function StudentLibrary() {
                     value={categoryFilter}
                     onChange={(e) => setCategoryFilter(e.target.value)}
                     className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    data-testid="select-category-filter"
                   >
                     <option value="all">All Categories</option>
                     {categories.map(category => (
@@ -400,19 +466,19 @@ export default function StudentLibrary() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {filteredAvailableBooks.slice(0, 6).map((book) => (
-                    <div key={book.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+                    <div key={book.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-200" data-testid={`card-available-book-${book.id}`}>
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
                           {book.title}
                         </h4>
                         <Badge variant="outline" className="text-xs">
-                          {book.availableCopies} available
+                          {book.available_copies} available
                         </Badge>
                       </div>
                       
-                      {book.titleBn && (
+                      {book.title_bn && (
                         <p className="text-gray-600 dark:text-gray-300 text-xs mb-1">
-                          {book.titleBn}
+                          {book.title_bn}
                         </p>
                       )}
                       
@@ -425,9 +491,9 @@ export default function StudentLibrary() {
                         <span className="text-gray-500">{book.location}</span>
                       </div>
                       
-                      {book.publishYear && (
+                      {book.publish_year && (
                         <p className="text-gray-500 text-xs mt-1">
-                          Published: {book.publishYear}
+                          Published: {book.publish_year}
                         </p>
                       )}
                     </div>
@@ -445,7 +511,7 @@ export default function StudentLibrary() {
                 
                 {filteredAvailableBooks.length > 6 && (
                   <div className="text-center mt-4">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" data-testid="button-view-all-books">
                       View All Books ({filteredAvailableBooks.length})
                     </Button>
                   </div>
@@ -465,15 +531,15 @@ export default function StudentLibrary() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full" size="sm">
+                <Button className="w-full" size="sm" data-testid="button-search-catalog">
                   <Search className="h-4 w-4 mr-2" />
                   Search Catalog
                 </Button>
-                <Button variant="outline" className="w-full" size="sm">
+                <Button variant="outline" className="w-full" size="sm" data-testid="button-browse-category">
                   <Book className="h-4 w-4 mr-2" />
                   Browse by Category
                 </Button>
-                <Button variant="outline" className="w-full" size="sm">
+                <Button variant="outline" className="w-full" size="sm" data-testid="button-request-book">
                   <User className="h-4 w-4 mr-2" />
                   Request Book
                 </Button>

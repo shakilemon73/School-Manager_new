@@ -80,7 +80,7 @@ export default function PurchaseOrdersPage() {
   });
 
   const { data: purchaseOrders = [], isLoading } = useQuery({
-    queryKey: ['/api/purchase-orders', schoolId],
+    queryKey: ['purchase-orders', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('purchase_orders')
@@ -97,7 +97,7 @@ export default function PurchaseOrdersPage() {
   });
 
   const { data: vendors = [] } = useQuery({
-    queryKey: ['/api/vendors-list', schoolId],
+    queryKey: ['vendors-list', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendors')
@@ -130,7 +130,7 @@ export default function PurchaseOrdersPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       toast({ title: 'সফল', description: 'ক্রয় আদেশ তৈরি হয়েছে' });
       setIsAddDialogOpen(false);
       resetForm();
@@ -160,7 +160,7 @@ export default function PurchaseOrdersPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       toast({ title: 'সফল', description: 'অবস্থা আপডেট হয়েছে' });
     },
     onError: (error: any) => {
@@ -179,7 +179,7 @@ export default function PurchaseOrdersPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       toast({ title: 'সফল', description: 'ক্রয় আদেশ মুছে ফেলা হয়েছে' });
     },
     onError: (error: any) => {

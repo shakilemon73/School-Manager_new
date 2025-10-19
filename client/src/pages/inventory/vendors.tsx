@@ -82,7 +82,7 @@ export default function VendorsPage() {
   });
 
   const { data: vendors = [], isLoading } = useQuery({
-    queryKey: ['/api/vendors', schoolId],
+    queryKey: ['vendors', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendors')
@@ -107,7 +107,7 @@ export default function VendorsPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
       toast({ title: 'সফল', description: 'ভেন্ডর যোগ করা হয়েছে' });
       setIsAddDialogOpen(false);
       resetForm();
@@ -131,7 +131,7 @@ export default function VendorsPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
       toast({ title: 'সফল', description: 'ভেন্ডর আপডেট হয়েছে' });
     },
     onError: (error: any) => {
@@ -150,7 +150,7 @@ export default function VendorsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
       toast({ title: 'সফল', description: 'ভেন্ডর মুছে ফেলা হয়েছে' });
     },
     onError: (error: any) => {

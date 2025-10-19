@@ -43,7 +43,7 @@ export default function HostelManagementPage() {
 
   // Fetch hostels
   const { data: hostels = [], isLoading } = useQuery({
-    queryKey: ['/api/hostels', schoolId],
+    queryKey: ['hostels', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hostels')
@@ -68,7 +68,7 @@ export default function HostelManagementPage() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hostels'] });
+      queryClient.invalidateQueries({ queryKey: ['hostels'] });
       toast({ title: 'সফল', description: 'হোস্টেল তৈরি হয়েছে' });
       setIsAddDialogOpen(false);
       resetForm();
