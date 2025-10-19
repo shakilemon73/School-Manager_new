@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useLocation } from 'wouter';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,6 +37,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function UnifiedAuthPage() {
   const [_, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -80,6 +82,13 @@ export default function UnifiedAuthPage() {
           title: "Login Successful",
           description: "Welcome back!",
         });
+
+        // Invalidate all React Query caches to force data refetch after login
+        console.log('🔄 Invalidating all queries after successful login');
+        await queryClient.invalidateQueries();
+        
+        // Small delay to allow auth state to propagate through the app
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         const userMetadata = authData.user.user_metadata;
         const userRole = userMetadata?.role || 'school_admin';

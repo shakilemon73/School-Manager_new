@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useLocation } from 'wouter';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -42,6 +43,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function AuthPage() {
   const { user: supabaseUser, loading: supabaseLoading, signIn } = useSupabaseDirectAuth();
   const [_, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
@@ -78,6 +80,14 @@ export default function AuthPage() {
   const onLoginSubmit = async (data: LoginFormValues) => {
     try {
       await signIn(data.email, data.password);
+      
+      // Invalidate all React Query caches to force data refetch after login
+      console.log('🔄 Invalidating all queries after successful login');
+      await queryClient.invalidateQueries();
+      
+      // Small delay to allow auth state to propagate through the app
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       toast({
         title: "স্বাগতম!",
         description: "সফলভাবে লগইন হয়েছে",
