@@ -158,6 +158,7 @@ import MedicalCheckups from "@/pages/student-welfare/medical-checkups";
 import Vaccinations from "@/pages/student-welfare/vaccinations";
 
 // Exam Management Pages
+import ExamManagement from "@/pages/exam-management/index";
 import ExamScheduling from "@/pages/exam-management/exam-scheduling";
 import SeatingArrangements from "@/pages/exam-management/seating-arrangements";
 import InvigilationDuties from "@/pages/exam-management/invigilation-duties";
@@ -405,6 +406,7 @@ function AppRoutes() {
       <ProtectedRoute path="/admission/interviews" component={AdmissionInterviews} />
       
       {/* Exam Management Routes */}
+      <ProtectedRoute path="/exam-management" component={ExamManagement} />
       <ProtectedRoute path="/exam-management/scheduling" component={ExamScheduling} />
       <ProtectedRoute path="/exam-management/seating-arrangements" component={SeatingArrangements} />
       <ProtectedRoute path="/exam-management/public-portal-settings" component={PublicPortalSettings} />

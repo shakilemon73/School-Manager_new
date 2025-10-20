@@ -5238,6 +5238,41 @@ export const db = {
     }
   },
 
+  async updateExam(id: number, data: any) {
+    console.log('✏️ Updating exam:', id, data);
+    try {
+      const dbData = toDbExam(data);
+      const { data: result, error } = await supabase
+        .from('exams')
+        .update(dbData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return fromDbExam(result);
+    } catch (error) {
+      console.error('Error in updateExam:', error);
+      throw error;
+    }
+  },
+
+  async deleteExam(id: number) {
+    console.log('🗑️ Deleting exam:', id);
+    try {
+      const { error } = await supabase
+        .from('exams')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Error in deleteExam:', error);
+      throw error;
+    }
+  },
+
   async createSubject(data: any) {
     console.log('📚 Creating subject:', data);
     try {

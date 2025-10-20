@@ -41,7 +41,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CalendarIcon, Clock, Plus, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import { userProfile } from "@/hooks/use-supabase-direct-auth";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { AppShell } from "@/components/layout/app-shell";
+import { ResponsivePageLayout } from "@/components/layout/responsive-page-layout";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 const examScheduleSchema = z.object({
   examId: z.number().min(1, "Exam is required"),
@@ -52,19 +55,93 @@ const examScheduleSchema = z.object({
   fullMarks: z.number().min(1, "Full marks is required"),
   passMarks: z.number().min(1, "Pass marks is required"),
   classId: z.number().optional(),
-  schoolId: z.number(),
 });
 
 type ExamScheduleForm = z.infer<typeof examScheduleSchema>;
 
-export default function ExamScheduling() {
+const translations = {
+  en: {
+    title: "Exam Scheduling",
+    addSchedule: "Add Schedule",
+    createSchedule: "Create Exam Schedule",
+    editSchedule: "Edit Exam Schedule",
+    exam: "Exam",
+    subject: "Subject",
+    date: "Exam Date",
+    startTime: "Start Time",
+    endTime: "End Time",
+    fullMarks: "Full Marks",
+    passMarks: "Pass Marks",
+    class: "Class (Optional)",
+    selectExam: "Select exam",
+    selectClass: "Select class",
+    selectSubject: "Select subject",
+    cancel: "Cancel",
+    create: "Create",
+    update: "Update",
+    examSchedules: "Exam Schedules",
+    time: "Time",
+    marks: "Marks",
+    actions: "Actions",
+    loading: "Loading...",
+    noSchedules: "No exam schedules found. Create your first schedule above.",
+    deleteConfirm: "Are you sure you want to delete this exam schedule?",
+    success: "Success",
+    error: "Error",
+    scheduleCreated: "Exam schedule created successfully",
+    scheduleUpdated: "Exam schedule updated successfully",
+    scheduleDeleted: "Exam schedule deleted successfully",
+    all: "All",
+    pass: "Pass",
+  },
+  bn: {
+    title: "পরীক্ষার সময়সূচী",
+    addSchedule: "সময়সূচী যোগ করুন",
+    createSchedule: "পরীক্ষার সময়সূচী তৈরি করুন",
+    editSchedule: "পরীক্ষার সময়সূচী সম্পাদনা করুন",
+    exam: "পরীক্ষা",
+    subject: "বিষয়",
+    date: "পরীক্ষার তারিখ",
+    startTime: "শুরুর সময়",
+    endTime: "শেষ সময়",
+    fullMarks: "পূর্ণ নম্বর",
+    passMarks: "পাশ নম্বর",
+    class: "শ্রেণী (ঐচ্ছিক)",
+    selectExam: "পরীক্ষা নির্বাচন করুন",
+    selectClass: "শ্রেণী নির্বাচন করুন",
+    selectSubject: "বিষয় নির্বাচন করুন",
+    cancel: "বাতিল",
+    create: "তৈরি করুন",
+    update: "আপডেট করুন",
+    examSchedules: "পরীক্ষার সময়সূচী",
+    time: "সময়",
+    marks: "নম্বর",
+    actions: "কার্যক্রম",
+    loading: "লোড হচ্ছে...",
+    noSchedules: "কোন পরীক্ষার সময়সূচী পাওয়া যায়নি। উপরে প্রথম সময়সূচী তৈরি করুন।",
+    deleteConfirm: "আপনি কি নিশ্চিত এই পরীক্ষার সময়সূচী মুছে ফেলতে চান?",
+    success: "সফল",
+    error: "ত্রুটি",
+    scheduleCreated: "পরীক্ষার সময়সূচী সফলভাবে তৈরি হয়েছে",
+    scheduleUpdated: "পরীক্ষার সময়সূচী সফলভাবে আপডেট হয়েছে",
+    scheduleDeleted: "পরীক্ষার সময়সূচী সফলভাবে মুছে ফেলা হয়েছে",
+    all: "সব",
+    pass: "পাশ",
+  },
+};
+
+function ExamSchedulingContent() {
   const { toast } = useToast();
+  const { language } = useLanguage();
+  const { schoolId, authReady } = useSupabaseDirectAuth();
+  const t = translations[language] || translations.bn;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<any>(null);
 
   const { data: schedules, isLoading } = useQuery({
-    queryKey: ["/api/exam-schedules"],
+    queryKey: ["exam-schedules", schoolId],
     queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
       const { data, error } = await supabase
         .from("exam_schedules")
         .select(`
@@ -73,84 +150,117 @@ export default function ExamScheduling() {
             id,
             name,
             type,
-            academic_year
+            academic_year_id
           ),
           classes (
             id,
             name
           )
         `)
+        .eq("school_id", schoolId)
         .order("date", { ascending: true });
 
       if (error) throw error;
       return data;
     },
+    enabled: !!schoolId,
+    refetchInterval: 30000,
+    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: exams } = useQuery({
-    queryKey: ["/api/exams"],
+    queryKey: ["exams", schoolId],
     queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
       const { data, error } = await supabase
         .from("exams")
         .select("*")
+        .eq("school_id", schoolId)
         .order("name");
 
       if (error) throw error;
       return data;
     },
+    enabled: !!schoolId,
   });
 
-  // Migrated to direct Supabase: Classes CRUD
-  const { data: classes } = useQuery({
-    queryKey: ["/api/classes"],
+  const { data: subjects } = useQuery({
+    queryKey: ["subjects", schoolId],
     queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
+      const { data, error } = await supabase
+        .from("subjects")
+        .select("*")
+        .eq("school_id", schoolId)
+        .order("name");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!schoolId,
+  });
+
+  const { data: classes } = useQuery({
+    queryKey: ["classes", schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
       const { data, error } = await supabase
         .from("classes")
         .select("*")
+        .eq("school_id", schoolId)
         .order("name");
 
       if (error) throw error;
       return data;
     },
+    enabled: !!schoolId,
   });
 
   const form = useForm<ExamScheduleForm>({
     resolver: zodResolver(examScheduleSchema),
-    defaultValues: async () => {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      return {
-        examId: 0,
-        subject: "",
-        date: "",
-        startTime: "",
-        endTime: "",
-        fullMarks: 100,
-        passMarks: 33,
-        schoolId: schoolId,
-      };
+    defaultValues: {
+      examId: 0,
+      subject: "",
+      date: "",
+      startTime: "",
+      endTime: "",
+      fullMarks: 100,
+      passMarks: 33,
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: ExamScheduleForm) => {
+      if (!schoolId) throw new Error('School ID not found');
       const { error } = await supabase
         .from("exam_schedules")
-        .insert([data]);
+        .insert([{ 
+          exam_id: data.examId,
+          subject: data.subject,
+          date: data.date,
+          start_time: data.startTime,
+          end_time: data.endTime,
+          full_marks: data.fullMarks,
+          pass_marks: data.passMarks,
+          class_id: data.classId,
+          school_id: schoolId 
+        }]);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/exam-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["exam-schedules", schoolId] });
       toast({
-        title: "Success",
-        description: "Exam schedule created successfully",
+        title: t.success,
+        description: t.scheduleCreated,
       });
       setIsDialogOpen(false);
       form.reset();
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
+        title: t.error,
         description: error.message,
         variant: "destructive",
       });
@@ -159,18 +269,29 @@ export default function ExamScheduling() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: ExamScheduleForm }) => {
+      if (!schoolId) throw new Error('School ID not found');
       const { error } = await supabase
         .from("exam_schedules")
-        .update(data)
+        .update({ 
+          exam_id: data.examId,
+          subject: data.subject,
+          date: data.date,
+          start_time: data.startTime,
+          end_time: data.endTime,
+          full_marks: data.fullMarks,
+          pass_marks: data.passMarks,
+          class_id: data.classId,
+          school_id: schoolId 
+        })
         .eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/exam-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["exam-schedules", schoolId] });
       toast({
-        title: "Success",
-        description: "Exam schedule updated successfully",
+        title: t.success,
+        description: t.scheduleUpdated,
       });
       setIsDialogOpen(false);
       setEditingSchedule(null);
@@ -178,7 +299,7 @@ export default function ExamScheduling() {
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
+        title: t.error,
         description: error.message,
         variant: "destructive",
       });
@@ -195,15 +316,15 @@ export default function ExamScheduling() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/exam-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["exam-schedules", schoolId] });
       toast({
-        title: "Success",
-        description: "Exam schedule deleted successfully",
+        title: t.success,
+        description: t.scheduleDeleted,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
+        title: t.error,
         description: error.message,
         variant: "destructive",
       });
@@ -229,32 +350,39 @@ export default function ExamScheduling() {
       fullMarks: schedule.full_marks,
       passMarks: schedule.pass_marks,
       classId: schedule.class_id,
-      schoolId: schedule.school_id,
     });
     setIsDialogOpen(true);
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this exam schedule?")) {
+    if (confirm(t.deleteConfirm)) {
       deleteMutation.mutate(id);
     }
   };
 
+  if (!authReady) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center py-8">{t.loading}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Exam Scheduling</h1>
+        <h1 className="text-3xl font-bold">{t.title}</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-schedule">
               <Plus className="mr-2 h-4 w-4" />
-              Add Schedule
+              {t.addSchedule}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
-                {editingSchedule ? "Edit" : "Create"} Exam Schedule
+                {editingSchedule ? t.editSchedule : t.createSchedule}
               </DialogTitle>
             </DialogHeader>
             <Form {...form}>
@@ -264,20 +392,20 @@ export default function ExamScheduling() {
                   name="examId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Exam</FormLabel>
+                      <FormLabel>{t.exam}</FormLabel>
                       <Select
                         onValueChange={(value) => field.onChange(Number(value))}
                         value={field.value?.toString()}
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-exam">
-                            <SelectValue placeholder="Select exam" />
+                            <SelectValue placeholder={t.selectExam} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {exams?.map((exam) => (
                             <SelectItem key={exam.id} value={exam.id.toString()}>
-                              {exam.name} ({exam.type})
+                              {exam.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -292,10 +420,24 @@ export default function ExamScheduling() {
                   name="subject"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Subject</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-subject" placeholder="Enter subject name" />
-                      </FormControl>
+                      <FormLabel>{t.subject}</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-subject">
+                            <SelectValue placeholder={t.selectSubject} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {subjects?.map((subject) => (
+                            <SelectItem key={subject.id} value={subject.name}>
+                              {language === 'bn' && subject.name_bn ? subject.name_bn : subject.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -307,7 +449,7 @@ export default function ExamScheduling() {
                     name="date"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Exam Date</FormLabel>
+                        <FormLabel>{t.date}</FormLabel>
                         <FormControl>
                           <Input {...field} type="date" data-testid="input-date" />
                         </FormControl>
@@ -321,20 +463,20 @@ export default function ExamScheduling() {
                     name="classId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Class (Optional)</FormLabel>
+                        <FormLabel>{t.class}</FormLabel>
                         <Select
                           onValueChange={(value) => field.onChange(Number(value))}
                           value={field.value?.toString()}
                         >
                           <FormControl>
                             <SelectTrigger data-testid="select-class">
-                              <SelectValue placeholder="Select class" />
+                              <SelectValue placeholder={t.selectClass} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {classes?.map((cls) => (
                               <SelectItem key={cls.id} value={cls.id.toString()}>
-                                {cls.name}
+                                {language === 'bn' && cls.name_in_bangla ? cls.name_in_bangla : cls.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -351,7 +493,7 @@ export default function ExamScheduling() {
                     name="startTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Start Time</FormLabel>
+                        <FormLabel>{t.startTime}</FormLabel>
                         <FormControl>
                           <Input {...field} type="time" data-testid="input-start-time" />
                         </FormControl>
@@ -365,7 +507,7 @@ export default function ExamScheduling() {
                     name="endTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>End Time</FormLabel>
+                        <FormLabel>{t.endTime}</FormLabel>
                         <FormControl>
                           <Input {...field} type="time" data-testid="input-end-time" />
                         </FormControl>
@@ -381,7 +523,7 @@ export default function ExamScheduling() {
                     name="fullMarks"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Full Marks</FormLabel>
+                        <FormLabel>{t.fullMarks}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
@@ -400,7 +542,7 @@ export default function ExamScheduling() {
                     name="passMarks"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Pass Marks</FormLabel>
+                        <FormLabel>{t.passMarks}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
@@ -426,14 +568,14 @@ export default function ExamScheduling() {
                     }}
                     data-testid="button-cancel"
                   >
-                    Cancel
+                    {t.cancel}
                   </Button>
                   <Button
                     type="submit"
                     disabled={createMutation.isPending || updateMutation.isPending}
                     data-testid="button-submit"
                   >
-                    {editingSchedule ? "Update" : "Create"}
+                    {editingSchedule ? t.update : t.create}
                   </Button>
                 </div>
               </form>
@@ -444,22 +586,22 @@ export default function ExamScheduling() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Exam Schedules</CardTitle>
+          <CardTitle>{t.examSchedules}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">Loading...</div>
+            <div className="text-center py-8">{t.loading}</div>
           ) : schedules && schedules.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Exam</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Class</TableHead>
-                  <TableHead>Marks</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{t.exam}</TableHead>
+                  <TableHead>{t.subject}</TableHead>
+                  <TableHead>{t.date}</TableHead>
+                  <TableHead>{t.time}</TableHead>
+                  <TableHead>{t.class}</TableHead>
+                  <TableHead>{t.marks}</TableHead>
+                  <TableHead>{t.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -479,9 +621,9 @@ export default function ExamScheduling() {
                         {schedule.start_time} - {schedule.end_time}
                       </div>
                     </TableCell>
-                    <TableCell>{schedule.classes?.name || 'All'}</TableCell>
+                    <TableCell>{schedule.classes?.name || t.all}</TableCell>
                     <TableCell>
-                      {schedule.full_marks} (Pass: {schedule.pass_marks})
+                      {schedule.full_marks} ({t.pass}: {schedule.pass_marks})
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -509,11 +651,21 @@ export default function ExamScheduling() {
             </Table>
           ) : (
             <div className="text-center py-8 text-gray-500">
-              No exam schedules found. Create your first schedule above.
+              {t.noSchedules}
             </div>
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ExamScheduling() {
+  return (
+    <AppShell>
+      <ResponsivePageLayout>
+        <ExamSchedulingContent />
+      </ResponsivePageLayout>
+    </AppShell>
   );
 }

@@ -42,7 +42,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { UserCheck, Plus, Pencil, Trash2, CalendarIcon, Clock, Filter } from "lucide-react";
 import { format } from "date-fns";
-import { userProfile } from "@/hooks/use-supabase-direct-auth";
+import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
+import { AppShell } from "@/components/layout/app-shell";
+import { ResponsivePageLayout } from "@/components/layout/responsive-page-layout";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 const invigilationDutySchema = z.object({
   examId: z.number().min(1, "Exam is required"),
@@ -53,118 +56,213 @@ const invigilationDutySchema = z.object({
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   notes: z.string().optional(),
-  schoolId: z.number(),
 });
 
 type InvigilationDutyForm = z.infer<typeof invigilationDutySchema>;
 
-export default function InvigilationDuties() {
+const translations = {
+  en: {
+    title: "Invigilation Duties",
+    assignDuty: "Assign Duty",
+    assignDutyTitle: "Assign Invigilation Duty",
+    editDutyTitle: "Edit Invigilation Duty",
+    exam: "Exam",
+    teacher: "Teacher",
+    room: "Room",
+    dutyType: "Duty Type",
+    roomNumber: "Room Number",
+    dutyDate: "Duty Date",
+    startTime: "Start Time",
+    endTime: "End Time",
+    notes: "Notes",
+    selectExam: "Select exam",
+    selectTeacher: "Select teacher",
+    selectDutyType: "Select duty type",
+    enterRoom: "Enter room number",
+    enterNotes: "Enter additional notes",
+    cancel: "Cancel",
+    create: "Assign",
+    update: "Update",
+    invigilationDuties: "Invigilation Duties",
+    date: "Date",
+    time: "Time",
+    actions: "Actions",
+    loading: "Loading...",
+    noDuties: "No invigilation duties found. Assign the first duty above.",
+    deleteConfirm: "Are you sure you want to delete this invigilation duty?",
+    success: "Success",
+    error: "Error",
+    dutyCreated: "Invigilation duty assigned successfully",
+    dutyUpdated: "Invigilation duty updated successfully",
+    dutyDeleted: "Invigilation duty deleted successfully",
+    chief: "Chief Invigilator",
+    assistant: "Assistant Invigilator",
+    supervisor: "Supervisor",
+  },
+  bn: {
+    title: "তত্ত্বাবধান দায়িত্ব",
+    assignDuty: "দায়িত্ব নিয়োগ করুন",
+    assignDutyTitle: "তত্ত্বাবধান দায়িত্ব নিয়োগ করুন",
+    editDutyTitle: "তত্ত্বাবধান দায়িত্ব সম্পাদনা করুন",
+    exam: "পরীক্ষা",
+    teacher: "শিক্ষক",
+    room: "রুম",
+    dutyType: "দায়িত্বের ধরন",
+    roomNumber: "রুম নম্বর",
+    dutyDate: "দায়িত্বের তারিখ",
+    startTime: "শুরুর সময়",
+    endTime: "শেষ সময়",
+    notes: "নোট",
+    selectExam: "পরীক্ষা নির্বাচন করুন",
+    selectTeacher: "শিক্ষক নির্বাচন করুন",
+    selectDutyType: "দায়িত্বের ধরন নির্বাচন করুন",
+    enterRoom: "রুম নম্বর লিখুন",
+    enterNotes: "অতিরিক্ত নোট লিখুন",
+    cancel: "বাতিল",
+    create: "নিয়োগ করুন",
+    update: "আপডেট করুন",
+    invigilationDuties: "তত্ত্বাবধান দায়িত্ব",
+    date: "তারিখ",
+    time: "সময়",
+    actions: "কার্যক্রম",
+    loading: "লোড হচ্ছে...",
+    noDuties: "কোন তত্ত্বাবধান দায়িত্ব পাওয়া যায়নি। উপরে প্রথম দায়িত্ব নিয়োগ করুন।",
+    deleteConfirm: "আপনি কি নিশ্চিত এই তত্ত্বাবধান দায়িত্ব মুছে ফেলতে চান?",
+    success: "সফল",
+    error: "ত্রুটি",
+    dutyCreated: "তত্ত্বাবধান দায়িত্ব সফলভাবে নিয়োগ হয়েছে",
+    dutyUpdated: "তত্ত্বাবধান দায়িত্ব সফলভাবে আপডেট হয়েছে",
+    dutyDeleted: "তত্ত্বাবধান দায়িত্ব সফলভাবে মুছে ফেলা হয়েছে",
+    chief: "প্রধান তত্ত্বাবধায়ক",
+    assistant: "সহকারী তত্ত্বাবধায়ক",
+    supervisor: "পরিদর্শক",
+  },
+};
+
+const dutyTypes = [
+  { value: "chief", labelEn: "Chief Invigilator", labelBn: "প্রধান তত্ত্বাবধায়ক" },
+  { value: "assistant", labelEn: "Assistant Invigilator", labelBn: "সহকারী তত্ত্বাবধায়ক" },
+  { value: "supervisor", labelEn: "Supervisor", labelBn: "পরিদর্শক" },
+];
+
+function InvigilationDutiesContent() {
   const { toast } = useToast();
+  const { language } = useLanguage();
+  const { schoolId, authReady } = useSupabaseDirectAuth();
+  const t = translations[language] || translations.bn;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDuty, setEditingDuty] = useState<any>(null);
-  const [filterExam, setFilterExam] = useState<string>("all");
-  const [filterDate, setFilterDate] = useState<string>("");
+  const [selectedExam, setSelectedExam] = useState<number | null>(null);
 
   const { data: duties, isLoading } = useQuery({
-    queryKey: ["/api/invigilation-duties", filterExam, filterDate],
+    queryKey: ["invigilation-duties", schoolId],
     queryFn: async () => {
-      let query = supabase
+      if (!schoolId) throw new Error('School ID not found');
+      const { data, error } = await supabase
         .from("invigilation_duties")
         .select(`
           *,
-          teachers (
-            id,
-            name,
-            teacher_id
-          ),
           exams (
             id,
             name,
             type
+          ),
+          teachers (
+            id,
+            name,
+            email
           )
         `)
+        .eq("school_id", schoolId)
         .order("duty_date", { ascending: true })
         .order("start_time", { ascending: true });
 
-      if (filterExam && filterExam !== 'all') {
-        query = query.eq("exam_id", filterExam);
-      }
-      if (filterDate) {
-        query = query.eq("duty_date", filterDate);
-      }
-
-      const { data, error } = await query;
-
       if (error) throw error;
       return data;
     },
+    enabled: !!schoolId,
+    refetchInterval: 30000,
+    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: exams } = useQuery({
-    queryKey: ["/api/exams"],
+    queryKey: ["exams", schoolId],
     queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
       const { data, error } = await supabase
         .from("exams")
         .select("*")
+        .eq("school_id", schoolId)
         .order("name");
 
       if (error) throw error;
       return data;
     },
+    enabled: !!schoolId,
   });
 
   const { data: teachers } = useQuery({
-    queryKey: ["/api/teachers"],
+    queryKey: ["teachers", schoolId],
     queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
       const { data, error } = await supabase
         .from("teachers")
-        .select("id, name, teacher_id, subject")
-        .eq("status", "active")
+        .select("*")
+        .eq("school_id", schoolId)
         .order("name");
 
       if (error) throw error;
       return data;
     },
+    enabled: !!schoolId,
   });
 
   const form = useForm<InvigilationDutyForm>({
     resolver: zodResolver(invigilationDutySchema),
-    defaultValues: async () => {
-      const schoolId = await userProfile.getCurrentUserSchoolId();
-      return {
-        examId: 0,
-        teacherId: 0,
-        roomNumber: "",
-        dutyType: "Main Invigilator",
-        dutyDate: "",
-        startTime: "",
-        endTime: "",
-        notes: "",
-        schoolId: schoolId,
-      };
+    defaultValues: {
+      examId: 0,
+      teacherId: 0,
+      roomNumber: "",
+      dutyType: "",
+      dutyDate: "",
+      startTime: "",
+      endTime: "",
+      notes: "",
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: InvigilationDutyForm) => {
+      if (!schoolId) throw new Error('School ID not found');
       const { error } = await supabase
         .from("invigilation_duties")
-        .insert([data]);
+        .insert([{ 
+          exam_id: data.examId,
+          teacher_id: data.teacherId,
+          room_number: data.roomNumber,
+          duty_type: data.dutyType,
+          duty_date: data.dutyDate,
+          start_time: data.startTime,
+          end_time: data.endTime,
+          notes: data.notes,
+          school_id: schoolId 
+        }]);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invigilation-duties"] });
+      queryClient.invalidateQueries({ queryKey: ["invigilation-duties", schoolId] });
       toast({
-        title: "Success",
-        description: "Invigilation duty assigned successfully",
+        title: t.success,
+        description: t.dutyCreated,
       });
       setIsDialogOpen(false);
       form.reset();
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
+        title: t.error,
         description: error.message,
         variant: "destructive",
       });
@@ -173,18 +271,29 @@ export default function InvigilationDuties() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: InvigilationDutyForm }) => {
+      if (!schoolId) throw new Error('School ID not found');
       const { error } = await supabase
         .from("invigilation_duties")
-        .update(data)
+        .update({ 
+          exam_id: data.examId,
+          teacher_id: data.teacherId,
+          room_number: data.roomNumber,
+          duty_type: data.dutyType,
+          duty_date: data.dutyDate,
+          start_time: data.startTime,
+          end_time: data.endTime,
+          notes: data.notes,
+          school_id: schoolId 
+        })
         .eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invigilation-duties"] });
+      queryClient.invalidateQueries({ queryKey: ["invigilation-duties", schoolId] });
       toast({
-        title: "Success",
-        description: "Invigilation duty updated successfully",
+        title: t.success,
+        description: t.dutyUpdated,
       });
       setIsDialogOpen(false);
       setEditingDuty(null);
@@ -192,7 +301,7 @@ export default function InvigilationDuties() {
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
+        title: t.error,
         description: error.message,
         variant: "destructive",
       });
@@ -209,15 +318,15 @@ export default function InvigilationDuties() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invigilation-duties"] });
+      queryClient.invalidateQueries({ queryKey: ["invigilation-duties", schoolId] });
       toast({
-        title: "Success",
-        description: "Invigilation duty deleted successfully",
+        title: t.success,
+        description: t.dutyDeleted,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
+        title: t.error,
         description: error.message,
         variant: "destructive",
       });
@@ -243,40 +352,43 @@ export default function InvigilationDuties() {
       startTime: duty.start_time,
       endTime: duty.end_time,
       notes: duty.notes || "",
-      schoolId: duty.school_id,
     });
     setIsDialogOpen(true);
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this invigilation duty?")) {
+    if (confirm(t.deleteConfirm)) {
       deleteMutation.mutate(id);
     }
   };
 
-  const dutyTypes = [
-    "Main Invigilator",
-    "Assistant Invigilator",
-    "Room Supervisor",
-    "Hall Supervisor",
-    "Flying Squad",
-  ];
+  if (!authReady) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center py-8">{t.loading}</div>
+      </div>
+    );
+  }
+
+  const filteredDuties = selectedExam
+    ? duties?.filter((d) => d.exam_id === selectedExam)
+    : duties;
 
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Invigilation Duties</h1>
+        <h1 className="text-3xl font-bold">{t.title}</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="button-add-duty">
+            <Button data-testid="button-assign-duty">
               <Plus className="mr-2 h-4 w-4" />
-              Assign Duty
+              {t.assignDuty}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
-                {editingDuty ? "Edit" : "Assign"} Invigilation Duty
+                {editingDuty ? t.editDutyTitle : t.assignDutyTitle}
               </DialogTitle>
             </DialogHeader>
             <Form {...form}>
@@ -287,20 +399,20 @@ export default function InvigilationDuties() {
                     name="examId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Exam</FormLabel>
+                        <FormLabel>{t.exam}</FormLabel>
                         <Select
                           onValueChange={(value) => field.onChange(Number(value))}
                           value={field.value?.toString()}
                         >
                           <FormControl>
                             <SelectTrigger data-testid="select-exam">
-                              <SelectValue placeholder="Select exam" />
+                              <SelectValue placeholder={t.selectExam} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {exams?.map((exam) => (
                               <SelectItem key={exam.id} value={exam.id.toString()}>
-                                {exam.name} ({exam.type})
+                                {exam.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -315,20 +427,20 @@ export default function InvigilationDuties() {
                     name="teacherId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Teacher</FormLabel>
+                        <FormLabel>{t.teacher}</FormLabel>
                         <Select
                           onValueChange={(value) => field.onChange(Number(value))}
                           value={field.value?.toString()}
                         >
                           <FormControl>
                             <SelectTrigger data-testid="select-teacher">
-                              <SelectValue placeholder="Select teacher" />
+                              <SelectValue placeholder={t.selectTeacher} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {teachers?.map((teacher) => (
                               <SelectItem key={teacher.id} value={teacher.id.toString()}>
-                                {teacher.name} ({teacher.teacher_id})
+                                {teacher.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -345,9 +457,9 @@ export default function InvigilationDuties() {
                     name="roomNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Room Number</FormLabel>
+                        <FormLabel>{t.roomNumber}</FormLabel>
                         <FormControl>
-                          <Input {...field} data-testid="input-room-number" placeholder="e.g., Room 101" />
+                          <Input {...field} data-testid="input-room" placeholder={t.enterRoom} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -359,20 +471,20 @@ export default function InvigilationDuties() {
                     name="dutyType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Duty Type</FormLabel>
+                        <FormLabel>{t.dutyType}</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger data-testid="select-duty-type">
-                              <SelectValue placeholder="Select duty type" />
+                              <SelectValue placeholder={t.selectDutyType} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {dutyTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
+                              <SelectItem key={type.value} value={type.value}>
+                                {language === 'bn' ? type.labelBn : type.labelEn}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -388,9 +500,9 @@ export default function InvigilationDuties() {
                   name="dutyDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Duty Date</FormLabel>
+                      <FormLabel>{t.dutyDate}</FormLabel>
                       <FormControl>
-                        <Input {...field} type="date" data-testid="input-duty-date" />
+                        <Input {...field} type="date" data-testid="input-date" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -403,7 +515,7 @@ export default function InvigilationDuties() {
                     name="startTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Start Time</FormLabel>
+                        <FormLabel>{t.startTime}</FormLabel>
                         <FormControl>
                           <Input {...field} type="time" data-testid="input-start-time" />
                         </FormControl>
@@ -417,7 +529,7 @@ export default function InvigilationDuties() {
                     name="endTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>End Time</FormLabel>
+                        <FormLabel>{t.endTime}</FormLabel>
                         <FormControl>
                           <Input {...field} type="time" data-testid="input-end-time" />
                         </FormControl>
@@ -432,12 +544,13 @@ export default function InvigilationDuties() {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Notes (Optional)</FormLabel>
+                      <FormLabel>{t.notes}</FormLabel>
                       <FormControl>
                         <Textarea
                           {...field}
-                          data-testid="textarea-notes"
-                          placeholder="Any special notes or instructions"
+                          data-testid="input-notes"
+                          placeholder={t.enterNotes}
+                          rows={3}
                         />
                       </FormControl>
                       <FormMessage />
@@ -456,14 +569,14 @@ export default function InvigilationDuties() {
                     }}
                     data-testid="button-cancel"
                   >
-                    Cancel
+                    {t.cancel}
                   </Button>
                   <Button
                     type="submit"
                     disabled={createMutation.isPending || updateMutation.isPending}
                     data-testid="button-submit"
                   >
-                    {editingDuty ? "Update" : "Assign"}
+                    {editingDuty ? t.update : t.create}
                   </Button>
                 </div>
               </form>
@@ -472,91 +585,64 @@ export default function InvigilationDuties() {
         </Dialog>
       </div>
 
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="mr-2 h-5 w-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Filter by Exam</label>
-              <Select value={filterExam} onValueChange={setFilterExam}>
-                <SelectTrigger data-testid="filter-exam">
-                  <SelectValue placeholder="All Exams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Exams</SelectItem>
-                  {exams?.map((exam) => (
-                    <SelectItem key={exam.id} value={exam.id.toString()}>
-                      {exam.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Filter by Date</label>
-              <Input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                data-testid="filter-date"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mb-4">
+        <Select
+          value={selectedExam?.toString() || "all"}
+          onValueChange={(value) => setSelectedExam(value === "all" ? null : Number(value))}
+        >
+          <SelectTrigger className="w-64" data-testid="filter-exam">
+            <SelectValue placeholder={t.exam} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Exams</SelectItem>
+            {exams?.map((exam) => (
+              <SelectItem key={exam.id} value={exam.id.toString()}>
+                {exam.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <UserCheck className="mr-2 h-5 w-5" />
-            Invigilation Duty Roster
-          </CardTitle>
+          <CardTitle>{t.invigilationDuties}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">Loading...</div>
-          ) : duties && duties.length > 0 ? (
+            <div className="text-center py-8">{t.loading}</div>
+          ) : filteredDuties && filteredDuties.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Exam</TableHead>
-                  <TableHead>Teacher</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Duty Type</TableHead>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{t.exam}</TableHead>
+                  <TableHead>{t.teacher}</TableHead>
+                  <TableHead>{t.room}</TableHead>
+                  <TableHead>{t.dutyType}</TableHead>
+                  <TableHead>{t.date}</TableHead>
+                  <TableHead>{t.time}</TableHead>
+                  <TableHead>{t.notes}</TableHead>
+                  <TableHead>{t.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {duties.map((duty) => (
+                {filteredDuties.map((duty) => (
                   <TableRow key={duty.id} data-testid={`row-duty-${duty.id}`}>
                     <TableCell>{duty.exams?.name || 'N/A'}</TableCell>
-                    <TableCell>
-                      {duty.teachers?.name || 'N/A'}
-                      <br />
-                      <span className="text-xs text-gray-500">
-                        ({duty.teachers?.teacher_id || 'N/A'})
-                      </span>
-                    </TableCell>
+                    <TableCell>{duty.teachers?.name || 'N/A'}</TableCell>
                     <TableCell>{duty.room_number}</TableCell>
                     <TableCell>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
-                        {duty.duty_type}
-                      </span>
+                      {dutyTypes.find(t => t.value === duty.duty_type)?.[language === 'bn' ? 'labelBn' : 'labelEn'] || duty.duty_type}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {format(new Date(duty.duty_date), 'MMM dd, yyyy')}
                       </div>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Clock className="mr-2 h-3 w-3" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <Clock className="mr-2 h-4 w-4" />
                         {duty.start_time} - {duty.end_time}
                       </div>
                     </TableCell>
@@ -589,11 +675,21 @@ export default function InvigilationDuties() {
             </Table>
           ) : (
             <div className="text-center py-8 text-gray-500">
-              No invigilation duties found. Assign duties above.
+              {t.noDuties}
             </div>
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function InvigilationDuties() {
+  return (
+    <AppShell>
+      <ResponsivePageLayout>
+        <InvigilationDutiesContent />
+      </ResponsivePageLayout>
+    </AppShell>
   );
 }

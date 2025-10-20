@@ -202,6 +202,18 @@ async function routeSupabaseMutation(method: string, path: string, body: any): P
         if (!meetingStatusId) return null;
         return await supabaseDb.updateMeetingStatus(meetingStatusId, body.status);
         
+      // Exams
+      case method === 'POST' && path === '/api/exams':
+        return await supabaseDb.createExam({ ...body, school_id: schoolId });
+      case method === 'PUT' && path.startsWith('/api/exams/'):
+        const updateExamId = parseResourceId(resourceId) as number;
+        if (!updateExamId) return null;
+        return await supabaseDb.updateExam(updateExamId, body);
+      case method === 'DELETE' && path.startsWith('/api/exams/'):
+        const deleteExamId = parseResourceId(resourceId) as number;
+        if (!deleteExamId) return null;
+        return await supabaseDb.deleteExam(deleteExamId);
+        
       // Users
       case method === 'POST' && path === '/api/users':
         return await supabaseDb.createUser({ ...body, schoolId });
