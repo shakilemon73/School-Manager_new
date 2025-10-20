@@ -1,5 +1,22 @@
-# Cloudflare Workers Configuration
-# School Management System - Express.js Deployment
+# ⚠️ LEGACY FILE - NOT USED FOR CURRENT DEPLOYMENT ⚠️
+# 
+# This file was the original Cloudflare Workers configuration for Express.js backend.
+# It is NO LONGER USED because:
+# 1. Express.js is not compatible with Cloudflare Workers/Pages
+# 2. The app now uses frontend-only deployment (Cloudflare Pages)
+# 3. Backend operations are handled by Supabase (serverless)
+#
+# For current deployment configuration, see:
+# - CLOUDFLARE_DEPLOYMENT_GUIDE.md (complete deployment guide)
+# - .env.cloudflare.example (environment variables)
+# - package.json scripts: build:cloudflare, deploy:cloudflare
+#
+# This file is kept for reference only.
+# DO NOT USE THIS FILE FOR DEPLOYMENT.
+#
+# ---
+# Original Cloudflare Workers Configuration
+# School Management System - Express.js Deployment (DEPRECATED)
 
 name = "school-management-system"
 main = "server/index.ts"

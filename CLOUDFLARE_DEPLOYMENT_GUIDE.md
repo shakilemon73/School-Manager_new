@@ -15,12 +15,11 @@ Before you begin, make sure you have:
 3. ✅ Git repository (GitHub, GitLab, or Bitbucket)
 4. ✅ Node.js installed locally (for testing)
 
-> **Note about `wrangler.toml` vs `wrangler.jsonc`:**  
-> This project contains two Wrangler config files:
-> - `wrangler.jsonc` - **NEW** configuration for Cloudflare Pages (frontend-only deployment) ✅ Use this one
-> - `wrangler.toml` - Legacy configuration for Cloudflare Workers (Express.js backend) ❌ Not compatible with Pages
->
-> For this deployment guide, we use `wrangler.jsonc` for Pages deployment.
+> **Note about Configuration Files:**  
+> - `wrangler.workers.toml.legacy` - Old Workers config (NOT USED - ignore this file)
+> - **No wrangler config needed** for Cloudflare Pages deployment!
+> - CLI deployment uses the command: `wrangler pages deploy public --project-name=school-management-system`
+> - Git deployment is configured in Cloudflare Dashboard (no local config needed)
 
 ---
 
