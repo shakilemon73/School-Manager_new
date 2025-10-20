@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { AppShell } from '@/components/layout/app-shell';
 import { useMobile } from '@/hooks/use-mobile';
+import { LanguageText } from '@/components/ui/language-text';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -88,6 +90,7 @@ export default function NoticesPage() {
   const isMobile = useMobile();
   const schoolId = useRequireSchoolId();
   const queryClient = useQueryClient();
+  const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState('list');
   const [previewMode, setPreviewMode] = useState(false);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
@@ -337,18 +340,24 @@ export default function NoticesPage() {
 
   return (
     <AppShell>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
         <div className="container mx-auto p-6 max-w-7xl">
-          {/* Enhanced Hero Section */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3" data-testid="page-title">
-                  <Megaphone className="w-8 h-8" />
-                  নোটিশ সিস্টেম
+          {/* Modern Gradient Hero Section */}
+          <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-2xl p-8 text-white shadow-2xl mb-8">
+            <div className="flex justify-between items-start">
+              <div className="space-y-3">
+                <h1 className="text-4xl md:text-5xl font-bold flex items-center gap-4" data-testid="page-title">
+                  <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                    <Megaphone className="w-10 h-10" />
+                  </div>
+                  <LanguageText en="Notice System" bn="বিজ্ঞপ্তি সিস্টেম" ar="نظام الإشعارات" />
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400 text-lg">
-                  গুরুত্বপূর্ণ বিজ্ঞপ্তি ও ঘোষণা তৈরি ও পরিচালনা করুন
+                <p className="text-orange-100 text-lg ml-1">
+                  <LanguageText 
+                    en="Create and manage important notices and announcements" 
+                    bn="গুরুত্বপূর্ণ বিজ্ঞপ্তি ও ঘোষণা তৈরি ও পরিচালনা করুন" 
+                    ar="إنشاء وإدارة الإشعارات والإعلانات المهمة"
+                  />
                 </p>
               </div>
               <Button
@@ -356,11 +365,12 @@ export default function NoticesPage() {
                   resetForm();
                   setActiveTab('create');
                 }}
-                className="bg-orange-600 hover:bg-orange-700"
+                className="bg-white text-orange-600 hover:bg-orange-50 shadow-lg"
+                size="lg"
                 data-testid="button-create-notice"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                নতুন নোটিশ
+                <Plus className="w-5 h-5 mr-2" />
+                <LanguageText en="New Notice" bn="নতুন বিজ্ঞপ্তি" ar="إشعار جديد" />
               </Button>
             </div>
           </div>
@@ -374,7 +384,9 @@ export default function NoticesPage() {
                     <Megaphone className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">মোট নোটিশ</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <LanguageText en="Total Notices" bn="মোট বিজ্ঞপ্তি" ar="إجمالي الإشعارات" />
+                    </p>
                     <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                       {stats.total}
                     </div>
@@ -406,7 +418,9 @@ export default function NoticesPage() {
                     <Eye className="w-5 h-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">প্রকাশিত</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <LanguageText en="Published" bn="প্রকাশিত" ar="منشور" />
+                    </p>
                     <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                       {stats.published}
                     </div>
@@ -422,7 +436,9 @@ export default function NoticesPage() {
                     <span className="material-icons text-purple-600 dark:text-purple-400 text-xl">visibility</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">মোট দর্শক</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <LanguageText en="Total Views" bn="মোট দর্শক" ar="إجمالي المشاهدات" />
+                    </p>
                     <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                       {stats.totalViews}
                     </div>
@@ -453,11 +469,11 @@ export default function NoticesPage() {
             <TabsList>
               <TabsTrigger value="list" data-testid="tab-list">
                 <span className="material-icons mr-2 text-sm">list</span>
-                নোটিশ তালিকা
+                <LanguageText en="Notice List" bn="বিজ্ঞপ্তি তালিকা" ar="قائمة الإشعارات" />
               </TabsTrigger>
               <TabsTrigger value="create" data-testid="tab-create">
                 <Plus className="w-4 h-4 mr-2" />
-                নতুন নোটিশ তৈরি
+                <LanguageText en="Create New Notice" bn="নতুন বিজ্ঞপ্তি তৈরি করুন" ar="إنشاء إشعار جديد" />
               </TabsTrigger>
             </TabsList>
 

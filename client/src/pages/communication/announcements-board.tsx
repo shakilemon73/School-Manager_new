@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useToast } from '@/hooks/use-toast';
 import { AppShell } from '@/components/layout/app-shell';
+import { LanguageText } from '@/components/ui/language-text';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +80,7 @@ interface AnnouncementCategory {
 export default function AnnouncementsBoardPage() {
   const { toast } = useToast();
   const schoolId = useRequireSchoolId();
+  const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState<'admin' | 'public'>('admin');
   const [searchQuery, setSearchQuery] = useState('');
@@ -408,125 +411,170 @@ export default function AnnouncementsBoardPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2" data-testid="page-title">
-              <Megaphone className="w-8 h-8" />
-              Announcements Board
-            </h1>
-            <p className="text-muted-foreground">Manage and view school announcements</p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant={viewMode === 'admin' ? 'default' : 'outline'}
-              onClick={() => setViewMode('admin')}
-              data-testid="button-admin-view"
-            >
-              Admin View
-            </Button>
-            <Button
-              variant={viewMode === 'public' ? 'default' : 'outline'}
-              onClick={() => setViewMode('public')}
-              data-testid="button-public-view"
-            >
-              Public View
-            </Button>
-            {viewMode === 'admin' && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCategoryDialogOpen(true)}
-                  data-testid="button-manage-categories"
-                >
-                  <Tag className="w-4 h-4 mr-2" />
-                  Categories
-                </Button>
-                <Button
-                  onClick={() => {
-                    resetAnnouncementForm();
-                    setEditingAnnouncement(null);
-                    setIsAnnouncementDialogOpen(true);
-                  }}
-                  data-testid="button-create-announcement"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Announcement
-                </Button>
-              </>
-            )}
+        {/* Modern Header with Gradient */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-8 text-white shadow-lg">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold flex items-center gap-3" data-testid="page-title">
+                <Megaphone className="w-10 h-10" />
+                <LanguageText en="Announcements Board" bn="ঘোষণা বোর্ড" ar="لوحة الإعلانات" />
+              </h1>
+              <p className="text-blue-100 text-lg">
+                <LanguageText 
+                  en="Manage and view school announcements" 
+                  bn="স্কুলের ঘোষণা পরিচালনা এবং দেখুন" 
+                  ar="إدارة ومشاهدة إعلانات المدرسة" 
+                />
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant={viewMode === 'admin' ? 'secondary' : 'outline'}
+                onClick={() => setViewMode('admin')}
+                className={viewMode === 'admin' ? 'bg-white text-blue-600 hover:bg-blue-50' : 'bg-white/20 text-white hover:bg-white/30 border-white/40'}
+                data-testid="button-admin-view"
+              >
+                <LanguageText en="Admin View" bn="অ্যাডমিন ভিউ" ar="عرض المشرف" />
+              </Button>
+              <Button
+                variant={viewMode === 'public' ? 'secondary' : 'outline'}
+                onClick={() => setViewMode('public')}
+                className={viewMode === 'public' ? 'bg-white text-purple-600 hover:bg-purple-50' : 'bg-white/20 text-white hover:bg-white/30 border-white/40'}
+                data-testid="button-public-view"
+              >
+                <LanguageText en="Public View" bn="পাবলিক ভিউ" ar="العرض العام" />
+              </Button>
+              {viewMode === 'admin' && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCategoryDialogOpen(true)}
+                    className="bg-white/20 text-white hover:bg-white/30 border-white/40"
+                    data-testid="button-manage-categories"
+                  >
+                    <Tag className="w-4 h-4 mr-2" />
+                    <LanguageText en="Categories" bn="ক্যাটাগরি" ar="التصنيفات" />
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      resetAnnouncementForm();
+                      setEditingAnnouncement(null);
+                      setIsAnnouncementDialogOpen(true);
+                    }}
+                    className="bg-white text-blue-600 hover:bg-blue-50"
+                    data-testid="button-create-announcement"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    <LanguageText en="New Announcement" bn="নতুন ঘোষণা" ar="إعلان جديد" />
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search announcements..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-              data-testid="input-search-announcements"
-            />
-          </div>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-[180px]" data-testid="select-priority-filter">
-              <SelectValue placeholder="Filter by priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[180px]" data-testid="select-category-filter">
-              <SelectValue placeholder="Filter by category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map(cat => (
-                <SelectItem key={cat.id} value={cat.id.toString()}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Modern Search and Filters */}
+        <Card className="border-2">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                <Input
+                  placeholder={language === 'bn' ? "ঘোষণা খুঁজুন..." : language === 'ar' ? "البحث عن الإعلانات..." : "Search announcements..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-11 h-12 text-lg"
+                  data-testid="input-search-announcements"
+                />
+              </div>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="w-[200px] h-12" data-testid="select-priority-filter">
+                  <SelectValue placeholder={language === 'bn' ? "অগ্রাধিকার ফিল্টার করুন" : language === 'ar' ? "تصفية حسب الأولوية" : "Filter by priority"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    <LanguageText en="All Priorities" bn="সব অগ্রাধিকার" ar="جميع الأولويات" />
+                  </SelectItem>
+                  <SelectItem value="low">
+                    <LanguageText en="Low" bn="কম" ar="منخفض" />
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    <LanguageText en="Medium" bn="মধ্যম" ar="متوسط" />
+                  </SelectItem>
+                  <SelectItem value="high">
+                    <LanguageText en="High" bn="উচ্চ" ar="عالي" />
+                  </SelectItem>
+                  <SelectItem value="urgent">
+                    <LanguageText en="Urgent" bn="জরুরি" ar="عاجل" />
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[200px] h-12" data-testid="select-category-filter">
+                  <SelectValue placeholder={language === 'bn' ? "ক্যাটাগরি ফিল্টার করুন" : language === 'ar' ? "تصفية حسب الفئة" : "Filter by category"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    <LanguageText en="All Categories" bn="সব ক্যাটাগরি" ar="جميع الفئات" />
+                  </SelectItem>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id.toString()}>
+                      {language === 'bn' && cat.name_bn ? cat.name_bn : cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         {viewMode === 'admin' && (
           <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="tabs-announcements">
-            <TabsList>
-              <TabsTrigger value="all" data-testid="tab-all">
-                All ({announcements.length})
+            <TabsList className="grid w-full max-w-md grid-cols-3">
+              <TabsTrigger value="all" data-testid="tab-all" className="text-base">
+                <LanguageText en="All" bn="সব" ar="الكل" /> ({announcements.length})
               </TabsTrigger>
-              <TabsTrigger value="published" data-testid="tab-published">
-                Published ({announcements.filter(a => a.is_published).length})
+              <TabsTrigger value="published" data-testid="tab-published" className="text-base">
+                <LanguageText en="Published" bn="প্রকাশিত" ar="منشور" /> ({announcements.filter(a => a.is_published).length})
               </TabsTrigger>
-              <TabsTrigger value="draft" data-testid="tab-draft">
-                Draft ({announcements.filter(a => !a.is_published).length})
+              <TabsTrigger value="draft" data-testid="tab-draft" className="text-base">
+                <LanguageText en="Draft" bn="খসড়া" ar="مسودة" /> ({announcements.filter(a => !a.is_published).length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
         )}
 
         {announcementsLoading ? (
-          <div className="text-center py-12" data-testid="loading-announcements">
-            <p className="text-muted-foreground">Loading announcements...</p>
+          <div className="text-center py-16" data-testid="loading-announcements">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-solid border-current border-r-transparent mb-4"></div>
+            <p className="text-muted-foreground text-lg">
+              <LanguageText en="Loading announcements..." bn="ঘোষণা লোড হচ্ছে..." ar="جاري تحميل الإعلانات..." />
+            </p>
           </div>
         ) : filteredAnnouncements.length === 0 ? (
-          <Card data-testid="empty-announcements">
-            <CardContent className="text-center py-12">
-              <Megaphone className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No announcements found</p>
+          <Card className="border-2 border-dashed" data-testid="empty-announcements">
+            <CardContent className="text-center py-16">
+              <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+                <Megaphone className="w-12 h-12 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">
+                <LanguageText en="No announcements found" bn="কোন ঘোষণা পাওয়া যায়নি" ar="لم يتم العثور على إعلانات" />
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                <LanguageText 
+                  en="Get started by creating your first announcement" 
+                  bn="আপনার প্রথম ঘোষণা তৈরি করে শুরু করুন"
+                  ar="ابدأ بإنشاء أول إعلان لك"
+                />
+              </p>
               {viewMode === 'admin' && (
                 <Button
-                  variant="link"
                   onClick={() => setIsAnnouncementDialogOpen(true)}
                   className="mt-2"
+                  size="lg"
                 >
-                  Create your first announcement
+                  <Plus className="w-4 h-4 mr-2" />
+                  <LanguageText en="Create Announcement" bn="ঘোষণা তৈরি করুন" ar="إنشاء إعلان" />
                 </Button>
               )}
             </CardContent>
@@ -550,10 +598,9 @@ export default function AnnouncementsBoardPage() {
                       {announcement.view_count}
                     </div>
                   </div>
-                  <CardTitle className="text-xl">{announcement.title}</CardTitle>
-                  {announcement.title_bn && (
-                    <p className="text-sm text-muted-foreground">{announcement.title_bn}</p>
-                  )}
+                  <CardTitle className="text-xl line-clamp-2">
+                    {language === 'bn' && announcement.title_bn ? announcement.title_bn : announcement.title}
+                  </CardTitle>
                   <CardDescription className="flex flex-wrap gap-2 mt-2">
                     <Badge variant="outline" className="flex items-center gap-1">
                       <Users className="w-3 h-3" />
@@ -561,15 +608,19 @@ export default function AnnouncementsBoardPage() {
                     </Badge>
                     {announcement.is_published ? (
                       <Badge variant="default" className="bg-green-100 text-green-800">
-                        Published
+                        <LanguageText en="Published" bn="প্রকাশিত" ar="منشور" />
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">Draft</Badge>
+                      <Badge variant="secondary">
+                        <LanguageText en="Draft" bn="খসড়া" ar="مسودة" />
+                      </Badge>
                     )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm mb-4 line-clamp-3">{announcement.content}</p>
+                  <p className="text-sm mb-4 line-clamp-3">
+                    {language === 'bn' && announcement.content_bn ? announcement.content_bn : announcement.content}
+                  </p>
                   
                   {announcement.attachments && announcement.attachments.length > 0 && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
@@ -607,12 +658,12 @@ export default function AnnouncementsBoardPage() {
                         {announcement.is_published ? (
                           <>
                             <EyeOff className="w-3 h-3 mr-1" />
-                            Unpublish
+                            <LanguageText en="Unpublish" bn="অপ্রকাশিত করুন" ar="إلغاء النشر" />
                           </>
                         ) : (
                           <>
                             <Eye className="w-3 h-3 mr-1" />
-                            Publish
+                            <LanguageText en="Publish" bn="প্রকাশ করুন" ar="نشر" />
                           </>
                         )}
                       </Button>
@@ -626,14 +677,19 @@ export default function AnnouncementsBoardPage() {
                         data-testid={`button-edit-${announcement.id}`}
                       >
                         <Edit className="w-3 h-3 mr-1" />
-                        Edit
+                        <LanguageText en="Edit" bn="সম্পাদনা" ar="تحرير" />
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm('Are you sure you want to delete this announcement?')) {
+                          const confirmMessage = language === 'bn' 
+                            ? 'আপনি কি নিশ্চিত যে আপনি এই ঘোষণাটি মুছে ফেলতে চান?' 
+                            : language === 'ar'
+                            ? 'هل أنت متأكد أنك تريد حذف هذا الإعلان؟'
+                            : 'Are you sure you want to delete this announcement?';
+                          if (confirm(confirmMessage)) {
                             deleteAnnouncementMutation.mutate(announcement.id);
                           }
                         }}

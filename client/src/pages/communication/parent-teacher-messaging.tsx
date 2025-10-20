@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useToast } from '@/hooks/use-toast';
 import { AppShell } from '@/components/layout/app-shell';
+import { LanguageText } from '@/components/ui/language-text';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +71,7 @@ interface Message {
 export default function ParentTeacherMessagingPage() {
   const { toast } = useToast();
   const schoolId = useRequireSchoolId();
+  const { language } = useLanguage();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [participantFilter, setParticipantFilter] = useState('all');
@@ -327,18 +330,32 @@ export default function ParentTeacherMessagingPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="page-title">Parent-Teacher Messaging</h1>
-            <p className="text-muted-foreground">Chat with teachers and parents</p>
+        {/* Modern Header with Gradient */}
+        <div className="bg-gradient-to-r from-green-600 to-teal-600 rounded-xl p-8 text-white shadow-lg">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold flex items-center gap-3" data-testid="page-title">
+                <MessageCircle className="w-10 h-10" />
+                <LanguageText en="Parent-Teacher Messaging" bn="অভিভাবক-শিক্ষক বার্তা" ar="رسائل أولياء الأمور والمعلمين" />
+              </h1>
+              <p className="text-green-100 text-lg">
+                <LanguageText 
+                  en="Chat with teachers and parents" 
+                  bn="শিক্ষক এবং অভিভাবকদের সাথে চ্যাট করুন" 
+                  ar="الدردشة مع المعلمين وأولياء الأمور"
+                />
+              </p>
+            </div>
+            <Button
+              onClick={() => setIsNewConversationOpen(true)}
+              className="bg-white text-green-600 hover:bg-green-50"
+              size="lg"
+              data-testid="button-new-conversation"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              <LanguageText en="New Conversation" bn="নতুন কথোপকথন" ar="محادثة جديدة" />
+            </Button>
           </div>
-          <Button
-            onClick={() => setIsNewConversationOpen(true)}
-            data-testid="button-new-conversation"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Conversation
-          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-[calc(100vh-250px)]">
@@ -355,7 +372,7 @@ export default function ParentTeacherMessagingPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
-                    placeholder="Search conversations..."
+                    placeholder={language === 'bn' ? "কথোপকথন খুঁজুন..." : language === 'ar' ? "البحث عن المحادثات..." : "Search conversations..."}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -594,9 +611,15 @@ export default function ParentTeacherMessagingPage() {
         <Dialog open={isNewConversationOpen} onOpenChange={setIsNewConversationOpen}>
           <DialogContent data-testid="dialog-new-conversation">
             <DialogHeader>
-              <DialogTitle>New Conversation</DialogTitle>
+              <DialogTitle>
+                <LanguageText en="New Conversation" bn="নতুন কথোপকথন" ar="محادثة جديدة" />
+              </DialogTitle>
               <DialogDescription>
-                Start a new conversation with a teacher or parent
+                <LanguageText 
+                  en="Start a new conversation with a teacher or parent" 
+                  bn="শিক্ষক বা অভিভাবকের সাথে একটি নতুন কথোপকথন শুরু করুন" 
+                  ar="ابدأ محادثة جديدة مع معلم أو ولي أمر"
+                />
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">

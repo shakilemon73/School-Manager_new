@@ -4,6 +4,8 @@ import { AppShell } from '@/components/layout/app-shell';
 import { ResponsivePageLayout } from '@/components/layout/responsive-page-layout';
 import { supabase } from '@/lib/supabase';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
+import { LanguageText } from '@/components/ui/language-text';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { Button } from '@/components/ui/button';
 import { 
   Card, 
@@ -99,6 +101,7 @@ export default function NotificationsPage() {
   const queryClient = useQueryClient();
   const isMobile = useMobile();
   const schoolId = useRequireSchoolId();
+  const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState("all");
   const [selectedNotifications, setSelectedNotifications] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -438,7 +441,7 @@ export default function NotificationsPage() {
                       "font-semibold text-sm",
                       notification.isRead ? "text-gray-700 dark:text-gray-300" : "text-gray-900 dark:text-white"
                     )}>
-                      {notification.titleBn}
+                      {language === 'bn' && notification.titleBn ? notification.titleBn : notification.title}
                     </h3>
                     <div className={cn(
                       "w-2 h-2 rounded-full",
@@ -453,7 +456,7 @@ export default function NotificationsPage() {
                     "text-sm mb-2",
                     notification.isRead ? "text-gray-600 dark:text-gray-400" : "text-gray-700 dark:text-gray-300"
                   )}>
-                    {notification.descriptionBn}
+                    {language === 'bn' && notification.descriptionBn ? notification.descriptionBn : notification.description}
                   </p>
                   <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1">
@@ -476,7 +479,7 @@ export default function NotificationsPage() {
                 <div className="flex items-center gap-1 ml-2">
                   {notification.actionRequired && (
                     <Badge variant="outline" className="text-xs">
-                      ব্যবস্থা প্রয়োজন
+                      <LanguageText en="Action Required" bn="ব্যবস্থা প্রয়োজন" ar="مطلوب إجراء" />
                     </Badge>
                   )}
                   <Button 
@@ -508,9 +511,29 @@ export default function NotificationsPage() {
 
   return (
     <AppShell>
+      <div className="space-y-6">
+        {/* Modern Header with Gradient */}
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-8 text-white shadow-lg">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold flex items-center gap-3" data-testid="page-title">
+                <Bell className="w-10 h-10" />
+                <LanguageText en="Notifications Center" bn="নোটিফিকেশন সেন্টার" ar="مركز الإشعارات" />
+              </h1>
+              <p className="text-purple-100 text-lg">
+                <LanguageText 
+                  en="Manage real-time updates and important messages" 
+                  bn="রিয়েল-টাইম আপডেট এবং গুরুত্বপূর্ণ বার্তা পরিচালনা করুন" 
+                  ar="إدارة التحديثات في الوقت الفعلي والرسائل المهمة"
+                />
+              </p>
+            </div>
+          </div>
+        </div>
+
       <ResponsivePageLayout
-        title="লাইভ নোটিফিকেশন"
-        description="রিয়েল-টাইম আপডেট এবং গুরুত্বপূর্ণ বার্তা পরিচালনা করুন"
+        title={language === 'bn' ? "নোটিফিকেশন" : language === 'ar' ? "الإشعارات" : "Notifications"}
+        description=""
       >
         <div className="space-y-6">
           {/* Enhanced stats overview following Susan Weinschenk's psychology principles */}
@@ -522,7 +545,9 @@ export default function NotificationsPage() {
                     <Bell className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm text-blue-600 dark:text-blue-400">মোট নোটিফিকেশন</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      <LanguageText en="Total Notifications" bn="মোট নোটিফিকেশন" ar="إجمالي الإشعارات" />
+                    </p>
                     <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                       {notificationStats.total}
                     </p>
@@ -591,7 +616,7 @@ export default function NotificationsPage() {
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      placeholder="নোটিফিকেশন খুঁজুন..."
+                      placeholder={language === 'bn' ? "নোটিফিকেশন খুঁজুন..." : language === 'ar' ? "ابحث عن الإشعارات..." : "Search notifications..."}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-10 border-gray-200 dark:border-gray-700"
@@ -688,7 +713,9 @@ export default function NotificationsPage() {
                 <div className="flex items-center justify-center py-12">
                   <div className="flex items-center gap-3">
                     <Activity className="h-5 w-5 animate-spin text-blue-500" />
-                    <span className="text-gray-600 dark:text-gray-400">নোটিফিকেশন লোড হচ্ছে...</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      <LanguageText en="Loading notifications..." bn="নোটিফিকেশন লোড হচ্ছে..." ar="جاري تحميل الإشعارات..." />
+                    </span>
                   </div>
                 </div>
               ) : filteredNotifications.length === 0 ? (
@@ -698,13 +725,18 @@ export default function NotificationsPage() {
                       <Bell className="h-8 w-8 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      কোনো নোটিফিকেশন নেই
+                      <LanguageText en="No notifications" bn="কোনো নোটিফিকেশন নেই" ar="لا توجد إشعارات" />
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-4">
-                      {activeTab === 'unread' ? 'সকল নোটিফিকেশন পঠিত' : 
-                       activeTab === 'starred' ? 'কোনো তারকাচিহ্নিত নোটিফিকেশন নেই' :
-                       activeTab === 'urgent' ? 'কোনো জরুরি নোটিফিকেশন নেই' : 
-                       'আপনার কোনো নোটিফিকেশন নেই'}
+                      {activeTab === 'unread' ? (
+                        <LanguageText en="All notifications are read" bn="সকল নোটিফিকেশন পঠিত" ar="تمت قراءة جميع الإشعارات" />
+                      ) : activeTab === 'starred' ? (
+                        <LanguageText en="No starred notifications" bn="কোনো তারকাচিহ্নিত নোটিফিকেশন নেই" ar="لا توجد إشعارات مميزة" />
+                      ) : activeTab === 'urgent' ? (
+                        <LanguageText en="No urgent notifications" bn="কোনো জরুরি নোটিফিকেশন নেই" ar="لا توجد إشعارات عاجلة" />
+                      ) : (
+                        <LanguageText en="You have no notifications" bn="আপনার কোনো নোটিফিকেশন নেই" ar="ليس لديك إشعارات" />
+                      )}
                     </p>
                   </CardContent>
                 </Card>
@@ -718,8 +750,22 @@ export default function NotificationsPage() {
                   
                   {/* Results summary */}
                   <div className="text-center text-sm text-gray-600 dark:text-gray-400 pt-4">
-                    {filteredNotifications.length} টি নোটিফিকেশন দেখানো হচ্ছে
-                    {searchQuery && ` "${searchQuery}" এর জন্য`}
+                    {language === 'bn' ? (
+                      <>
+                        {filteredNotifications.length} টি নোটিফিকেশন দেখানো হচ্ছে
+                        {searchQuery && ` "${searchQuery}" এর জন্য`}
+                      </>
+                    ) : language === 'ar' ? (
+                      <>
+                        عرض {filteredNotifications.length} إشعارات
+                        {searchQuery && ` لـ "${searchQuery}"`}
+                      </>
+                    ) : (
+                      <>
+                        Showing {filteredNotifications.length} notifications
+                        {searchQuery && ` for "${searchQuery}"`}
+                      </>
+                    )}
                   </div>
                 </>
               )}
@@ -727,6 +773,7 @@ export default function NotificationsPage() {
           </Tabs>
         </div>
       </ResponsivePageLayout>
+      </div>
     </AppShell>
   );
 }
