@@ -1,7 +1,12 @@
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { AppShell } from '@/components/layout/app-shell';
 import { useMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Card, 
   CardContent, 
@@ -24,12 +29,24 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Megaphone, Plus, Edit, Trash2, Eye, Download, Search } from 'lucide-react';
+import { format } from 'date-fns';
 
 // Define schema for notice information
 const noticeSchema = z.object({
@@ -47,46 +64,209 @@ const noticeSchema = z.object({
   importantNote: z.string().optional()
 });
 
+interface Notice {
+  id: number;
+  title: string;
+  title_bn: string | null;
+  content: string;
+  content_bn: string | null;
+  notice_type: string;
+  issue_date: string;
+  reference_number: string | null;
+  school_name: string | null;
+  school_name_bn: string | null;
+  principal_name: string | null;
+  target_audience: string;
+  important_note: string | null;
+  is_published: boolean;
+  views_count: number;
+  school_id: number;
+  created_at: string;
+}
+
 export default function NoticesPage() {
   const isMobile = useMobile();
-  const [isLoading, setIsLoading] = useState(false);
+  const schoolId = useRequireSchoolId();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('list');
   const [previewMode, setPreviewMode] = useState(false);
+  const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
   // Notice form setup
   const noticeForm = useForm<z.infer<typeof noticeSchema>>({
     resolver: zodResolver(noticeSchema),
     defaultValues: {
-      title: "Half-Yearly Examination Notice",
-      titleInBangla: "অর্ধ-বার্ষিক পরীক্ষা সংক্রান্ত বিজ্ঞপ্তি",
+      title: "",
+      titleInBangla: "",
       noticeType: "Academic",
       issueDate: new Date().toISOString().split('T')[0],
-      referenceNumber: "DPS/NOTICE/2025/" + Math.random().toString(36).substr(2, 3).toUpperCase(),
-      schoolName: "Dhaka Public School",
-      schoolNameInBangla: "ঢাকা পাবলিক স্কুল",
-      principalName: "Professor Mohammad Rahman",
-      content: "This is to inform all students and parents that the half-yearly examination will be held from 15th June 2025 to 25th June 2025. All students are requested to prepare accordingly.",
-      contentInBangla: "সকল শিক্ষার্থী এবং অভিভাবকদের জানানো যাচ্ছে যে, অর্ধ-বার্ষিক পরীক্ষা আগামী ১৫ জুন ২০২৫ থেকে ২৫ জুন ২০২৫ পর্যন্ত অনুষ্ঠিত হবে।",
+      referenceNumber: "",
+      schoolName: "",
+      schoolNameInBangla: "",
+      principalName: "",
+      content: "",
+      contentInBangla: "",
       targetAudience: "All Students and Parents",
-      importantNote: "All students must bring their admit cards to the examination hall."
+      importantNote: ""
     }
+  });
+
+  // Fetch notices from Supabase
+  const { data: notices = [], isLoading, refetch } = useQuery({
+    queryKey: ['notices', schoolId],
+    queryFn: async () => {
+      console.log('📋 Fetching notices');
+      const { data, error } = await supabase
+        .from('notices')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as Notice[];
+    },
+    refetchInterval: 30000,
+  });
+
+  // Calculate statistics from real data
+  const stats = {
+    total: notices.length,
+    thisMonth: notices.filter(n => {
+      const date = new Date(n.created_at);
+      const now = new Date();
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    }).length,
+    published: notices.filter(n => n.is_published).length,
+    totalViews: notices.reduce((sum, n) => sum + n.views_count, 0),
+    types: [...new Set(notices.map(n => n.notice_type))].length,
+  };
+
+  // Create notice mutation
+  const createNoticeMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof noticeSchema>) => {
+      const { data: notice, error } = await supabase
+        .from('notices')
+        .insert({
+          title: data.title,
+          title_bn: data.titleInBangla || null,
+          content: data.content,
+          content_bn: data.contentInBangla || null,
+          notice_type: data.noticeType,
+          issue_date: data.issueDate,
+          reference_number: data.referenceNumber || `NOTICE/${new Date().getFullYear()}/${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+          school_name: data.schoolName,
+          school_name_bn: data.schoolNameInBangla || null,
+          principal_name: data.principalName,
+          target_audience: data.targetAudience,
+          important_note: data.importantNote || null,
+          is_published: true,
+          school_id: schoolId,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return notice;
+    },
+    onSuccess: () => {
+      toast({
+        title: "নোটিশ তৈরি হয়েছে",
+        description: "আপনার নোটিশ সফলভাবে ডাটাবেসে সেভ হয়েছে",
+      });
+      queryClient.invalidateQueries({ queryKey: ['notices'] });
+      setPreviewMode(false);
+      setActiveTab('list');
+      noticeForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "ত্রুটি",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update notice mutation
+  const updateNoticeMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof noticeSchema> }) => {
+      const { error } = await supabase
+        .from('notices')
+        .update({
+          title: data.title,
+          title_bn: data.titleInBangla || null,
+          content: data.content,
+          content_bn: data.contentInBangla || null,
+          notice_type: data.noticeType,
+          issue_date: data.issueDate,
+          reference_number: data.referenceNumber,
+          school_name: data.schoolName,
+          school_name_bn: data.schoolNameInBangla || null,
+          principal_name: data.principalName,
+          target_audience: data.targetAudience,
+          important_note: data.importantNote || null,
+        })
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "নোটিশ আপডেট হয়েছে",
+        description: "নোটিশ সফলভাবে আপডেট করা হয়েছে",
+      });
+      queryClient.invalidateQueries({ queryKey: ['notices'] });
+      setEditingNotice(null);
+      setIsDialogOpen(false);
+      noticeForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "ত্রুটি",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete notice mutation
+  const deleteNoticeMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase
+        .from('notices')
+        .delete()
+        .eq('id', id)
+        .eq('school_id', schoolId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "নোটিশ মুছে ফেলা হয়েছে",
+        description: "নোটিশ সফলভাবে মুছে ফেলা হয়েছে",
+      });
+      queryClient.invalidateQueries({ queryKey: ['notices'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "ত্রুটি",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Handle form submission
   const onNoticeSubmit = (data: z.infer<typeof noticeSchema>) => {
-    setIsLoading(true);
-    
-    console.log("Notice Data:", data);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      setPreviewMode(true);
-      toast({
-        title: "নোটিশ তৈরি হয়েছে",
-        description: "আপনার নোটিশ সফলভাবে তৈরি হয়েছে",
-      });
-    }, 1500);
+    if (editingNotice) {
+      updateNoticeMutation.mutate({ id: editingNotice.id, data });
+    } else {
+      createNoticeMutation.mutate(data);
+    }
   };
   
   // Generate PDF function
@@ -123,311 +303,475 @@ export default function NoticesPage() {
   // Reset form and preview
   const resetForm = () => {
     setPreviewMode(false);
+    setEditingNotice(null);
     noticeForm.reset();
   };
+
+  // Handle edit notice
+  const handleEditNotice = (notice: Notice) => {
+    setEditingNotice(notice);
+    noticeForm.reset({
+      title: notice.title,
+      titleInBangla: notice.title_bn || "",
+      noticeType: notice.notice_type,
+      issueDate: notice.issue_date,
+      referenceNumber: notice.reference_number || "",
+      schoolName: notice.school_name || "",
+      schoolNameInBangla: notice.school_name_bn || "",
+      principalName: notice.principal_name || "",
+      content: notice.content,
+      contentInBangla: notice.content_bn || "",
+      targetAudience: notice.target_audience,
+      importantNote: notice.important_note || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  // Filter notices based on search
+  const filteredNotices = notices.filter(notice => 
+    !searchQuery || 
+    notice.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (notice.title_bn && notice.title_bn.includes(searchQuery)) ||
+    notice.content.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <AppShell>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto p-6 max-w-7xl">
-          {/* Enhanced Hero Section - Don Norman's Clear Mental Model */}
+          {/* Enhanced Hero Section */}
           <div className="mb-8">
-            <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-6" aria-label="Breadcrumb">
-              <a href="/" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">হোম</a>
-              <span className="material-icons text-xs">chevron_right</span>
-              <span className="text-gray-900 dark:text-gray-100 font-medium">নোটিশ সিস্টেম</span>
-            </nav>
-            
-            {/* Hero Header with Status Indicator */}
-            <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950 rounded-2xl p-8 border border-orange-100 dark:border-orange-800">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-orange-600 rounded-2xl flex items-center justify-center">
-                      <span className="material-icons text-white text-2xl">campaign</span>
-                    </div>
-                    <div>
-                      <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100">
-                        নোটিশ সিস্টেম
-                      </h1>
-                      <p className="text-gray-600 dark:text-gray-400 text-lg">
-                        গুরুত্বপূর্ণ বিজ্ঞপ্তি ও ঘোষণা তৈরি করুন
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-                      <span>বিজ্ঞপ্তি সিস্টেম সক্রিয়</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                      <span className="material-icons text-sm">verified</span>
-                      <span>অনুমোদিত ফরম্যাট</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button 
-                    className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-xl font-medium transition-all hover:scale-105"
-                    onClick={() => noticeForm.handleSubmit(onNoticeSubmit)()}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <span className="material-icons mr-2 animate-spin">autorenew</span>
-                        জেনারেট হচ্ছে...
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-icons mr-2">campaign</span>
-                        নোটিশ তৈরি করুন
-                      </>
-                    )}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="px-6 py-3 rounded-xl font-medium border-orange-200 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                    onClick={resetForm}
-                  >
-                    <span className="material-icons mr-2">refresh</span>
-                    রিসেট
-                  </Button>
-                </div>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3" data-testid="page-title">
+                  <Megaphone className="w-8 h-8" />
+                  নোটিশ সিস্টেম
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 text-lg">
+                  গুরুত্বপূর্ণ বিজ্ঞপ্তি ও ঘোষণা তৈরি ও পরিচালনা করুন
+                </p>
               </div>
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setActiveTab('create');
+                }}
+                className="bg-orange-600 hover:bg-orange-700"
+                data-testid="button-create-notice"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                নতুন নোটিশ
+              </Button>
             </div>
           </div>
 
-          {/* Enhanced Statistics Cards - Julie Zhuo's Information Hierarchy */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white dark:bg-gray-800">
+          {/* Enhanced Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white dark:bg-gray-800" data-testid="stat-total">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <span className="material-icons text-orange-600 dark:text-orange-400 text-xl">campaign</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">এ মাসের নোটিশ</p>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          ২৩
-                        </div>
-                      </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Megaphone className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">মোট নোটিশ</p>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {stats.total}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded-md">প্রকাশিত</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white dark:bg-gray-800">
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white dark:bg-gray-800" data-testid="stat-month">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <span className="material-icons text-blue-600 dark:text-blue-400 text-xl">visibility</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">মোট দর্শক</p>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          ১,৮৯৫
-                        </div>
-                      </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className="material-icons text-blue-600 dark:text-blue-400 text-xl">calendar_today</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">এ মাসের নোটিশ</p>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {stats.thisMonth}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded-md">এ মাসে</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white dark:bg-gray-800">
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white dark:bg-gray-800" data-testid="stat-published">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-green-50 dark:bg-green-900/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <span className="material-icons text-green-600 dark:text-green-400 text-xl">star</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">গুরুত্বপূর্ণ</p>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          ৮
-                        </div>
-                      </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-green-50 dark:bg-green-900/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Eye className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">প্রকাশিত</p>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {stats.published}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded-md">জরুরি নোটিশ</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white dark:bg-gray-800">
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white dark:bg-gray-800" data-testid="stat-views">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-purple-50 dark:bg-purple-900/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <span className="material-icons text-purple-600 dark:text-purple-400 text-xl">category</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">নোটিশের ধরন</p>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          ৬
-                        </div>
-                      </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-purple-50 dark:bg-purple-900/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className="material-icons text-purple-600 dark:text-purple-400 text-xl">visibility</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">মোট দর্শক</p>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {stats.totalViews}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded-md">বিভিন্ন বিভাগ</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white dark:bg-gray-800" data-testid="stat-types">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className="material-icons text-amber-600 dark:text-amber-400 text-xl">category</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">নোটিশের ধরন</p>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {stats.types}
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {!previewMode ? (
-            <div className="flex flex-col gap-6">
-              {/* Enhanced Notice Configuration - Dieter Rams' Minimalism */}
+          {/* Tabs for List and Create */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="tabs-notices">
+            <TabsList>
+              <TabsTrigger value="list" data-testid="tab-list">
+                <span className="material-icons mr-2 text-sm">list</span>
+                নোটিশ তালিকা
+              </TabsTrigger>
+              <TabsTrigger value="create" data-testid="tab-create">
+                <Plus className="w-4 h-4 mr-2" />
+                নতুন নোটিশ তৈরি
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="list" className="mt-6">
+              {/* Search Bar */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    placeholder="নোটিশ খুঁজুন..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search"
+                  />
+                </div>
+              </div>
+
+              {/* Notices List */}
+              {isLoading ? (
+                <div className="text-center py-12" data-testid="loading-notices">
+                  <p className="text-muted-foreground">লোড হচ্ছে...</p>
+                </div>
+              ) : filteredNotices.length === 0 ? (
+                <Card data-testid="empty-notices">
+                  <CardContent className="text-center py-12">
+                    <Megaphone className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">কোনো নোটিশ পাওয়া যায়নি</p>
+                    <Button
+                      variant="link"
+                      onClick={() => setActiveTab('create')}
+                      className="mt-2"
+                    >
+                      প্রথম নোটিশ তৈরি করুন
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredNotices.map((notice) => (
+                    <Card key={notice.id} className="hover:shadow-lg transition-shadow" data-testid={`notice-card-${notice.id}`}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-2">
+                          <Badge variant="outline">{notice.notice_type}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(notice.created_at), 'dd MMM yyyy')}
+                          </span>
+                        </div>
+                        <CardTitle className="text-xl">{notice.title_bn || notice.title}</CardTitle>
+                        {notice.reference_number && (
+                          <p className="text-sm text-muted-foreground">Ref: {notice.reference_number}</p>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm mb-4 line-clamp-3">{notice.content_bn || notice.content}</p>
+                        <div className="flex gap-2 pt-4 border-t">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditNotice(notice)}
+                            data-testid={`button-edit-${notice.id}`}
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            সম্পাদনা
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm('আপনি কি এই নোটিশটি মুছে ফেলতে চান?')) {
+                                deleteNoticeMutation.mutate(notice.id);
+                              }
+                            }}
+                            data-testid={`button-delete-${notice.id}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="create" className="mt-6">
               <Card className="border-0 shadow-lg bg-white dark:bg-gray-800">
                 <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 rounded-xl flex items-center justify-center">
-                      <span className="material-icons text-orange-600 dark:text-orange-400 text-xl">settings</span>
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        নোটিশ কনফিগারেশন
-                      </CardTitle>
-                      <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
-                        গুরুত্বপূর্ণ বিজ্ঞপ্তির বিস্তারিত তথ্য প্রদান করুন
-                      </CardDescription>
-                    </div>
-                  </div>
+                  <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    নোটিশ কনফিগারেশন
+                  </CardTitle>
+                  <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
+                    গুরুত্বপূর্ণ বিজ্ঞপ্তির বিস্তারিত তথ্য প্রদান করুন
+                  </CardDescription>
                 </CardHeader>
                 
-                <CardContent>
+                <CardContent className="p-6">
                   <Form {...noticeForm}>
-                    <div className="space-y-6">
+                    <form onSubmit={noticeForm.handleSubmit(onNoticeSubmit)} className="space-y-6">
                       {/* Notice Information Section */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                          <span className="material-icons text-orange-500">info</span>
-                          নোটিশের তথ্য
-                        </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={noticeForm.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>শিরোনাম (ইংরেজি)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Half-Yearly Examination Notice" data-testid="input-title" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField
-                            control={noticeForm.control}
-                            name="title"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">শিরোনাম (ইংরেজি)</FormLabel>
+                        <FormField
+                          control={noticeForm.control}
+                          name="titleInBangla"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>শিরোনাম (বাংলা)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="অর্ধ-বার্ষিক পরীক্ষা সংক্রান্ত বিজ্ঞপ্তি" data-testid="input-title-bn" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={noticeForm.control}
+                          name="noticeType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>নোটিশের ধরন</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <input 
-                                    {...field}
-                                    className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                                    placeholder="Half-Yearly Examination Notice"
-                                  />
+                                  <SelectTrigger data-testid="select-notice-type">
+                                    <SelectValue placeholder="ধরন নির্বাচন করুন" />
+                                  </SelectTrigger>
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={noticeForm.control}
-                            name="titleInBangla"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">শিরোনাম (বাংলা)</FormLabel>
+                                <SelectContent>
+                                  <SelectItem value="Academic">একাডেমিক</SelectItem>
+                                  <SelectItem value="Administrative">প্রশাসনিক</SelectItem>
+                                  <SelectItem value="Event">ইভেন্ট</SelectItem>
+                                  <SelectItem value="Emergency">জরুরি</SelectItem>
+                                  <SelectItem value="General">সাধারণ</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={noticeForm.control}
+                          name="targetAudience"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>লক্ষ্য দর্শক</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <input 
-                                    {...field}
-                                    className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                                    placeholder="অর্ধ-বার্ষিক পরীক্ষা সংক্রান্ত বিজ্ঞপ্তি"
-                                  />
+                                  <SelectTrigger data-testid="select-target-audience">
+                                    <SelectValue placeholder="দর্শক নির্বাচন করুন" />
+                                  </SelectTrigger>
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={noticeForm.control}
-                            name="noticeType"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">নোটিশের ধরন</FormLabel>
-                                <Select 
-                                  onValueChange={field.onChange} 
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                                      <SelectValue placeholder="ধরন নির্বাচন করুন" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="Academic">একাডেমিক</SelectItem>
-                                    <SelectItem value="Administrative">প্রশাসনিক</SelectItem>
-                                    <SelectItem value="Event">ইভেন্ট</SelectItem>
-                                    <SelectItem value="Emergency">জরুরি</SelectItem>
-                                    <SelectItem value="General">সাধারণ</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={noticeForm.control}
-                            name="targetAudience"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">লক্ষ্য দর্শক</FormLabel>
-                                <Select 
-                                  onValueChange={field.onChange} 
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                                      <SelectValue placeholder="দর্শক নির্বাচন করুন" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="All Students">সকল শিক্ষার্থী</SelectItem>
-                                    <SelectItem value="All Teachers">সকল শিক্ষক</SelectItem>
-                                    <SelectItem value="All Staff">সকল কর্মচারী</SelectItem>
-                                    <SelectItem value="All Students and Parents">সকল শিক্ষার্থী ও অভিভাবক</SelectItem>
-                                    <SelectItem value="Class 6-8">৬ষ্ঠ-৮ম শ্রেণি</SelectItem>
-                                    <SelectItem value="Class 9-10">৯ম-১০ম শ্রেণি</SelectItem>
-                                    <SelectItem value="All">সকলের জন্য</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                                <SelectContent>
+                                  <SelectItem value="All Students">সকল শিক্ষার্থী</SelectItem>
+                                  <SelectItem value="All Teachers">সকল শিক্ষক</SelectItem>
+                                  <SelectItem value="All Staff">সকল কর্মচারী</SelectItem>
+                                  <SelectItem value="All Students and Parents">সকল শিক্ষার্থী ও অভিভাবক</SelectItem>
+                                  <SelectItem value="All">সকলের জন্য</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={noticeForm.control}
+                          name="issueDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>ইস্যু তারিখ</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} data-testid="input-issue-date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={noticeForm.control}
+                          name="referenceNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>রেফারেন্স নম্বর (ঐচ্ছিক)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="NOTICE/2025/..." data-testid="input-reference" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={noticeForm.control}
+                          name="schoolName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>স্কুলের নাম (ইংরেজি)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Dhaka Public School" data-testid="input-school-name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={noticeForm.control}
+                          name="schoolNameInBangla"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>স্কুলের নাম (বাংলা)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="ঢাকা পাবলিক স্কুল" data-testid="input-school-name-bn" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={noticeForm.control}
+                          name="principalName"
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormLabel>প্রধান শিক্ষকের নাম</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Professor Mohammad Rahman" data-testid="input-principal-name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="space-y-4">
+                        <FormField
+                          control={noticeForm.control}
+                          name="content"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>নোটিশ বিষয়বস্তু (ইংরেজি)</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} rows={5} placeholder="Enter notice content..." data-testid="textarea-content" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={noticeForm.control}
+                          name="contentInBangla"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>নোটিশ বিষয়বস্তু (বাংলা)</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} rows={5} placeholder="বাংলায় নোটিশ বিষয়বস্তু লিখুন..." data-testid="textarea-content-bn" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={noticeForm.control}
+                          name="importantNote"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>গুরুত্বপূর্ণ নোট (ঐচ্ছিক)</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} rows={2} placeholder="Any important notes..." data-testid="textarea-important-note" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
                       
                       <div className="flex gap-4 pt-6 border-t border-gray-100 dark:border-gray-700">
                         <Button 
-                          type="button"
-                          onClick={() => noticeForm.handleSubmit(onNoticeSubmit)()}
-                          disabled={isLoading}
-                          className="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-xl font-medium transition-all hover:scale-105"
+                          type="submit"
+                          disabled={createNoticeMutation.isPending || updateNoticeMutation.isPending}
+                          className="flex-1 bg-orange-600 hover:bg-orange-700"
+                          data-testid="button-submit"
                         >
-                          {isLoading ? (
+                          {createNoticeMutation.isPending || updateNoticeMutation.isPending ? (
                             <>
                               <span className="material-icons mr-2 animate-spin">autorenew</span>
-                              জেনারেট হচ্ছে...
+                              সেভ হচ্ছে...
+                            </>
+                          ) : editingNotice ? (
+                            <>
+                              <Edit className="w-4 h-4 mr-2" />
+                              নোটিশ আপডেট করুন
                             </>
                           ) : (
                             <>
-                              <span className="material-icons mr-2">campaign</span>
+                              <Megaphone className="w-4 h-4 mr-2" />
                               নোটিশ তৈরি করুন
                             </>
                           )}
@@ -436,92 +780,82 @@ export default function NoticesPage() {
                           type="button"
                           variant="outline"
                           onClick={resetForm}
-                          className="px-6 py-3 rounded-xl font-medium border-gray-200 dark:border-gray-600"
+                          className="px-6"
+                          data-testid="button-reset"
                         >
                           <span className="material-icons mr-2">refresh</span>
                           রিসেট
                         </Button>
                       </div>
-                    </div>
+                    </form>
                   </Form>
                 </CardContent>
               </Card>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-6">
-              <Card className="border-0 shadow-lg bg-white dark:bg-gray-800">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-green-50 dark:bg-green-900/20 rounded-xl flex items-center justify-center">
-                        <span className="material-icons text-green-600 dark:text-green-400 text-xl">preview</span>
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          নোটিশ প্রিভিউ
-                        </CardTitle>
-                        <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
-                          আপনার তৈরি করা নোটিশ
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={generatePDF}
-                        className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium"
-                      >
-                        <span className="material-icons mr-2">picture_as_pdf</span>
-                        পিডিএফ
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        onClick={() => setPreviewMode(false)}
-                        className="px-4 py-2 rounded-lg font-medium"
-                      >
-                        <span className="material-icons mr-2">edit</span>
-                        সম্পাদনা
-                      </Button>
-                    </div>
+            </TabsContent>
+          </Tabs>
+
+          {/* Edit Dialog */}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-edit-notice">
+              <DialogHeader>
+                <DialogTitle>নোটিশ সম্পাদনা করুন</DialogTitle>
+                <DialogDescription>নোটিশের তথ্য আপডেট করুন</DialogDescription>
+              </DialogHeader>
+              <Form {...noticeForm}>
+                <form onSubmit={noticeForm.handleSubmit(onNoticeSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={noticeForm.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>শিরোনাম (ইংরেজি)</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={noticeForm.control}
+                      name="titleInBangla"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>শিরোনাম (বাংলা)</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                </CardHeader>
-                
-                <CardContent className="p-0">
-                  <div id="notice-preview" className="p-8 bg-white">
-                    <div className="text-center mb-6">
-                      <h1 className="text-2xl font-bold mb-2">{noticeForm.getValues('schoolNameInBangla')}</h1>
-                      <h2 className="text-xl mb-2">বিজ্ঞপ্তি</h2>
-                      <p className="text-sm text-gray-600">
-                        নং: {noticeForm.getValues('referenceNumber')} | 
-                        তারিখ: {noticeForm.getValues('issueDate')}
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">{noticeForm.getValues('titleInBangla')}</h3>
-                        <p className="text-sm text-gray-600 mb-4">বিষয়: {noticeForm.getValues('title')}</p>
-                        <p className="mb-4">{noticeForm.getValues('contentInBangla')}</p>
-                        <p className="mb-4">{noticeForm.getValues('content')}</p>
-                        
-                        {noticeForm.getValues('importantNote') && (
-                          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-                            <p className="text-sm font-semibold">গুরুত্বপূর্ণ:</p>
-                            <p className="text-sm">{noticeForm.getValues('importantNote')}</p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="mt-8 text-right">
-                        <p className="font-semibold">{noticeForm.getValues('principalName')}</p>
-                        <p>অধ্যক্ষ</p>
-                        <p>{noticeForm.getValues('schoolNameInBangla')}</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+                  <FormField
+                    control={noticeForm.control}
+                    name="content"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>বিষয়বস্তু</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} rows={6} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      বাতিল
+                    </Button>
+                    <Button type="submit" disabled={updateNoticeMutation.isPending}>
+                      {updateNoticeMutation.isPending ? 'আপডেট হচ্ছে...' : 'আপডেট করুন'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </AppShell>

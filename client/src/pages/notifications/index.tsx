@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
 import { ResponsivePageLayout } from '@/components/layout/responsive-page-layout';
 import { supabase } from '@/lib/supabase';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { Button } from '@/components/ui/button';
 import { 
   Card, 
@@ -97,6 +98,7 @@ export default function NotificationsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useMobile();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState("all");
   const [selectedNotifications, setSelectedNotifications] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -113,13 +115,14 @@ export default function NotificationsPage() {
 
   // Real-time notifications from Supabase directly with RLS
   const { data: notificationsResponse, isLoading, error } = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', schoolId],
     queryFn: async () => {
       console.log('🔔 Fetching notifications with direct Supabase calls');
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .order('created_at', { ascending: false });
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false});
       
       if (error) {
         console.error('Notifications fetch error:', error);
@@ -305,6 +308,7 @@ export default function NotificationsPage() {
         .from('notifications')
         .update({ is_read: true })
         .in('id', notificationIds)
+        .eq('school_id', schoolId)
         .select();
       
       if (error) {
@@ -339,7 +343,8 @@ export default function NotificationsPage() {
       const { error } = await supabase
         .from('notifications')
         .delete()
-        .in('id', notificationIds);
+        .in('id', notificationIds)
+        .eq('school_id', schoolId);
       
       if (error) {
         console.error('Delete notifications error:', error);

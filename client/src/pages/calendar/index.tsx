@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
+import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
   Card, 
   CardContent, 
@@ -52,7 +52,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format } from 'date-fns';
-import { Edit, Trash2, Eye, Plus, Save, X, Calendar, Clock } from 'lucide-react';
+import { Edit, Trash2, Eye, Plus, Save, X, Calendar as CalendarIcon, Clock } from 'lucide-react';
 
 // Define schema for event
 const eventSchema = z.object({
@@ -72,6 +72,7 @@ const eventSchema = z.object({
 export default function CalendarPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const schoolId = useRequireSchoolId();
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isLoading, setIsLoading] = useState(false);
@@ -98,12 +99,13 @@ export default function CalendarPage() {
   
   // Fetch real events from Supabase directly with RLS
   const { data: rawEvents = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ['calendar-events'],
+    queryKey: ['calendar-events', schoolId],
     queryFn: async () => {
       console.log('📅 Fetching calendar events with direct Supabase calls');
       const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
+        .eq('school_id', schoolId)
         .order('start_date', { ascending: false });
       
       if (error) {
@@ -140,7 +142,7 @@ export default function CalendarPage() {
     mutationFn: async (eventData: any) => {
       console.log('Creating event with data:', eventData);
       
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('calendar_events')
         .insert({
           title: eventData.title,
@@ -155,7 +157,8 @@ export default function CalendarPage() {
           location: eventData.location,
           organizer: 'Admin',
           is_public: true,
-          is_active: true
+          is_active: true,
+          school_id: schoolId
         })
         .select()
         .single();
@@ -207,6 +210,7 @@ export default function CalendarPage() {
           location: eventData.location,
         })
         .eq('id', id)
+        .eq('school_id', schoolId)
         .select()
         .single();
       
@@ -245,7 +249,8 @@ export default function CalendarPage() {
       const { error } = await supabase
         .from('calendar_events')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', schoolId);
       
       if (error) {
         console.error('Calendar event deletion error:', error);
