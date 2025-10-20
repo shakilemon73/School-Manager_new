@@ -76,9 +76,16 @@ export default function CalendarPage() {
   });
 
   // Real-time events from Supabase using direct database calls
+  const schoolId = getUserSchoolId();
   const { data: events = [], isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
-    queryKey: ['calendar', 'events'],
-    queryFn: () => db.getCalendarEvents(),
+    queryKey: ['calendar', 'events', schoolId],
+    queryFn: () => {
+      if (!schoolId) {
+        throw new Error('School ID is required for calendar events');
+      }
+      return db.getCalendarEvents(schoolId);
+    },
+    enabled: !!schoolId,
     refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
   });
 
@@ -107,7 +114,7 @@ export default function CalendarPage() {
       return await db.createCalendarEvent(calendarEvent);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['calendar', 'events'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar', 'events', schoolId] });
       toast({
         title: "ইভেন্ট তৈরি হয়েছে",
         description: "নতুন ইভেন্ট সফলভাবে যোগ করা হয়েছে",
