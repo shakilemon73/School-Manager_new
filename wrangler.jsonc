@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "school-management-system",
+  "compatibility_date": "2025-04-01",
+  
+  // Cloudflare Pages configuration for frontend-only deployment
+  "pages_build_output_dir": "public",
+  
+  // Single-page application routing
+  // All routes will be handled by React Router (wouter)
+  "assets": {
+    "not_found_handling": "single-page-application"
+  },
+  
+  // Environment variables (non-sensitive, public)
+  // Set these in Cloudflare Dashboard: Pages → Your Project → Settings → Environment Variables
+  "vars": {
+    "NODE_ENV": "production"
+  }
+}
