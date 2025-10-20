@@ -85,3 +85,13 @@ client/dist/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Wrangler (Cloudflare) - config not needed for Pages
+.wrangler/
+wrangler.toml
+wrangler.json
+wrangler.jsonc
+*.toml.legacy
+
+# Archive folder (legacy configs)
+.archive/

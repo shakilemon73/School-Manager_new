@@ -57,5 +57,34 @@ The system includes comprehensive modules for:
 - **Radix UI primitives via shadcn/ui**: For UI components and design system.
 - **Zod**: For schema validation, integrated with React Hook Form.
 - **Vite**: Frontend build tool.
-- **Cloudflare Pages**: Frontend hosting platform.
-- **Vercel**: Frontend hosting platform.
+- **Cloudflare Pages**: Frontend hosting platform (primary deployment target).
+- **Vercel**: Frontend hosting platform (alternative).
+
+## Deployment to Cloudflare Pages
+**Status**: ✅ Ready for production deployment
+
+**Quick Deploy**:
+```bash
+npm run deploy:cloudflare
+```
+
+**Documentation**:
+- Quick Start: `DEPLOY_TO_CLOUDFLARE.md` (3 simple steps)
+- Complete Guide: `CLOUDFLARE_DEPLOYMENT_GUIDE.md` (full documentation)
+
+**Configuration**:
+- No wrangler config files needed
+- Frontend-only deployment (Supabase handles backend)
+- Build output: `public/` directory
+- Deployment method: CLI or Git auto-deploy
+
+**Required Environment Variables**:
+- `VITE_SUPABASE_URL` - From Supabase Dashboard → Settings → API
+- `VITE_SUPABASE_ANON_KEY` - From Supabase Dashboard → Settings → API
+- `NODE_ENV` - Set to "production"
+
+**Deployment Fixed** (October 20, 2025):
+- ✅ Removed conflicting wrangler config files
+- ✅ Archived legacy Workers config
+- ✅ Verified build process (22.6s compilation)
+- ✅ Ready for production deployment
