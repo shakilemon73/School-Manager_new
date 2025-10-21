@@ -1,25 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AppShell } from '@/components/layout/app-shell';
-import { ResponsivePageLayout } from '@/components/layout/responsive-page-layout';
 import { useSupabaseDirectAuth } from '@/hooks/use-supabase-direct-auth';
 import { useSchoolBranding, useCurrentAcademicYear } from '@/hooks/use-school-context';
 import { useMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/lib/supabase';
-import { userProfile } from '@/hooks/use-supabase-direct-auth';
-import { TeacherActivityMonitor } from '@/components/admin/teacher-activity-monitor';
-import { RealtimeActivityFeed } from '@/components/admin/realtime-activity-feed';
-import { StudentPerformanceAnalytics } from '@/components/admin/student-performance-analytics';
 import { 
   Card, 
   CardContent, 
   CardHeader, 
   CardTitle, 
-  CardDescription 
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useToast } from '@/hooks/use-toast';
 import { 
   BarChart3, 
@@ -33,29 +27,30 @@ import {
   Bell,
   Settings,
   Plus,
-  Eye,
-  Download,
-  ArrowRight,
   Activity,
   Clock,
   CheckCircle,
   AlertCircle,
   Package,
-  Bus,
-  Building,
-  CreditCard
+  ChevronRight,
+  Zap,
+  TrendingDown,
+  Award,
+  Target,
+  UserPlus,
+  FilePlus,
+  CalendarPlus,
+  CreditCard,
+  X
 } from 'lucide-react';
+import { Link, useLocation } from 'wouter';
 
-// Types for API responses
+// Types
 interface DashboardStats {
   students: number;
   teachers: number;
   books: number;
   inventory: number;
-  monthlyIncome?: number;
-  classes?: number;
-  events?: number;
-  documents?: number;
 }
 
 interface NotificationItem {
@@ -67,88 +62,109 @@ interface NotificationItem {
   read: boolean;
 }
 
-interface DocumentTemplate {
-  id: number;
-  name: string;
-  nameBn: string;
-  category: string;
-  icon: string;
-  usageCount: number;
-  isActive: boolean;
+interface FABAction {
+  id: string;
+  label: string;
+  icon: any;
+  color: string;
+  bgColor: string;
+  path: string;
 }
 
-interface CalendarEvent {
-  id: number;
-  title: string;
-  titleBn: string;
-  date: string;
-  type: string;
-  description?: string;
-}
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+  }
+};
+
+const fabVariants = {
+  closed: { rotate: 0 },
+  open: { rotate: 45 }
+};
+
+const fabMenuVariants = {
+  closed: { opacity: 0, scale: 0 },
+  open: {
+    opacity: 1,
+    scale: 1,
+    transition: { staggerChildren: 0.05, delayChildren: 0.1 }
+  }
+};
+
+const fabItemVariants = {
+  closed: { opacity: 0, y: 20, scale: 0 },
+  open: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { type: 'spring', stiffness: 300, damping: 24 }
+  }
+};
 
 export default function ResponsiveDashboard() {
-  // ✅ FIX: Get schoolId directly from AuthContext (single source of truth)
   const { user, schoolId, authReady } = useSupabaseDirectAuth();
-  const { schoolName, schoolNameBn } = useSchoolBranding();
+  const { schoolName } = useSchoolBranding();
   const { currentAcademicYear, loading: academicYearLoading } = useCurrentAcademicYear();
   const { toast } = useToast();
   const isMobile = useMobile();
+  const [, navigate] = useLocation();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [fabOpen, setFabOpen] = useState(false);
+  const [showNotificationSheet, setShowNotificationSheet] = useState(false);
 
-  // Update time every minute for live dashboard feel
+  // Update time every minute
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // ✅ FIX: Removed redundant getCurrentSchoolId() - use schoolId directly from AuthContext
+  // Close FAB on route change
+  useEffect(() => {
+    setFabOpen(false);
+  }, [navigate]);
 
-  // Fetch dashboard stats using direct Supabase calls - filtered by current academic year
-  const { data: dashboardStats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStats>({
+  // Fetch dashboard stats with optimized queries
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats', schoolId, currentAcademicYear?.id],
     queryFn: async () => {
-      if (!schoolId) {
-        throw new Error('School ID not available');
-      }
-      console.log('📊 Fetching dashboard stats for school:', schoolId, 'academic year:', currentAcademicYear?.name);
+      if (!schoolId) throw new Error('School ID not available');
       
-      // Build queries - using estimated counts for better performance
       const [studentsCount, teachersCount, booksCount, inventoryCount] = await Promise.all([
-        supabase.from('students').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId), // Students filtered by school only
-        supabase.from('teachers').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId), // Teachers not year-specific
-        supabase.from('library_books').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId), // Books not year-specific
-        supabase.from('inventory_items').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId) // Inventory not year-specific
+        supabase.from('students').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId),
+        supabase.from('teachers').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId),
+        supabase.from('library_books').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId),
+        supabase.from('inventory_items').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId)
       ]);
-
-      // Log any errors
-      if (studentsCount.error) console.error('❌ Students query error:', studentsCount.error);
-      if (teachersCount.error) console.error('❌ Teachers query error:', teachersCount.error);
-      if (booksCount.error) console.error('❌ Books query error:', booksCount.error);
-      if (inventoryCount.error) console.error('❌ Inventory query error:', inventoryCount.error);
 
       return {
         students: studentsCount.count || 0,
         teachers: teachersCount.count || 0, 
         books: booksCount.count || 0,
         inventory: inventoryCount.count || 0,
-        monthlyIncome: 0,
-        events: 0,
-        documents: 0
       };
     },
-    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
-    retry: 2,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: true, // Always refetch when component mounts after login
+    enabled: authReady && !!schoolId && !academicYearLoading,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: true,
   });
 
+  // Fetch notifications with virtualization support
   const { data: notifications, isLoading: notificationsLoading } = useQuery<NotificationItem[]>({
     queryKey: ['notifications', schoolId],
     queryFn: async () => {
-      if (!schoolId) {
-        throw new Error('School ID not available');
-      }
-      console.log('🔔 Fetching notifications for school:', schoolId);
+      if (!schoolId) throw new Error('School ID not available');
       
       const { data, error } = await supabase
         .from('notifications')
@@ -158,10 +174,7 @@ export default function ResponsiveDashboard() {
         .order('created_at', { ascending: false })
         .limit(10);
       
-      if (error) {
-        console.error('Error fetching notifications:', error);
-        return [];
-      }
+      if (error) return [];
       
       return (data || []).map((n: any) => ({
         id: n.id,
@@ -170,259 +183,32 @@ export default function ResponsiveDashboard() {
         type: (n.type || 'info') as 'info' | 'success' | 'warning' | 'error',
         created_at: n.created_at,
         read: n.is_read || false
-      })) || [];
+      }));
     },
-    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
-    retry: 2,
+    enabled: authReady && !!schoolId && !academicYearLoading,
+    staleTime: 2 * 60 * 1000,
     refetchOnMount: true,
   });
 
-  const { data: documentTemplates, isLoading: documentsLoading } = useQuery<DocumentTemplate[]>({
-    queryKey: ['document-templates', schoolId],
-    queryFn: async () => {
-      console.log('📄 Fetching document templates with direct Supabase calls');
-      if (!schoolId) throw new Error('School ID not available');
-      
-      const { data, error } = await supabase
-        .from('document_templates')
-        .select('*')
-        .eq('school_id', schoolId)
-        .eq('is_active', true)
-        .order('usage_count', { ascending: false })
-        .limit(20);
-      
-      if (error) {
-        console.error('Error fetching document templates:', error);
-        return [];
-      }
-      
-      return data?.map(t => ({
-        id: t.id,
-        name: t.name,
-        nameBn: t.name_bn || t.name,
-        category: t.category,
-        icon: t.icon || 'FileText',
-        usageCount: t.usage_count || 0,
-        isActive: t.is_active || false
-      })) || [];
-    },
-    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
-    retry: 2,
-    refetchOnMount: true,
-  });
-
-  const { data: calendarEvents, isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
-    queryKey: ['calendar-events', schoolId],
-    queryFn: async () => {
-      console.log('📅 Fetching calendar events with direct Supabase calls');
-      if (!schoolId) throw new Error('School ID not available');
-      
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .select('*')
-        .eq('school_id', schoolId)
-        .eq('is_active', true)
-        .order('start_date', { ascending: true })
-        .limit(10);
-      
-      if (error) {
-        console.error('Error fetching calendar events:', error);
-        return [];
-      }
-      
-      return data?.map(e => ({
-        id: e.id,
-        title: e.title,
-        titleBn: e.title_bn || e.title,
-        date: e.start_date,
-        type: e.event_type,
-        description: e.description || undefined
-      })) || [];
-    },
-    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
-    retry: 2,
-    refetchOnMount: true,
-  });
-
-  // Super Admin: Teacher Activity Log
-  const { data: teacherActivities } = useQuery({
-    queryKey: ['teacher-activities', schoolId],
-    queryFn: async () => {
-      console.log('👨‍🏫 Fetching teacher activities with direct Supabase calls');
-      if (!schoolId) throw new Error('School ID not available');
-      
-      // Get recent notifications related to teacher activities
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('school_id', schoolId)
-        .order('created_at', { ascending: false })
-        .limit(20);
-      
-      if (error) {
-        console.error('Error fetching teacher activities:', error);
-        return [];
-      }
-      
-      return data?.map(n => ({
-        id: n.id,
-        userName: n.title,
-        action: n.type || 'activity',
-        description: n.message,
-        created_at: n.created_at,
-        user_type: 'Teacher'
-      })) || [];
-    },
-    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
-    staleTime: 30000,
-    refetchInterval: 30000
-  });
-
-  // Super Admin: Pending Approvals (simplified to avoid schema issues)
-  const { data: pendingApprovals } = useQuery({
-    queryKey: ['pending-approvals', schoolId],
-    queryFn: async () => {
-      console.log('⏳ Fetching pending approvals with direct Supabase calls');
-      if (!schoolId) throw new Error('School ID not available');
-      
-      // Get recent exam results as pending approvals (simplified)
-      const { data: results, error } = await supabase
-        .from('exam_results')
-        .select('*')
-        .eq('school_id', schoolId)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      if (error) {
-        console.error('Error fetching pending approvals:', error);
-        return [];
-      }
-      
-      // Create simple approval items
-      return (results || []).map((r: any, idx: number) => ({
-        id: r.id,
-        exam_id: r.schedule_id,
-        schedule_id: r.schedule_id,
-        exam_name: 'পরীক্ষা ' + (idx + 1),
-        subject_name: 'General',
-        class: '১০',
-        student_count: 1,
-        teacher_name: 'Teacher'
-      }));
-    },
-    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
-    staleTime: 30000
-  });
-
-  // Super Admin: System-wide Activity
-  const { data: systemActivities } = useQuery({
-    queryKey: ['system-activities', schoolId],
-    queryFn: async () => {
-      console.log('🌐 Fetching system-wide activities with direct Supabase calls');
-      if (!schoolId) throw new Error('School ID not available');
-      
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('school_id', schoolId)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      
-      if (error) {
-        console.error('Error fetching system activities:', error);
-        return [];
-      }
-      
-      return data || [];
-    },
-    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
-    staleTime: 30000,
-    refetchInterval: 30000
-  });
-
-  // Super Admin: Student Performance Analytics (simplified)
-  const { data: studentPerformance } = useQuery({
-    queryKey: ['student-performance', schoolId],
-    queryFn: async () => {
-      console.log('📈 Fetching student performance analytics with direct Supabase calls');
-      if (!schoolId) throw new Error('School ID not available');
-      
-      // Get students for performance display (simplified)
-      const { data: students, error: studentsError } = await supabase
-        .from('students')
-        .select('id, name, class')
-        .eq('school_id', schoolId)
-        .limit(10);
-      
-      if (studentsError) {
-        console.error('Error fetching student performance:', studentsError);
-        return { topPerformers: [], needsAttention: [] };
-      }
-      
-      // Create sample performance data (in production, this would come from actual exam results)
-      const topPerformers = (students || []).slice(0, 5).map((student: any, idx: number) => ({
-        id: student.id,
-        name: student.name,
-        class: student.class,
-        avgPercentage: 85 - (idx * 3),
-        gpa: (5.0 - (idx * 0.2)).toFixed(1)
-      }));
-      
-      const needsAttention = (students || []).slice(5, 8).map((student: any) => ({
-        id: student.id,
-        name: student.name,
-        class: student.class,
-        avgPercentage: 45,
-        gpa: '2.5'
-      }));
-      
-      return { topPerformers, needsAttention };
-    },
-    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
-    staleTime: 60000
-  });
-
-  // Super Admin: Enhanced Admin Dashboard Stats
+  // Fetch admin stats
   const { data: adminStats } = useQuery({
     queryKey: ['admin-stats', schoolId],
     queryFn: async () => {
-      console.log('📊 Fetching enhanced admin stats with direct Supabase calls');
       if (!schoolId) throw new Error('School ID not available');
       
-      // Get today's date range
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       
       const [marksToday, attendanceRate, activeExams, pendingCount] = await Promise.all([
-        // Marks entered today
-        supabase
-          .from('exam_results')
-          .select('id', { count: 'estimated', head: true })
-          .eq('school_id', schoolId)
-          .gte('created_at', today.toISOString())
-          .lt('created_at', tomorrow.toISOString()),
-        
-        // Attendance rate (simplified - from attendance records)
-        supabase
-          .from('attendance_records')
-          .select('status', { count: 'estimated' })
-          .eq('school_id', schoolId)
-          .gte('date', today.toISOString().split('T')[0]),
-        
-        // Active exams
-        supabase
-          .from('exams')
-          .select('id', { count: 'estimated', head: true })
-          .eq('school_id', schoolId),
-        
-        // Pending approvals count
-        supabase
-          .from('exam_results')
-          .select('id', { count: 'estimated', head: true })
-          .eq('school_id', schoolId)
-          .is('verified_by', null)
+        supabase.from('exam_results').select('id', { count: 'estimated', head: true })
+          .eq('school_id', schoolId).gte('created_at', today.toISOString()).lt('created_at', tomorrow.toISOString()),
+        supabase.from('attendance_records').select('status', { count: 'estimated' })
+          .eq('school_id', schoolId).gte('date', today.toISOString().split('T')[0]),
+        supabase.from('exams').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId),
+        supabase.from('exam_results').select('id', { count: 'estimated', head: true })
+          .eq('school_id', schoolId).is('verified_by', null)
       ]);
       
       const presentCount = attendanceRate.data?.filter((r: any) => r.status === 'present').length || 0;
@@ -436,18 +222,13 @@ export default function ResponsiveDashboard() {
         pendingApprovals: pendingCount.count || 0
       };
     },
-    enabled: authReady && !!schoolId && !academicYearLoading, // ✅ FIX: Wait for authReady and schoolId
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    refetchOnMount: true, // Always refetch when component mounts after login
+    enabled: authReady && !!schoolId && !academicYearLoading,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: true,
   });
 
-  // Format numbers for display
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('bn-BD').format(num);
-  };
+  const formatNumber = (num: number) => new Intl.NumberFormat('bn-BD').format(num);
 
-  // Get greeting based on time
   const getGreeting = () => {
     const hour = currentTime.getHours();
     if (hour < 12) return 'সুপ্রভাত';
@@ -456,701 +237,638 @@ export default function ResponsiveDashboard() {
     return 'শুভ রাত্রি';
   };
 
-  const navigateTo = (path: string) => {
-    window.location.href = path;
-  };
-
-  const showToast = (title: string, description?: string) => {
-    toast({
-      title,
-      description: description || 'কার্যক্রম সম্পন্ন হচ্ছে...',
-    });
-  };
-
-  // Generate statistics cards with real data
-  const statsCards = [
+  // Context-based primary stats
+  const primaryStats = useMemo(() => [
     {
+      id: 'students',
       title: 'মোট শিক্ষার্থী',
+      subtitle: 'সক্রিয় ভর্তিকৃত',
       value: dashboardStats?.students || 0,
       icon: Users,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50 dark:bg-blue-950/20',
-      textColor: 'text-blue-600 dark:text-blue-400',
+      iconBg: 'bg-blue-500/10',
+      iconColor: 'text-blue-600 dark:text-blue-400',
       trend: '+৮%',
-      description: 'গত মাসের তুলনায়'
+      trendUp: true,
+      path: '/management/students'
     },
     {
+      id: 'teachers',
       title: 'মোট শিক্ষক',
+      subtitle: 'নিয়োজিত শিক্ষক',
       value: dashboardStats?.teachers || 0,
       icon: GraduationCap,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50 dark:bg-green-950/20',
-      textColor: 'text-green-600 dark:text-green-400',
+      iconBg: 'bg-green-500/10',
+      iconColor: 'text-green-600 dark:text-green-400',
       trend: '+৩%',
-      description: 'নতুন নিয়োগ'
+      trendUp: true,
+      path: '/management/teachers'
     },
     {
+      id: 'books',
       title: 'লাইব্রেরি বই',
+      subtitle: 'মোট সংগ্রহ',
       value: dashboardStats?.books || 0,
       icon: BookOpen,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50 dark:bg-purple-950/20',
-      textColor: 'text-purple-600 dark:text-purple-400',
+      iconBg: 'bg-purple-500/10',
+      iconColor: 'text-purple-600 dark:text-purple-400',
       trend: '+১২%',
-      description: 'নতুন সংযোজন'
+      trendUp: true,
+      path: '/library'
     },
     {
+      id: 'inventory',
       title: 'ইনভেন্টরি আইটেম',
+      subtitle: 'মজুদ সরঞ্জাম',
       value: dashboardStats?.inventory || 0,
       icon: Package,
-      color: 'bg-orange-500',
-      bgColor: 'bg-orange-50 dark:bg-orange-950/20',
-      textColor: 'text-orange-600 dark:text-orange-400',
+      iconBg: 'bg-orange-500/10',
+      iconColor: 'text-orange-600 dark:text-orange-400',
       trend: '+৫%',
-      description: 'স্টক আপডেট'
+      trendUp: true,
+      path: '/inventory'
     },
+  ], [dashboardStats]);
+
+  // Context-based quick actions
+  const quickActions = useMemo(() => [
     {
-      title: 'মার্ক এন্ট্রি আজ',
-      value: adminStats?.marksEnteredToday || 0,
+      id: 'documents',
+      title: 'ডকুমেন্ট তৈরি',
+      description: 'সার্টিফিকেট ও রিপোর্ট',
       icon: FileText,
-      color: 'bg-cyan-500',
-      bgColor: 'bg-cyan-50 dark:bg-cyan-950/20',
-      textColor: 'text-cyan-600 dark:text-cyan-400',
-      trend: 'আজ',
-      description: 'নতুন মার্ক এন্ট্রি'
+      color: 'text-purple-600 dark:text-purple-400',
+      bgColor: 'bg-purple-500/10',
+      path: '/documents'
     },
     {
-      title: 'উপস্থিতি রেট',
-      value: adminStats?.attendanceRate || 0,
+      id: 'admit-card',
+      title: 'প্রবেশপত্র',
+      description: 'পরীক্ষার প্রবেশপত্র',
+      icon: CreditCard,
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-500/10',
+      path: '/admit-card'
+    },
+    {
+      id: 'finances',
+      title: 'আর্থিক হিসাব',
+      description: 'ফি ও লেনদেন',
+      icon: DollarSign,
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bgColor: 'bg-emerald-500/10',
+      path: '/management/finances'
+    },
+    {
+      id: 'calendar',
+      title: 'ক্যালেন্ডার',
+      description: 'ইভেন্ট ও সময়সূচী',
+      icon: Calendar,
+      color: 'text-orange-600 dark:text-orange-400',
+      bgColor: 'bg-orange-500/10',
+      path: '/calendar'
+    },
+    {
+      id: 'settings',
+      title: 'স্কুল সেটিংস',
+      description: 'কনফিগারেশন',
+      icon: Settings,
+      color: 'text-slate-600 dark:text-slate-400',
+      bgColor: 'bg-slate-500/10',
+      path: '/settings/school'
+    },
+    {
+      id: 'reports',
+      title: 'রিপোর্ট ও বিশ্লেষণ',
+      description: 'পারফরম্যান্স ডেটা',
+      icon: BarChart3,
+      color: 'text-cyan-600 dark:text-cyan-400',
+      bgColor: 'bg-cyan-500/10',
+      path: '/reports'
+    },
+  ], []);
+
+  // Multi-action FAB items - Context-based main tasks
+  const fabActions: FABAction[] = useMemo(() => [
+    {
+      id: 'add-student',
+      label: 'শিক্ষার্থী যোগ করুন',
+      icon: UserPlus,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-500',
+      path: '/management/students'
+    },
+    {
+      id: 'create-document',
+      label: 'ডকুমেন্ট তৈরি করুন',
+      icon: FilePlus,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-500',
+      path: '/documents'
+    },
+    {
+      id: 'add-event',
+      label: 'ইভেন্ট যোগ করুন',
+      icon: CalendarPlus,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-500',
+      path: '/calendar'
+    },
+    {
+      id: 'teacher-portal',
+      label: 'শিক্ষক পোর্টাল',
+      icon: GraduationCap,
+      color: 'text-green-600',
+      bgColor: 'bg-green-500',
+      path: '/teacher'
+    },
+  ], []);
+
+  // Activity metrics
+  const activityMetrics = useMemo(() => [
+    {
+      label: 'মার্ক এন্ট্রি',
+      value: adminStats?.marksEnteredToday || 0,
       icon: CheckCircle,
-      color: 'bg-emerald-500',
-      bgColor: 'bg-emerald-50 dark:bg-emerald-950/20',
-      textColor: 'text-emerald-600 dark:text-emerald-400',
-      trend: '%',
-      description: 'আজকের উপস্থিতি'
+      color: 'text-cyan-600 dark:text-cyan-400',
+      badge: 'আজ'
     },
     {
-      title: 'সক্রিয় পরীক্ষা',
+      label: 'উপস্থিতি',
+      value: adminStats?.attendanceRate || 0,
+      icon: Target,
+      color: 'text-emerald-600 dark:text-emerald-400',
+      badge: '%'
+    },
+    {
+      label: 'পরীক্ষা',
       value: adminStats?.activeExams || 0,
-      icon: BookOpen,
-      color: 'bg-violet-500',
-      bgColor: 'bg-violet-50 dark:bg-violet-950/20',
-      textColor: 'text-violet-600 dark:text-violet-400',
-      trend: 'চলমান',
-      description: 'পরীক্ষা সক্রিয়'
+      icon: Award,
+      color: 'text-violet-600 dark:text-violet-400',
+      badge: 'সক্রিয়'
     },
     {
-      title: 'অপেক্ষমাণ অনুমোদন',
+      label: 'অনুমোদন',
       value: adminStats?.pendingApprovals || 0,
       icon: AlertCircle,
-      color: 'bg-red-500',
-      bgColor: 'bg-red-50 dark:bg-red-950/20',
-      textColor: 'text-red-600 dark:text-red-400',
-      trend: 'জরুরি',
-      description: 'অনুমোদন প্রয়োজন'
-    }
-  ];
+      color: 'text-red-600 dark:text-red-400',
+      badge: 'অপেক্ষমাণ'
+    },
+  ], [adminStats]);
+
+  const handleFABAction = (path: string) => {
+    setFabOpen(false);
+    navigate(path);
+  };
 
   return (
     <AppShell>
-      <ResponsivePageLayout
-        title="ড্যাশবোর্ড"
-        description="স্কুল ম্যানেজমেন্ট সিস্টেম"
-        primaryAction={{
-          icon: "plus",
-          label: "নতুন ডকুমেন্ট",
-          onClick: () => navigateTo('/documents'),
-        }}
-      >
-        {/* Hero Section - Welcome & System Status */}
-        <div className="mb-8">
-          <Card className="border-0 bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-purple-50/80 dark:from-blue-950/50 dark:via-indigo-950/40 dark:to-purple-950/50">
-            <CardContent className="p-6 lg:p-8">
-              <div className="flex items-start justify-between">
-                <div className="space-y-4 flex-1">
-                  <div>
-                    <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                      {getGreeting()}, {user?.user_metadata?.name || user?.email?.split('@')[0] || 'প্রশাসক'}!
-                    </h1>
-                    <p className="text-slate-600 dark:text-slate-400 text-sm lg:text-base">
-                      {currentTime.toLocaleDateString('bn-BD', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-24">
+          
+          {/* Hero Status Section - Compact */}
+          <motion.section
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+            data-testid="hero-status-section"
+          >
+            <motion.div variants={itemVariants}>
+              <Card className="border-0 shadow-sm rounded-xl">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 mb-0.5 truncate" data-testid="greeting-text">
+                        {getGreeting()}, {user?.user_metadata?.name || user?.email?.split('@')[0] || 'প্রশাসক'}!
+                      </h1>
+                      <p className="text-xs text-slate-600 dark:text-slate-400" data-testid="current-date">
+                        {currentTime.toLocaleDateString('bn-BD', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                      
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 rounded-full" data-testid="system-status">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-xs font-medium text-green-700 dark:text-green-400">সিস্টেম সক্রিয়</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
+                          <Clock className="w-3 h-3" />
+                          <span>এখনই</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {!isMobile && (
+                      <div className="relative">
+                        <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                          <Activity className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
+                          <CheckCircle className="w-2.5 h-2.5 text-white" />
+                        </div>
+                      </div>
+                    )}
                   </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.section>
 
-                  {/* System Status */}
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-green-100/80 dark:bg-green-900/30 rounded-lg">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-green-700 dark:text-green-400 font-medium">সিস্টেম সক্রিয়</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                      <Clock className="w-4 h-4" />
-                      <span>সর্বশেষ আপডেট: এখনই</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {!isMobile && (
-                  <div className="relative">
-                    <div className="h-20 w-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-                      <Activity className="w-8 h-8 text-white" />
-                    </div>
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Statistics Grid */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-slate-100">
+          {/* Stats Summary - Responsive: 1 col mobile, 2 col tablet, 4 col desktop */}
+          <motion.section
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+            data-testid="stats-summary-section"
+          >
+            <motion.div variants={itemVariants} className="flex items-center justify-between mb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">
                 মূল পরিসংখ্যান
               </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                রিয়েল-টাইম ডেটা ও পারফরম্যান্স মেট্রিক্স
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => navigateTo('/analytics')}>
-              <BarChart3 className="w-4 h-4 mr-2" />
-              বিস্তারিত
-            </Button>
-          </div>
-
-          {(statsLoading || academicYearLoading) ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardContent className="p-6">
-                    <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                    <div className="h-8 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : statsError ? (
-            <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
-              <CardContent className="p-6 text-center">
-                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-2">
-                  ডেটা লোড করতে সমস্যা
-                </h3>
-                <p className="text-red-600 dark:text-red-400 text-sm mb-4">
-                  পরিসংখ্যান লোড করা যাচ্ছে না। ইন্টারনেট সংযোগ পরীক্ষা করুন।
-                </p>
-                <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                  পুনরায় চেষ্টা করুন
+              <Link href="/reports">
+                <Button variant="ghost" size="sm" className="h-9 gap-2" data-testid="button-view-analytics">
+                  <BarChart3 className="w-4 h-4" />
+                  <span className="hidden sm:inline">বিস্তারিত</span>
                 </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {statsCards.map((stat, index) => {
-                const IconComponent = stat.icon;
-                return (
-                  <Card key={index} className="hover:shadow-lg transition-all duration-300 group">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
-                          <IconComponent className={`w-6 h-6 ${stat.textColor}`} />
-                        </div>
-                        <div className="flex items-center gap-1 text-xs">
-                          <TrendingUp className="w-3 h-3 text-green-500" />
-                          <span className="text-green-600 font-medium">{stat.trend}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <h3 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                          {formatNumber(stat.value)}
-                        </h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
-                          {stat.title}
-                        </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-500">
-                          {stat.description}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
+              </Link>
+            </motion.div>
 
-        {/* Quick Actions Grid */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-slate-100">
-              দ্রুত কার্যাবলী
-            </h2>
-            <span className="text-sm text-slate-500 dark:text-slate-400">
-              সবচেয়ে ব্যবহৃত ফিচার
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Students Management */}
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group" onClick={() => navigateTo('/management/students')}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Users className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-                  শিক্ষার্থী ব্যবস্থাপনা
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                  ভর্তি, তথ্য আপডেট ও রেকর্ড রক্ষণাবেক্ষণ
-                </p>
-                <Badge variant="secondary">{formatNumber(dashboardStats?.students || 0)} জন</Badge>
-              </CardContent>
-            </Card>
-
-            {/* Teachers Management */}
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group" onClick={() => navigateTo('/management/teachers')}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <GraduationCap className="w-7 h-7 text-green-600 dark:text-green-400" />
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-green-500 transition-colors" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-                  শিক্ষক ব্যবস্থাপনা
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                  নিয়োগ, পদোন্নতি ও কর্মক্ষেত্র ব্যবস্থাপনা
-                </p>
-                <Badge variant="secondary">{formatNumber(dashboardStats?.teachers || 0)} জন</Badge>
-              </CardContent>
-            </Card>
-
-            {/* Document Generation */}
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group" onClick={() => navigateTo('/documents')}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <FileText className="w-7 h-7 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-purple-500 transition-colors" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-                  ডকুমেন্ট জেনারেটর
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                  সার্টিফিকেট, রিপোর্ট ও প্রশাসনিক কাগজপত্র
-                </p>
-                <Badge variant="secondary">{documentTemplates?.length || 0}+ টেমপ্লেট</Badge>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* School Admin: Portal Access - Integrated access to all portals */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-slate-100">
-                পোর্টাল অ্যাক্সেস
-              </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                শিক্ষক, অভিভাবক ও শিক্ষার্থী পোর্টাল পরিচালনা করুন
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Teacher Portal Access */}
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-2 border-green-200 dark:border-green-800" onClick={() => navigateTo('/teacher')}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                    <GraduationCap className="w-7 h-7 text-white" />
-                  </div>
-                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700">
-                    সক্রিয়
-                  </Badge>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-                  শিক্ষক পোর্টাল
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                  উপস্থিতি, নম্বর এন্ট্রি, ক্লাস ম্যানেজমেন্ট
-                </p>
-                <div className="flex items-center text-green-600 dark:text-green-400 font-medium text-sm">
-                  পোর্টালে প্রবেশ করুন
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Parent Portal Access */}
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-2 border-blue-200 dark:border-blue-800" onClick={() => navigateTo('/parent')}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                    <Users className="w-7 h-7 text-white" />
-                  </div>
-                  <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700">
-                    সক্রিয়
-                  </Badge>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-                  অভিভাবক পোর্টাল
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                  সন্তানের রেজাল্ট, উপস্থিতি ও ফি দেখুন
-                </p>
-                <div className="flex items-center text-blue-600 dark:text-blue-400 font-medium text-sm">
-                  পোর্টালে প্রবেশ করুন
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Student Portal Access */}
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-2 border-purple-200 dark:border-purple-800" onClick={() => navigateTo('/student')}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                    <BookOpen className="w-7 h-7 text-white" />
-                  </div>
-                  <Badge variant="outline" className="bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700">
-                    সক্রিয়
-                  </Badge>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-                  শিক্ষার্থী পোর্টাল
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                  পরীক্ষার রেজাল্ট, রুটিন ও লাইব্রেরি
-                </p>
-                <div className="flex items-center text-purple-600 dark:text-purple-400 font-medium text-sm">
-                  পোর্টালে প্রবেশ করুন
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Super Admin: Teacher Activity Monitor */}
-        <div className="mb-8">
-          <TeacherActivityMonitor />
-        </div>
-
-        {/* Super Admin: Pending Approvals */}
-        {pendingApprovals && pendingApprovals.length > 0 && (
-          <div className="mb-8">
-            <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
-                    <AlertCircle className="w-5 h-5" />
-                    অনুমোদনের জন্য অপেক্ষমাণ
-                    <Badge variant="destructive" className="ml-2">{pendingApprovals.length}</Badge>
-                  </CardTitle>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => navigateTo('/admin/marks-approval')}
-                  >
-                    সব দেখুন
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {pendingApprovals.slice(0, 5).map((approval: any) => (
-                    <div key={approval.id} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900 dark:text-slate-100">
-                          {approval.exam_name} - {approval.subject_name}
-                        </p>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          ক্লাস {approval.class} • {approval.student_count} জন ছাত্র • {approval.teacher_name} এন্ট্রি করেছেন
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => navigateTo('/admin/marks-approval')}>
-                          রিভিউ
-                        </Button>
-                        <Button size="sm" onClick={() => navigateTo('/admin/marks-approval')}>
-                          অনুমোদন করুন
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Content Grid - Activities & Events */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Recent Activities */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-blue-500" />
-                  সাম্প্রতিক কার্যক্রম
-                </CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigateTo('/notifications')}>
-                  সব দেখুন
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {notificationsLoading ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse flex gap-3">
-                      <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
-                      <div className="flex-1">
-                        <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : notifications && notifications.length > 0 ? (
-                <div className="space-y-4">
-                  {notifications.slice(0, 5).map((notification) => (
-                    <div key={notification.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        notification.type === 'success' ? 'bg-green-100 dark:bg-green-900/30' :
-                        notification.type === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
-                        notification.type === 'error' ? 'bg-red-100 dark:bg-red-900/30' :
-                        'bg-blue-100 dark:bg-blue-900/30'
-                      }`}>
-                        {notification.type === 'success' ? <CheckCircle className="w-4 h-4 text-green-600" /> :
-                         notification.type === 'warning' ? <AlertCircle className="w-4 h-4 text-yellow-600" /> :
-                         notification.type === 'error' ? <AlertCircle className="w-4 h-4 text-red-600" /> :
-                         <Bell className="w-4 h-4 text-blue-600" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-slate-900 dark:text-slate-100 text-sm">
-                          {notification.title}
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                          {new Date(notification.created_at).toLocaleDateString('bn-BD')}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Bell className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 dark:text-slate-400 text-sm">
-                    কোন নতুন কার্যক্রম নেই
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Upcoming Events */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-purple-500" />
-                  আসন্ন ইভেন্ট
-                </CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigateTo('/calendar')}>
-                  ক্যালেন্ডার
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {eventsLoading ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse flex gap-3">
-                      <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
-                      <div className="flex-1">
-                        <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : calendarEvents && calendarEvents.length > 0 ? (
-                <div className="space-y-4">
-                  {calendarEvents.slice(0, 5).map((event) => (
-                    <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                      <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                        <Calendar className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-slate-900 dark:text-slate-100 text-sm">
-                          {event.titleBn || event.title}
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          {new Date(event.date).toLocaleDateString('bn-BD')}
-                        </p>
-                        <Badge variant="outline" className="mt-2 text-xs">
-                          {event.type}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 dark:text-slate-400 text-sm">
-                    কোন আসন্ন ইভেন্ট নেই
-                  </p>
-                  <Button variant="outline" size="sm" className="mt-4" onClick={() => navigateTo('/calendar')}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    নতুন ইভেন্ট যোগ করুন
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-        </div>
-
-        {/* Admin Features - Real-time Activity Feed */}
-        <div className="mb-8">
-          <RealtimeActivityFeed />
-        </div>
-
-        {/* Admin Features - Student Performance Analytics */}
-        <div className="mb-8">
-          <StudentPerformanceAnalytics />
-        </div>
-
-        {/* Mobile-Only Additional Features */}
-        {isMobile && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6">
-              অতিরিক্ত ফিচার
-            </h2>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="cursor-pointer" onClick={() => navigateTo('/management/library')}>
-                <CardContent className="p-4 text-center">
-                  <BookOpen className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                  <h3 className="font-semibold text-sm">লাইব্রেরি</h3>
-                  <p className="text-xs text-slate-500">বই ব্যবস্থাপনা</p>
-                </CardContent>
-              </Card>
-
-              <Card className="cursor-pointer" onClick={() => navigateTo('/management/inventory')}>
-                <CardContent className="p-4 text-center">
-                  <Package className="w-8 h-8 text-orange-600 mx-auto mb-2" />
-                  <h3 className="font-semibold text-sm">ইনভেন্টরি</h3>
-                  <p className="text-xs text-slate-500">সম্পদ তালিকা</p>
-                </CardContent>
-              </Card>
-
-              <Card className="cursor-pointer" onClick={() => navigateTo('/management/transport')}>
-                <CardContent className="p-4 text-center">
-                  <Bus className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                  <h3 className="font-semibold text-sm">ট্রান্সপোর্ট</h3>
-                  <p className="text-xs text-slate-500">যাতায়াত</p>
-                </CardContent>
-              </Card>
-
-              <Card className="cursor-pointer" onClick={() => navigateTo('/settings')}>
-                <CardContent className="p-4 text-center">
-                  <Settings className="w-8 h-8 text-gray-600 mx-auto mb-2" />
-                  <h3 className="font-semibold text-sm">সেটিংস</h3>
-                  <p className="text-xs text-slate-500">কনফিগারেশন</p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Popular Document Templates */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-green-500" />
-                জনপ্রিয় ডকুমেন্ট টেমপ্লেট
-              </CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => navigateTo('/documents')}>
-                সব দেখুন
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {documentsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                  </div>
-                ))}
-              </div>
-            ) : documentTemplates && documentTemplates.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {documentTemplates.slice(0, 6).map((template) => (
-                  <div
-                    key={template.id}
-                    className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:shadow-md transition-all cursor-pointer group"
-                    onClick={() => navigateTo(`/documents/generate/${template.id}`)}
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100 group-hover:text-green-600 transition-colors">
-                          {template.nameBn || template.name}
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {template.category} • ব্যবহার: {formatNumber(template.usageCount)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Badge variant={template.isActive ? "default" : "secondary"}>
-                        {template.isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
-                      </Badge>
-                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-green-500 transition-colors" />
-                    </div>
-                  </div>
+            {statsLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500 dark:text-slate-400 text-sm">
-                  কোন ডকুমেন্ট টেমপ্লেট উপলব্ধ নেই
-                </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {primaryStats.map((stat) => {
+                  const Icon = stat.icon;
+                  return (
+                    <motion.div key={stat.id} variants={itemVariants}>
+                      <Link href={stat.path}>
+                        <Card 
+                          className="border-0 shadow-sm hover:shadow-md transition-all cursor-pointer group h-full rounded-xl"
+                          data-testid={`card-stat-${stat.id}`}
+                        >
+                          <CardContent className="p-5">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className={`w-12 h-12 ${stat.iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                                <Icon className={`w-6 h-6 ${stat.iconColor}`} />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {stat.trendUp ? (
+                                  <TrendingUp className="w-3 h-3 text-green-500" />
+                                ) : (
+                                  <TrendingDown className="w-3 h-3 text-red-500" />
+                                )}
+                                <span className={`text-xs font-medium ${stat.trendUp ? 'text-green-600' : 'text-red-600'}`}>
+                                  {stat.trend}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100" data-testid={`stat-value-${stat.id}`}>
+                                {formatNumber(stat.value)}
+                              </div>
+                              <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                {stat.title}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </ResponsivePageLayout>
+          </motion.section>
+
+          {/* Quick Actions - Responsive: 2 col mobile, 3 col tablet, 6 col desktop */}
+          <motion.section
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+            data-testid="quick-actions-section"
+          >
+            <motion.div variants={itemVariants}>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+                দ্রুত কার্যাবলী
+              </h2>
+            </motion.div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <motion.div key={action.id} variants={itemVariants}>
+                    <Link href={action.path}>
+                      <Card 
+                        className="border-0 shadow-sm hover:shadow-md transition-all cursor-pointer group h-full rounded-lg"
+                        data-testid={`card-action-${action.id}`}
+                      >
+                        <CardContent className="p-4 flex flex-col items-center text-center gap-3">
+                          <div className={`w-12 h-12 ${action.bgColor} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                            <Icon className={`w-6 h-6 ${action.color}`} />
+                          </div>
+                          <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {action.title}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.section>
+
+          {/* Activity Stack - Responsive: 1 col mobile, 2 col tablet, 3 col desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Activity Metrics */}
+            <motion.div 
+              initial="hidden"
+              animate="visible"
+              variants={containerVariants}
+              className="lg:col-span-2"
+              data-testid="activity-metrics-section"
+            >
+              <motion.div variants={itemVariants}>
+                <Card className="border-0 shadow-sm rounded-xl">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-yellow-500" />
+                      আজকের শিক্ষা কার্যক্রম
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {activityMetrics.map((metric, index) => {
+                        const Icon = metric.icon;
+                        return (
+                          <div key={index} className="text-center" data-testid={`metric-${index}`}>
+                            <Icon className={`w-8 h-8 ${metric.color} mx-auto mb-2`} />
+                            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                              {formatNumber(metric.value)}{metric.badge === '%' ? metric.badge : ''}
+                            </div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                              {metric.label}
+                            </div>
+                            {metric.badge !== '%' && (
+                              <Badge variant="outline" className="mt-2 text-xs">
+                                {metric.badge}
+                              </Badge>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
+
+            {/* Notifications */}
+            <motion.div 
+              initial="hidden"
+              animate="visible"
+              variants={containerVariants}
+              data-testid="notifications-section"
+            >
+              <motion.div variants={itemVariants}>
+                <Card className="border-0 shadow-sm rounded-xl">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Bell className="w-5 h-5 text-blue-500" />
+                        সাম্প্রতিক বিজ্ঞপ্তি
+                      </CardTitle>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setShowNotificationSheet(true)}
+                        data-testid="button-view-all-notifications"
+                      >
+                        সব দেখুন
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {notificationsLoading ? (
+                      <div className="space-y-3">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="h-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse"></div>
+                        ))}
+                      </div>
+                    ) : notifications && notifications.length > 0 ? (
+                      <div className="space-y-3">
+                        {notifications.slice(0, 5).map((notif) => (
+                          <div 
+                            key={notif.id} 
+                            className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            data-testid={`notification-${notif.id}`}
+                          >
+                            <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                              notif.type === 'success' ? 'bg-green-500' :
+                              notif.type === 'warning' ? 'bg-yellow-500' :
+                              notif.type === 'error' ? 'bg-red-500' :
+                              'bg-blue-500'
+                            }`}></div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                                {notif.title}
+                              </div>
+                              <div className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-2">
+                                {notif.message}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                        <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">কোনো বিজ্ঞপ্তি নেই</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
+          </div>
+
+        </div>
+
+        {/* Multi-Action Floating Action Button (FAB) */}
+        <div className="fixed bottom-6 right-6 z-50">
+          {/* Backdrop overlay when FAB is open */}
+          <AnimatePresence>
+            {fabOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setFabOpen(false)}
+                className="fixed inset-0 bg-black/20 backdrop-blur-sm -z-10"
+                style={{ bottom: 0, right: 0, left: 0, top: 0 }}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* FAB Action Menu */}
+          <AnimatePresence>
+            {fabOpen && (
+              <motion.div
+                variants={fabMenuVariants}
+                initial="closed"
+                animate="open"
+                exit="closed"
+                className="absolute bottom-20 right-0 space-y-4"
+              >
+                {fabActions.map((action, index) => {
+                  const Icon = action.icon;
+                  return (
+                    <motion.div
+                      key={action.id}
+                      variants={fabItemVariants}
+                      className="flex items-center gap-3 justify-end"
+                      custom={index}
+                    >
+                      {/* Label with backdrop blur */}
+                      <motion.div 
+                        className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-slate-900 dark:text-slate-100 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg border border-slate-200 dark:border-slate-700 whitespace-nowrap"
+                        whileHover={{ scale: 1.05, x: -4 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      >
+                        {action.label}
+                      </motion.div>
+                      
+                      {/* Action button */}
+                      <motion.button
+                        onClick={() => handleFABAction(action.path)}
+                        className={`${action.bgColor} hover:opacity-90 text-white h-14 w-14 rounded-full shadow-xl flex items-center justify-center transition-all relative overflow-hidden`}
+                        data-testid={`fab-action-${action.id}`}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <div className="absolute inset-0 bg-white/20 opacity-0 hover:opacity-100 transition-opacity" />
+                        <Icon className="w-6 h-6 relative z-10" />
+                      </motion.button>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Main FAB Button */}
+          <motion.button
+            variants={fabVariants}
+            animate={fabOpen ? 'open' : 'closed'}
+            onClick={() => setFabOpen(!fabOpen)}
+            className="h-16 w-16 rounded-full shadow-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white flex items-center justify-center transition-all relative overflow-hidden group"
+            data-testid="fab-main"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {/* Animated background pulse */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            
+            {/* Plus icon with rotation */}
+            <motion.div
+              animate={{ rotate: fabOpen ? 45 : 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="relative z-10"
+            >
+              <Plus className="w-7 h-7" strokeWidth={2.5} />
+            </motion.div>
+            
+            {/* Ripple effect on hover */}
+            <motion.div
+              className="absolute inset-0 bg-white/30 rounded-full"
+              initial={{ scale: 0, opacity: 0.5 }}
+              whileHover={{ scale: 2, opacity: 0 }}
+              transition={{ duration: 0.6 }}
+            />
+          </motion.button>
+        </div>
+
+        {/* Bottom Sheet for Notifications */}
+        <AnimatePresence>
+          {showNotificationSheet && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowNotificationSheet(false)}
+                className="fixed inset-0 bg-black/50 z-50"
+                data-testid="notification-sheet-overlay"
+              />
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 rounded-t-3xl z-50 max-h-[80vh] overflow-hidden"
+                data-testid="notification-sheet"
+              >
+                <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      সকল বিজ্ঞপ্তি
+                    </h3>
+                    <button
+                      onClick={() => setShowNotificationSheet(false)}
+                      className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                      data-testid="button-close-notification-sheet"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="overflow-y-auto p-4 space-y-3" style={{ maxHeight: 'calc(80vh - 64px)' }}>
+                  {notifications && notifications.length > 0 ? (
+                    notifications.map((notif) => (
+                      <div 
+                        key={notif.id} 
+                        className="flex items-start gap-3 p-4 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                          notif.type === 'success' ? 'bg-green-500' :
+                          notif.type === 'warning' ? 'bg-yellow-500' :
+                          notif.type === 'error' ? 'bg-red-500' :
+                          'bg-blue-500'
+                        }`}></div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                            {notif.title}
+                          </div>
+                          <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                            {notif.message}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-500 mt-2">
+                            {new Date(notif.created_at).toLocaleDateString('bn-BD')}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                      <Bell className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p>কোনো বিজ্ঞপ্তি নেই</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
     </AppShell>
   );
 }
