@@ -1069,11 +1069,16 @@ export const exams = pgTable("exams", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
+  type: text("type").notNull(), // midterm, final, half_yearly, class_test, etc.
   academicYearId: integer("academic_year_id").references(() => academicYears.id),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   isActive: boolean("is_active").default(true),
   isPubliclyAvailable: boolean("is_publicly_available").default(false),
+  publishStatus: text("publish_status").default("draft"), // draft, published, archived
+  isLocked: boolean("is_locked").default(false),
+  lockedBy: integer("locked_by"),
+  lockedAt: timestamp("locked_at"),
   publicationDate: timestamp("publication_date"),
   publishedBy: integer("published_by"),
   schoolId: integer("school_id").references(() => schools.id),
@@ -1095,6 +1100,9 @@ export const examSchedules = pgTable("exam_schedules", {
   fullMarks: integer("full_marks").notNull(),
   passMarks: integer("pass_marks").notNull(),
   classId: integer("class_id").references(() => classes.id),
+  roomId: integer("room_id"),
+  teacherId: integer("teacher_id"),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -1923,6 +1931,12 @@ export const seatingArrangements = pgTable("seating_arrangements", {
   seatNumber: text("seat_number").notNull(),
   rowNumber: integer("row_number"),
   columnNumber: integer("column_number"),
+  roomId: integer("room_id"),
+  isSpecialNeeds: boolean("is_special_needs").default(false),
+  specialNeedsNote: text("special_needs_note"),
+  approvalStatus: text("approval_status").default("pending"),
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
   instructions: text("instructions"),
   schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1951,6 +1965,97 @@ export const invigilationDuties = pgTable("invigilation_duties", {
 export const invigilationDutiesInsertSchema = createInsertSchema(invigilationDuties);
 export type InsertInvigilationDuty = z.infer<typeof invigilationDutiesInsertSchema>;
 export type InvigilationDuty = typeof invigilationDuties.$inferSelect;
+
+// Exam Rooms
+export const examRooms = pgTable("exam_rooms", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  building: text("building"),
+  floor: text("floor"),
+  capacity: integer("capacity").notNull(),
+  rowsCount: integer("rows_count").default(0),
+  seatsPerRow: integer("seats_per_row").default(0),
+  features: json("features"), // {hasProjector, hasAC, isAccessible}
+  isActive: boolean("is_active").default(true),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const examRoomsInsertSchema = createInsertSchema(examRooms);
+export type InsertExamRoom = z.infer<typeof examRoomsInsertSchema>;
+export type ExamRoom = typeof examRooms.$inferSelect;
+
+// Teacher Availability
+export const teacherAvailability = pgTable("teacher_availability", {
+  id: serial("id").primaryKey(),
+  teacherId: integer("teacher_id").notNull(),
+  examId: integer("exam_id").notNull(),
+  date: date("date").notNull(),
+  isAvailable: boolean("is_available").default(true),
+  reason: text("reason"),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const teacherAvailabilityInsertSchema = createInsertSchema(teacherAvailability);
+export type InsertTeacherAvailability = z.infer<typeof teacherAvailabilityInsertSchema>;
+export type TeacherAvailability = typeof teacherAvailability.$inferSelect;
+
+// Duty Swaps
+export const dutySwaps = pgTable("duty_swaps", {
+  id: serial("id").primaryKey(),
+  originalDutyId: integer("original_duty_id").notNull(),
+  fromTeacherId: integer("from_teacher_id").notNull(),
+  toTeacherId: integer("to_teacher_id").notNull(),
+  status: text("status").default("pending"), // pending, approved, rejected
+  reason: text("reason"),
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const dutySwapsInsertSchema = createInsertSchema(dutySwaps);
+export type InsertDutySwap = z.infer<typeof dutySwapsInsertSchema>;
+export type DutySwap = typeof dutySwaps.$inferSelect;
+
+// Schedule Conflicts
+export const scheduleConflicts = pgTable("schedule_conflicts", {
+  id: serial("id").primaryKey(),
+  scheduleId: integer("schedule_id").notNull(),
+  conflictType: text("conflict_type").notNull(), // time_overlap, room_occupied, teacher_busy
+  conflictWith: integer("conflict_with"),
+  severity: text("severity").default("warning"), // warning, error
+  message: text("message"),
+  resolved: boolean("resolved").default(false),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const scheduleConflictsInsertSchema = createInsertSchema(scheduleConflicts);
+export type InsertScheduleConflict = z.infer<typeof scheduleConflictsInsertSchema>;
+export type ScheduleConflict = typeof scheduleConflicts.$inferSelect;
+
+// Bulk Job Logs
+export const bulkJobLogs = pgTable("bulk_job_logs", {
+  id: serial("id").primaryKey(),
+  jobType: text("job_type").notNull(), // auto_seating, auto_duties, bulk_import
+  status: text("status").default("running"), // running, completed, failed
+  totalItems: integer("total_items").default(0),
+  processedItems: integer("processed_items").default(0),
+  failedItems: integer("failed_items").default(0),
+  errors: json("errors"),
+  result: json("result"),
+  userId: integer("user_id").notNull(),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const bulkJobLogsInsertSchema = createInsertSchema(bulkJobLogs);
+export type InsertBulkJobLog = z.infer<typeof bulkJobLogsInsertSchema>;
+export type BulkJobLog = typeof bulkJobLogs.$inferSelect;
 
 // ============================================================================
 // HR & STAFF MANAGEMENT

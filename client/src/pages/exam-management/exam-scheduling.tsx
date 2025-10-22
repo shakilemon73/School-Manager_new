@@ -134,7 +134,7 @@ function ExamSchedulingContent() {
   const { toast } = useToast();
   const { language } = useLanguage();
   const { schoolId, authReady } = useSupabaseDirectAuth();
-  const t = translations[language] || translations.bn;
+  const t = (translations as any)[language] || translations.bn;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<any>(null);
 
@@ -663,7 +663,7 @@ function ExamSchedulingContent() {
 export default function ExamScheduling() {
   return (
     <AppShell>
-      <ResponsivePageLayout>
+      <ResponsivePageLayout title="Exam Scheduling" backButton={false}>
         <ExamSchedulingContent />
       </ResponsivePageLayout>
     </AppShell>

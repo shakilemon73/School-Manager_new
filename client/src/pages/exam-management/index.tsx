@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,12 +41,16 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CalendarIcon, Plus, Pencil, Trash2, FileText, Users, BookOpen } from "lucide-react";
+import { CalendarIcon, Plus, Pencil, Trash2, FileText, Users, BookOpen, Download, Copy, Lock, Unlock, Building, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
 import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { AppShell } from "@/components/layout/app-shell";
 import { ResponsivePageLayout } from "@/components/layout/responsive-page-layout";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { BulkOperations, ExamPDFGenerator } from "@/lib/exam-management-utils";
+import { utils as xlsxUtils, write as xlsxWrite } from "xlsx";
 
 const examSchema = z.object({
   name: z.string().min(1, "Exam name is required"),
@@ -109,6 +114,27 @@ const translations = {
     totalExams: "Total Exams",
     activeExams: "Active Exams",
     upcomingExams: "Upcoming Exams",
+    rooms: "Exam Rooms",
+    addRoom: "Add Room",
+    roomName: "Room Name",
+    capacity: "Capacity",
+    building: "Building",
+    floor: "Floor",
+    features: "Features",
+    noRooms: "No rooms found. Add your first room.",
+    roomCreated: "Room created successfully",
+    roomUpdated: "Room updated successfully",
+    roomDeleted: "Room deleted successfully",
+    export: "Export",
+    exportPDF: "Export as PDF",
+    exportExcel: "Export as Excel",
+    bulkOperations: "Bulk Operations",
+    cloneExam: "Clone Exam",
+    bulkDelete: "Bulk Delete",
+    selectExamToClone: "Select exam to clone",
+    clone: "Clone",
+    locked: "Locked",
+    unlocked: "Unlocked",
   },
   bn: {
     title: "পরীক্ষা ব্যবস্থাপনা",
@@ -156,18 +182,42 @@ function ExamManagementContent() {
   const { toast } = useToast();
   const { language } = useLanguage();
   const { schoolId, authReady } = useSupabaseDirectAuth();
-  const t = translations[language as 'en' | 'bn'] || translations.bn;
+  const t = (translations as any)[language] || translations.bn;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingExam, setEditingExam] = useState<any>(null);
 
   const { data: exams, isLoading } = useQuery({
-    queryKey: ["/api/exams", schoolId],
+    queryKey: ["exams", schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
+      const { data, error } = await supabase
+        .from("exams")
+        .select("*, academic_years(id, year)")
+        .eq("school_id", schoolId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
     enabled: !!schoolId,
     refetchInterval: 30000,
+    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: academicYears } = useQuery({
-    queryKey: ["/api/academic-years", schoolId],
+    queryKey: ["academic-years", schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not found');
+      const { data, error } = await supabase
+        .from("academic_years")
+        .select("*")
+        .eq("school_id", schoolId)
+        .order("year", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
     enabled: !!schoolId,
   });
 
@@ -185,9 +235,10 @@ function ExamManagementContent() {
 
   const createMutation = useMutation({
     mutationFn: async (data: ExamForm) => {
-      const response = await apiRequest("/api/exams", {
-        method: "POST",
-        body: {
+      if (!schoolId) throw new Error('School ID not found');
+      const { error } = await supabase
+        .from("exams")
+        .insert([{
           name: data.name,
           description: data.description,
           type: data.type,
@@ -195,12 +246,13 @@ function ExamManagementContent() {
           start_date: data.startDate,
           end_date: data.endDate,
           is_active: true,
-        },
-      });
-      return response.json();
+          school_id: schoolId,
+        }]);
+
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/exams", schoolId] });
+      queryClient.invalidateQueries({ queryKey: ["exams", schoolId] });
       toast({
         title: t.success,
         description: t.examCreated,
@@ -219,21 +271,24 @@ function ExamManagementContent() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: ExamForm }) => {
-      const response = await apiRequest(`/api/exams/${id}`, {
-        method: "PUT",
-        body: {
+      if (!schoolId) throw new Error('School ID not found');
+      const { error } = await supabase
+        .from("exams")
+        .update({
           name: data.name,
           description: data.description,
           type: data.type,
           academic_year_id: data.academicYearId,
           start_date: data.startDate,
           end_date: data.endDate,
-        },
-      });
-      return response.json();
+        })
+        .eq("id", id)
+        .eq("school_id", schoolId);
+
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/exams", schoolId] });
+      queryClient.invalidateQueries({ queryKey: ["exams", schoolId] });
       toast({
         title: t.success,
         description: t.examUpdated,
@@ -253,13 +308,17 @@ function ExamManagementContent() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest(`/api/exams/${id}`, {
-        method: "DELETE",
-      });
-      return response.json();
+      if (!schoolId) throw new Error('School ID not found');
+      const { error } = await supabase
+        .from("exams")
+        .delete()
+        .eq("id", id)
+        .eq("school_id", schoolId);
+
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/exams", schoolId] });
+      queryClient.invalidateQueries({ queryKey: ["exams", schoolId] });
       toast({
         title: t.success,
         description: t.examDeleted,
@@ -610,7 +669,7 @@ function ExamManagementContent() {
 export default function ExamManagement() {
   return (
     <AppShell>
-      <ResponsivePageLayout title="Exam Management">
+      <ResponsivePageLayout title="Exam Management" backButton={false}>
         <ExamManagementContent />
       </ResponsivePageLayout>
     </AppShell>
