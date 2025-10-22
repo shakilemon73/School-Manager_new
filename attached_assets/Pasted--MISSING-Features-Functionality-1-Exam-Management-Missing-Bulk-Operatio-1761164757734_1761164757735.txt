@@ -1,0 +1,86 @@
+❌ MISSING Features & Functionality:
+1. পরীক্ষা পরিচালনা (Exam Management) - Missing:
+Bulk Operations
+❌ Copy/Clone previous exam
+❌ Delete multiple exams at once
+Advanced Features
+❌ Exam hall/room configuration
+❌ Total students count per exam
+❌ Subject list preview
+❌ Exam calendar view (only table view exists)
+❌ Export exam details (PDF/Excel)
+Status Management
+❌ Publish/Unpublish exam (make visible to students/parents)
+❌ Lock exam (prevent further editing)
+2. পরীক্ষার সময়সূচী (Exam Scheduling) - Missing:
+Auto-Generation
+❌ Auto-generate schedule from exam template
+❌ Conflict detection (same subject/class at same time)
+❌ Smart scheduling suggestions
+Visualization
+❌ Calendar view of schedule
+❌ Timeline view (visual representation)
+❌ Printable schedule format
+Bulk Operations
+❌ Import schedule from CSV/Excel
+❌ Copy schedule from previous exam
+❌ Bulk edit (change all timings at once)
+Advanced Features
+❌ Multiple rooms per subject (for large classes)
+❌ Break time configuration
+❌ Subject-wise teacher assignment in schedule
+❌ PDF download for schedule (class-wise/exam-wise)
+❌ Send schedule notifications to students/teachers
+3. আসন বিন্যাস (Seating Arrangements) - Missing:
+Auto-Generation (Critical!)
+❌ Button exists but NO actual functionality
+❌ Zigzag pattern generation
+❌ Class mixing option (prevent same class students sitting together)
+❌ Roll number-based arrangement
+❌ Random arrangement
+Room Management
+❌ Room capacity configuration
+❌ Multi-room auto-distribution
+❌ Visual seat layout (grid view)
+Printing & Export
+❌ Print seating plan (room-wise)
+❌ Student admit card with seat info
+❌ Room-wise PDF export
+❌ Individual student seat slip
+Advanced Features
+❌ Reserve seats for special needs students
+❌ Seat swapping/exchange functionality
+❌ Seat plan approval workflow
+❌ Class-wise seat statistics
+4. তত্ত্বাবধান দায়িত্ব (Invigilation Duties) - Missing:
+Auto-Assignment (Critical!)
+❌ Auto-distribute teachers across rooms
+❌ Fair distribution (equal duty per teacher)
+❌ Avoid conflicts (teacher's own class exam)
+❌ Seniority-based assignment
+Availability Management
+❌ Teacher availability/unavailability tracking
+❌ Leave/absence consideration
+❌ Preferred duty time selection
+Duty Reports
+❌ Teacher duty schedule summary
+❌ Room-wise duty chart
+❌ PDF export for duty roster
+❌ Printable duty cards for teachers
+Notifications
+❌ Send duty notification to teachers (email/SMS)
+❌ Reminder before exam day
+❌ Duty change alerts
+Advanced Features
+❌ Duty swapping between teachers
+❌ Chief/Assistant ratio enforcement
+❌ Multiple shifts support
+❌ Relief duty assignment
+🔥 MOST CRITICAL MISSING FEATURES:
+Auto-Generate Seating Arrangement ⚠️ (Button exists but doesn't work!)
+Auto-Assign Invigilation Duties ⚠️
+PDF Export for all modules (Schedule, Seating Plan, Duty Roster)
+Calendar/Visual view for schedules
+Conflict Detection (schedule overlaps, teacher availability)
+Bulk Import/Export capabilities
+Notification System (to students, teachers, parents)
