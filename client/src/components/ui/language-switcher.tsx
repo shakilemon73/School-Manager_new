@@ -6,24 +6,26 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from './dropdown-menu';
+import { useLanguage, Language } from '@/lib/i18n/LanguageProvider';
 
 /**
  * LanguageSwitcher component that allows users to switch between different languages
  * Supports English, Bangla, and Arabic with appropriate text direction
  */
 export function LanguageSwitcher() {
-    const [open, setOpen] = useState(false);
+  const { language, setLanguage } = useLanguage();
+  const [open, setOpen] = useState(false);
   
   const languageOptions = [
-    { code: 'en', name: 'English', nativeName: 'English' },
-    { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
-    { code: 'ar', name: 'Arabic', nativeName: 'العربية' }
+    { code: 'en' as Language, name: 'English', nativeName: 'English' },
+    { code: 'bn' as Language, name: 'Bengali', nativeName: 'বাংলা' },
+    { code: 'ar' as Language, name: 'Arabic', nativeName: 'العربية' }
   ];
   
   // Get current language display name
   const currentLanguage = languageOptions.find(lang => lang.code === language);
   
-  const handleLanguageChange = (langCode) => {
+  const handleLanguageChange = (langCode: Language) => {
     setLanguage(langCode);
     setOpen(false);
   };
