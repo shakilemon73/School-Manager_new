@@ -15,10 +15,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { 
-  Search, Filter, Grid, List, Star, TrendingUp, Clock, Users, 
+  Search, Grid3x3, Rows3, Star, TrendingUp, Clock, Users, 
   FileText, CreditCard, Wallet, Target, ChevronRight, BookOpen,
   GraduationCap, Building, DollarSign, Award, Calendar, ArrowRight,
-  MessageSquare, FileCheck, UserPlus, Heart, Zap
+  MessageSquare, FileCheck, UserPlus, Heart, Zap, Filter,
+  Receipt, TrendingDown, Bell, FileQuestion, CheckSquare, ListChecks,
+  IdCard, UserCheck, ClipboardCheck, CalendarClock, FileSpreadsheet,
+  FileSignature, ScrollText, Megaphone, ShieldCheck, Sparkles,
+  LayoutGrid, Banknote, BookCheck, FileBarChart, FolderOpen,
+  Plus, X, SlidersHorizontal, ArrowUpDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { db, supabase } from '@/lib/supabase';
@@ -56,9 +61,53 @@ interface CategoryConfig {
   icon: any;
   color: string;
   bgColor: string;
+  borderColor: string;
   description: string;
   count: number;
 }
+
+const getDocumentIcon = (documentName: string, category?: string) => {
+  const iconMap: Record<string, any> = {
+    "Student ID Card": IdCard,
+    "Teacher ID Card": UserCheck,
+    "Admit Card": ClipboardCheck,
+    "Class Routine": Calendar,
+    "Teacher Routine": CalendarClock,
+    "Marksheet": FileCheck,
+    "Result Sheet": FileSpreadsheet,
+    "Testimonial": ScrollText,
+    "Transfer Certificate": FileSignature,
+    "Fee Receipt": Receipt,
+    "Pay Sheet": Wallet,
+    "Income Report": TrendingUp,
+    "Expense Sheet": TrendingDown,
+    "Admission Form": UserPlus,
+    "Office Order": FileText,
+    "Notice": Megaphone,
+    "Exam Paper": FileQuestion,
+    "OMR Sheet": CheckSquare,
+    "MCQ Format": ListChecks,
+  };
+
+  return iconMap[documentName] || FileText;
+};
+
+const getCategoryIcon = (categoryId: string) => {
+  const categoryIconMap: Record<string, any> = {
+    'financial': Banknote,
+    'academic': BookCheck,
+    'certificates': Award,
+    'administrative': FolderOpen,
+    'staff': Users,
+    'examination': ClipboardCheck,
+    'services': Heart,
+    'activities': Sparkles,
+    'modern': Zap,
+    'all': LayoutGrid
+  };
+  
+  return categoryIconMap[categoryId] || FileText;
+};
 
 export default function DocumentsDashboardUX() {
   const { toast } = useToast();
@@ -69,12 +118,10 @@ export default function DocumentsDashboardUX() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeTab, setActiveTab] = useState<string>('overview');
-  const [sortBy, setSortBy] = useState<'usage' | 'popular' | 'name' | 'category'>('usage');
-  const [showPopularFirst, setShowPopularFirst] = useState<boolean>(true);
+  const [sortBy, setSortBy] = useState<'usage' | 'popular' | 'name' | 'category'>('popular');
+  const [showFilters, setShowFilters] = useState<boolean>(false);
   const { language } = useLanguage();
 
-  // Fetch user statistics from Supabase
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['document-user-stats', schoolId],
     queryFn: async () => {
@@ -83,7 +130,6 @@ export default function DocumentsDashboardUX() {
     enabled: !!schoolId
   });
 
-  // Fetch ALL document templates for category counts (without filtering)
   const { data: allTemplatesData, isLoading: allTemplatesLoading } = useQuery({
     queryKey: ['document-templates-all', schoolId, language],
     queryFn: async () => {
@@ -92,7 +138,6 @@ export default function DocumentsDashboardUX() {
     enabled: !!schoolId
   });
 
-  // Fetch filtered document templates for display
   const { data: templateData, isLoading: templatesLoading } = useQuery({
     queryKey: ['document-templates-filtered', selectedCategory, searchQuery, schoolId, language],
     queryFn: async () => {
@@ -105,7 +150,6 @@ export default function DocumentsDashboardUX() {
     enabled: !!schoolId
   });
 
-  // Fetch recent documents
   const { data: recentDocuments, isLoading: recentLoading } = useQuery({
     queryKey: ['recent-documents', schoolId],
     queryFn: async () => {
@@ -114,7 +158,6 @@ export default function DocumentsDashboardUX() {
     enabled: !!schoolId
   });
 
-  // Fetch user credit balance from Supabase using authenticated user
   const { data: creditBalance, isLoading: creditLoading } = useQuery({
     queryKey: ['credit-stats', schoolId],
     queryFn: async () => {
@@ -125,7 +168,6 @@ export default function DocumentsDashboardUX() {
     enabled: !!schoolId
   });
 
-  // Fetch document costs from Supabase
   const { data: documentCosts, isLoading: costsLoading } = useQuery({
     queryKey: ['document-costs'],
     queryFn: async () => {
@@ -133,7 +175,6 @@ export default function DocumentsDashboardUX() {
     }
   });
 
-  // Seed templates mutation with Supabase
   const seedTemplatesMutation = useMutation({
     mutationFn: async () => {
       return await db.seedDocumentTemplates(schoolId);
@@ -148,7 +189,6 @@ export default function DocumentsDashboardUX() {
     }
   });
 
-  // Generate document with credit deduction using Supabase
   const generateDocumentMutation = useMutation({
     mutationFn: async (data: { templateId: number; documentType: string; studentIds: number[] }) => {
       return await db.generateDocument({
@@ -175,7 +215,6 @@ export default function DocumentsDashboardUX() {
     },
   });
 
-  // Document type mapping for proper routing
   const getDocumentRoute = (documentName: string): string => {
     const routeMap: Record<string, string> = {
       "Student ID Card": "/id-card/dashboard",
@@ -202,7 +241,6 @@ export default function DocumentsDashboardUX() {
     return routeMap[documentName] || "/documents/templates";
   };
 
-  // UX Principle: Don Norman - Clear signifiers and affordances
   const handleDocumentAccess = async (documentName: string, creditsRequired: number) => {
     const currentBalance = creditBalance?.currentBalance || 0;
     
@@ -215,12 +253,10 @@ export default function DocumentsDashboardUX() {
       return;
     }
     
-    // Navigate to document generation page using proper document type name with SPA routing
     const route = getDocumentRoute(documentName);
     setLocation(route);
   };
 
-  // Quick document generation for testing
   const handleQuickGenerate = (templateId: number, creditsRequired: number) => {
     const currentBalance = creditBalance?.currentBalance || 0;
     
@@ -236,18 +272,15 @@ export default function DocumentsDashboardUX() {
     generateDocumentMutation.mutate({
       templateId,
       documentType: 'quick_generate',
-      studentIds: [1] // Sample student ID for demo
+      studentIds: [1]
     });
   };
 
-  // Use API data instead of static data
   const documentTypes = templateData || [];
 
-  // Process and sort the filtered documents with enhanced sorting controls
   const sortedAndFilteredDocuments = useMemo(() => {
     let filtered = documentTypes;
     
-    // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((doc: any) => 
@@ -257,7 +290,6 @@ export default function DocumentsDashboardUX() {
       );
     }
     
-    // Apply category filter with grouped categories
     if (selectedCategory !== 'all') {
       const categoryMapping: Record<string, string[]> = {
         'academic': ['academic'],
@@ -275,20 +307,16 @@ export default function DocumentsDashboardUX() {
       filtered = filtered.filter((doc: any) => allowedCategories.includes(doc.category));
     }
     
-    // Apply sorting based on sortBy preference
     let sorted = [...filtered];
     
-    // First sort by popularity if enabled
-    if (showPopularFirst) {
-      sorted = sorted.sort((a, b) => {
-        if (a.isPopular && !b.isPopular) return -1;
-        if (!a.isPopular && b.isPopular) return 1;
-        return 0;
-      });
-    }
-    
-    // Then apply secondary sorting
     switch (sortBy) {
+      case 'popular':
+        sorted = sorted.sort((a, b) => {
+          if (a.isPopular && !b.isPopular) return -1;
+          if (!a.isPopular && b.isPopular) return 1;
+          return (b.usageCount || 0) - (a.usageCount || 0);
+        });
+        break;
       case 'usage':
         sorted = sorted.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
         break;
@@ -307,9 +335,8 @@ export default function DocumentsDashboardUX() {
     }
     
     return sorted;
-  }, [documentTypes, searchQuery, selectedCategory, sortBy, showPopularFirst, language]);
+  }, [documentTypes, searchQuery, selectedCategory, sortBy, language]);
 
-  // UX-optimized category configurations based on user workflows and mental models
   const categoryConfigs: CategoryConfig[] = useMemo(() => {
     const allTemplates = allTemplatesData || [];
     return [
@@ -317,194 +344,190 @@ export default function DocumentsDashboardUX() {
         id: 'all',
         name: 'All Documents',
         nameBn: 'সব ডকুমেন্ট',
-        icon: FileText,
-        color: 'text-slate-600',
-        bgColor: 'bg-slate-100',
-        description: 'সকল ধরনের ডকুমেন্ট দেখুন',
+        icon: getCategoryIcon('all'),
+        color: 'text-gray-700',
+        bgColor: 'bg-gray-50 hover:bg-gray-100',
+        borderColor: 'border-gray-200',
+        description: 'সকল ধরনের ডকুমেন্ট',
         count: allTemplates.length
       },
       {
         id: 'financial',
-        name: 'Financial Management',
-        nameBn: 'আর্থিক ব্যবস্থাপনা',
-        icon: () => <span className="text-2xl">💰</span>,
-        color: 'text-green-600',
-        bgColor: 'bg-green-100',
-        description: 'ফি, বেতন, বাজেট ও আর্থিক রিপোর্ট',
+        name: 'Financial',
+        nameBn: 'আর্থিক',
+        icon: getCategoryIcon('financial'),
+        color: 'text-emerald-700',
+        bgColor: 'bg-emerald-50 hover:bg-emerald-100',
+        borderColor: 'border-emerald-200',
+        description: 'ফি, বেতন ও রিপোর্ট',
         count: allTemplates.filter((d: any) => d.category === 'financial').length
       },
       {
         id: 'academic',
-        name: 'Academic Records',
-        nameBn: 'একাডেমিক রেকর্ড',
-        icon: () => <span className="text-2xl">📊</span>,
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-100',
-        description: 'নম্বরপত্র, প্রগ্রেস রিপোর্ট ও একাডেমিক সনদ',
+        name: 'Academic',
+        nameBn: 'একাডেমিক',
+        icon: getCategoryIcon('academic'),
+        color: 'text-blue-700',
+        bgColor: 'bg-blue-50 hover:bg-blue-100',
+        borderColor: 'border-blue-200',
+        description: 'নম্বরপত্র ও রেকর্ড',
         count: allTemplates.filter((d: any) => d.category === 'academic').length
       },
       {
         id: 'certificates',
-        name: 'Certificates & Legal',
-        nameBn: 'সনদপত্র ও আইনি কাগজ',
-        icon: () => <span className="text-2xl">🏆</span>,
-        color: 'text-purple-600',
-        bgColor: 'bg-purple-100',
-        description: 'স্থানান্তর, ছাড়পত্র ও অফিসিয়াল সনদ',
+        name: 'Certificates',
+        nameBn: 'সনদপত্র',
+        icon: getCategoryIcon('certificates'),
+        color: 'text-purple-700',
+        bgColor: 'bg-purple-50 hover:bg-purple-100',
+        borderColor: 'border-purple-200',
+        description: 'স্থানান্তর ও সনদ',
         count: allTemplates.filter((d: any) => ['certificate', 'recognition', 'graduation'].includes(d.category)).length
+      },
+      {
+        id: 'examination',
+        name: 'Examination',
+        nameBn: 'পরীক্ষা',
+        icon: getCategoryIcon('examination'),
+        color: 'text-red-700',
+        bgColor: 'bg-red-50 hover:bg-red-100',
+        borderColor: 'border-red-200',
+        description: 'এডমিট ও প্রশ্নপত্র',
+        count: allTemplates.filter((d: any) => d.category === 'examination').length
       },
       {
         id: 'administrative',
         name: 'Administrative',
         nameBn: 'প্রশাসনিক',
-        icon: () => <span className="text-2xl">📋</span>,
-        color: 'text-orange-600',
-        bgColor: 'bg-orange-100',
-        description: 'প্রশাসনিক কাগজপত্র ও অফিসিয়াল দলিল',
+        icon: getCategoryIcon('administrative'),
+        color: 'text-orange-700',
+        bgColor: 'bg-orange-50 hover:bg-orange-100',
+        borderColor: 'border-orange-200',
+        description: 'অফিসিয়াল কাগজপত্র',
         count: allTemplates.filter((d: any) => ['administrative', 'communication'].includes(d.category)).length
       },
       {
         id: 'staff',
-        name: 'Staff & Personnel',
-        nameBn: 'কর্মী ও কর্মচারী',
-        icon: () => <span className="text-2xl">👨‍🏫</span>,
-        color: 'text-emerald-600',
-        bgColor: 'bg-emerald-100',
-        description: 'শিক্ষক ও কর্মচারী সংক্রান্ত কাগজপত্র',
+        name: 'Staff',
+        nameBn: 'কর্মী',
+        icon: getCategoryIcon('staff'),
+        color: 'text-teal-700',
+        bgColor: 'bg-teal-50 hover:bg-teal-100',
+        borderColor: 'border-teal-200',
+        description: 'শিক্ষক ও কর্মচারী',
         count: allTemplates.filter((d: any) => d.category === 'staff').length
-      },
-      {
-        id: 'examination',
-        name: 'Examinations',
-        nameBn: 'পরীক্ষা',
-        icon: () => <span className="text-2xl">📝</span>,
-        color: 'text-red-600',
-        bgColor: 'bg-red-100',
-        description: 'এডমিট কার্ড, প্রশ্নপত্র ও পরীক্ষা সামগ্রী',
-        count: allTemplates.filter((d: any) => d.category === 'examination').length
-      },
-      {
-        id: 'services',
-        name: 'Services & Support',
-        nameBn: 'সেবা ও সহায়তা',
-        icon: () => <span className="text-2xl">🏥</span>,
-        color: 'text-teal-600',
-        bgColor: 'bg-teal-100',
-        description: 'চিকিৎসা, লাইব্রেরি, পরিবহন ও সেবা',
-        count: allTemplates.filter((d: any) => ['medical', 'library', 'transport', 'service'].includes(d.category)).length
-      },
-      {
-        id: 'activities',
-        name: 'Activities & Events',
-        nameBn: 'কার্যক্রম ও অনুষ্ঠান',
-        icon: () => <span className="text-2xl">🎉</span>,
-        color: 'text-pink-600',
-        bgColor: 'bg-pink-100',
-        description: 'সাংস্কৃতিক, ক্রীড়া ও গবেষণা কার্যক্রম',
-        count: allTemplates.filter((d: any) => ['cultural', 'extracurricular', 'research', 'event'].includes(d.category)).length
-      },
-      {
-        id: 'modern',
-        name: 'Modern & Digital',
-        nameBn: 'আধুনিক ও ডিজিটাল',
-        icon: () => <span className="text-2xl">💻</span>,
-        color: 'text-indigo-600',
-        bgColor: 'bg-indigo-100',
-        description: 'ডিজিটাল সেবা, প্রযুক্তি ও আন্তর্জাতিক',
-        count: allTemplates.filter((d: any) => ['digital', 'technology', 'international', 'safety', 'alumni'].includes(d.category)).length
       }
     ];
   }, [allTemplatesData]);
 
-
-
   const popularDocuments = sortedAndFilteredDocuments.filter((doc: any) => doc.isPopular);
 
-  // UX Principle: Aarron Walter - Emotional design with delight
-  const getDifficultyColor = (difficulty: string) => {
+  const getDifficultyConfig = (difficulty: string) => {
     switch (difficulty) {
-      case 'easy': return 'bg-green-100 text-green-700';
-      case 'medium': return 'bg-yellow-100 text-yellow-700';
-      case 'advanced': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'easy': 
+        return { 
+          color: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+          label: 'সহজ' 
+        };
+      case 'medium': 
+        return { 
+          color: 'bg-amber-100 text-amber-700 border-amber-200',
+          label: 'মাঝারি' 
+        };
+      case 'advanced': 
+        return { 
+          color: 'bg-rose-100 text-rose-700 border-rose-200',
+          label: 'উন্নত' 
+        };
+      default: 
+        return { 
+          color: 'bg-gray-100 text-gray-700 border-gray-200',
+          label: 'সহজ' 
+        };
     }
   };
 
-  // UX Principle: Jonathan Ive - Simplicity through understanding
-  const StatCard = ({ title, value, subtitle, icon: Icon, color }: any) => (
-    <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <div className={cn("p-2 rounded-lg group-hover:scale-110 transition-transform", color)}>
-          <Icon className="h-4 w-4" />
+  const StatCard = ({ title, value, subtitle, icon: Icon, color, bgColor }: any) => (
+    <Card className="group hover:shadow-md transition-all duration-300 border-0 shadow-sm hover:scale-[1.02]" data-testid={`stat-card-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2 flex-1">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <div className="text-3xl font-bold tracking-tight" data-testid={`stat-value-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+              {value || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
+          </div>
+          <div className={cn("p-3 rounded-xl transition-transform duration-300 group-hover:scale-110", bgColor)}>
+            <Icon className={cn("h-5 w-5", color)} />
+          </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold mb-1">{value || 0}</div>
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
       </CardContent>
     </Card>
   );
 
-  // UX Principle: Dieter Rams - Good design is as little design as possible
-  const DocumentCard = ({ doc }: { doc: any }) => (
-    <Card 
-      className="group hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500"
-      onClick={() => handleDocumentAccess(doc.name, doc.creditsRequired || 1)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleDocumentAccess(doc.name, doc.creditsRequired || 1);
-        }
-      }}
-    >
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="text-3xl mb-2">{doc.icon || '📄'}</div>
-          <div className="flex flex-col items-end space-y-1">
-            {doc.isPopular && (
-              <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200">
-                <Star className="h-3 w-3 mr-1" />
-                জনপ্রিয়
+  const DocumentCard = ({ doc }: { doc: any }) => {
+    const IconComponent = getDocumentIcon(doc.name, doc.category);
+    const difficultyConfig = getDifficultyConfig(doc.difficulty || 'easy');
+    
+    return (
+      <Card 
+        className="group hover:shadow-lg transition-all duration-300 cursor-pointer border hover:border-primary/50 overflow-hidden bg-gradient-to-br from-white to-gray-50/30"
+        onClick={() => handleDocumentAccess(doc.name, doc.creditsRequired || 1)}
+        role="button"
+        tabIndex={0}
+        data-testid={`document-card-${doc.id}`}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleDocumentAccess(doc.name, doc.creditsRequired || 1);
+          }
+        }}
+      >
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300">
+              <IconComponent className="h-6 w-6" />
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              {doc.isPopular && (
+                <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-sm" data-testid={`badge-popular-${doc.id}`}>
+                  <Star className="h-3 w-3 mr-1 fill-current" />
+                  জনপ্রিয়
+                </Badge>
+              )}
+              <Badge variant="outline" className={cn("border", difficultyConfig.color)} data-testid={`badge-difficulty-${doc.id}`}>
+                {difficultyConfig.label}
               </Badge>
-            )}
-            <Badge className={getDifficultyColor(doc.difficulty || 'easy')}>
-              {(doc.difficulty || 'easy') === 'easy' ? 'সহজ' : (doc.difficulty || 'easy') === 'medium' ? 'মাঝারি' : 'উন্নত'}
-            </Badge>
+            </div>
           </div>
-        </div>
-        
-        <h3 className="font-semibold text-lg mb-2 group-hover:text-blue-600 transition-colors">
-          {language === 'bn' ? doc.nameBn : doc.name}
-        </h3>
-        <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-          {language === 'bn' ? doc.descriptionBn : doc.description}
-        </p>
-        
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center space-x-4 text-muted-foreground">
-            <span className="flex items-center">
-              <Clock className="h-4 w-4 mr-1" />
-              {doc.estimatedTime || '২-৩ মিনিট'}
-            </span>
-            <span className="flex items-center font-semibold text-orange-600">
-              <CreditCard className="h-4 w-4 mr-1" />
-              {doc.requiredCredits || doc.creditsRequired || 1} ক্রেডিট
-            </span>
-            {doc.usageCount !== undefined && (
-              <span className="flex items-center">
-                <TrendingUp className="h-4 w-4 mr-1" />
-                {doc.usageCount} বার ব্যবহৃত
+          
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors" data-testid={`document-name-${doc.id}`}>
+              {language === 'bn' ? doc.nameBn : doc.name}
+            </h3>
+            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed" data-testid={`document-description-${doc.id}`}>
+              {language === 'bn' ? doc.descriptionBn : doc.description}
+            </p>
+          </div>
+          
+          <div className="flex items-center justify-between pt-2 border-t">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5" data-testid={`document-time-${doc.id}`}>
+                <Clock className="h-4 w-4" />
+                <span className="text-xs">{doc.estimatedTime || '২-৩ মিনিট'}</span>
               </span>
-            )}
+              <span className="flex items-center gap-1.5 font-semibold text-primary" data-testid={`document-credits-${doc.id}`}>
+                <CreditCard className="h-4 w-4" />
+                <span className="text-xs">{doc.requiredCredits || doc.creditsRequired || 1}</span>
+              </span>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
           </div>
-          <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <AppShell>
@@ -520,55 +543,51 @@ export default function DocumentsDashboardUX() {
           }}
         />
 
-        <div className="space-y-8">
-          {/* Header Section */}
-          <div className="text-center space-y-4">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+        <div className="space-y-8 pb-8">
+          <div className="text-center space-y-4 pt-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-sm font-medium text-primary mb-2">
+              <Sparkles className="h-4 w-4" />
+              <span>AI-Powered Document Generation</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
               ডকুমেন্ট জেনারেটর
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              আপনার স্কুলের জন্য প্রয়োজনীয় সকল ধরনের ডকুমেন্ট দ্রুত এবং সহজে তৈরি করুন
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              আপনার স্কুলের জন্য প্রয়োজনীয় সকল ডকুমেন্ট দ্রুত এবং সহজে তৈরি করুন
             </p>
-            {/* Seed Templates Button for Development */}
-            <Button 
-              onClick={() => seedTemplatesMutation.mutate()}
-              disabled={seedTemplatesMutation.isPending}
-              variant="outline"
-            >
-              {seedTemplatesMutation.isPending ? 'যোগ করা হচ্ছে...' : 'টেমপ্লেট যোগ করুন'}
-            </Button>
           </div>
 
-          {/* Credit Balance Banner */}
           {!creditLoading && creditBalance && (
-            <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-blue-50">
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-3 bg-green-100 rounded-lg">
-                      <Wallet className="h-6 w-6 text-green-600" />
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 text-white overflow-hidden" data-testid="credit-balance-card">
+              <CardContent className="p-6 md:p-8">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                      <Wallet className="h-8 w-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-800">আপনার ক্রেডিট ব্যালেন্স</h3>
-                      <p className="text-sm text-gray-600">ডকুমেন্ট তৈরির জন্য উপলব্ধ ক্রেডিট</p>
+                      <h3 className="text-xl font-semibold text-white mb-1">আপনার ক্রেডিট ব্যালেন্স</h3>
+                      <p className="text-sm text-white/80">ডকুমেন্ট তৈরির জন্য উপলব্ধ ক্রেডিট</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-6">
+                  <div className="flex items-center gap-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-green-600">{creditBalance.currentBalance || 0}</div>
-                      <div className="text-sm text-gray-500">উপলব্ধ ক্রেডিট</div>
+                      <div className="text-4xl font-bold text-white mb-1" data-testid="credit-balance">{creditBalance.currentBalance || 0}</div>
+                      <div className="text-sm text-white/80">উপলব্ধ</div>
                     </div>
                     
+                    <div className="h-12 w-px bg-white/30"></div>
+                    
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-blue-600">{creditBalance.totalSpent || 0}</div>
-                      <div className="text-sm text-gray-500">ব্যবহৃত ক্রেডিট</div>
+                      <div className="text-2xl font-semibold text-white mb-1" data-testid="credit-spent">{creditBalance.totalSpent || 0}</div>
+                      <div className="text-sm text-white/80">ব্যবহৃত</div>
                     </div>
                     
                     <Link href="/credits/supabase-dashboard">
-                      <Button className="flex items-center space-x-2">
-                        <CreditCard className="h-4 w-4" />
-                        <span>ক্রেডিট কিনুন</span>
+                      <Button className="bg-white text-emerald-600 hover:bg-white/90 shadow-lg font-semibold" data-testid="button-buy-credits">
+                        <Plus className="h-4 w-4 mr-2" />
+                        ক্রেডিট কিনুন
                       </Button>
                     </Link>
                   </div>
@@ -577,340 +596,248 @@ export default function DocumentsDashboardUX() {
             </Card>
           )}
 
-          {/* Statistics Overview */}
           {statsLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {[...Array(4)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
+                <Card key={i} className="animate-pulse border-0 shadow-sm">
                   <CardContent className="p-6">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-8 bg-gray-300 rounded w-1/2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+                    <div className="h-8 bg-gray-300 rounded w-1/2 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               <StatCard
                 title="মোট ডকুমেন্ট"
                 value={stats?.totalGenerated || 0}
                 subtitle="এই মাসে তৈরি"
                 icon={FileText}
-                color="bg-blue-100 text-blue-600"
+                color="text-blue-600"
+                bgColor="bg-blue-100"
               />
               <StatCard
                 title="ব্যবহৃত ক্রেডিট"
                 value={creditBalance?.totalSpent || stats?.creditsUsed || 0}
                 subtitle="সর্বমোট"
                 icon={CreditCard}
-                color="bg-orange-100 text-orange-600"
+                color="text-orange-600"
+                bgColor="bg-orange-100"
               />
               <StatCard
                 title="বর্তমান ব্যালেন্স"
                 value={creditBalance?.currentBalance || stats?.creditsRemaining || 0}
                 subtitle="উপলব্ধ ক্রেডিট"
                 icon={Wallet}
-                color="bg-green-100 text-green-600"
+                color="text-emerald-600"
+                bgColor="bg-emerald-100"
               />
               <StatCard
                 title="এ মাসে ব্যবহার"
                 value={stats?.monthlyUsed || 0}
                 subtitle="চলতি মাসে"
                 icon={Target}
-                color="bg-purple-100 text-purple-600"
+                color="text-purple-600"
+                bgColor="bg-purple-100"
               />
             </div>
           )}
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">সংক্ষিপ্ত বিবরণ</TabsTrigger>
-              <TabsTrigger value="categories">ক্যাটাগরি</TabsTrigger>
-              <TabsTrigger value="popular">জনপ্রিয়</TabsTrigger>
-              <TabsTrigger value="costs">মূল্য তালিকা</TabsTrigger>
-            </TabsList>
-
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              {/* Search and Filters */}
-              <div className="flex flex-col md:flex-row gap-4 items-center">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="ডকুমেন্ট খুঁজুন... (যেমন: আইডি কার্ড, রসিদ)"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-12"
-                  />
-                </div>
-                
-                {/* Enhanced Sorting Controls */}
-                <div className="flex items-center space-x-2">
-                  <select 
-                    value={sortBy} 
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="px-3 py-2 border rounded-md text-sm bg-white"
-                  >
-                    <option value="usage">📈 বেশি ব্যবহৃত</option>
-                    <option value="name">📝 নাম অনুসারে</option>
-                    <option value="category">📂 ক্যাটাগরি</option>
-                  </select>
-                  
-                  <Button
-                    variant={showPopularFirst ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setShowPopularFirst(!showPopularFirst)}
-                    className="min-w-[120px] min-h-[44px]"
-                  >
-                    <Star className="h-4 w-4 mr-1" />
-                    জনপ্রিয় প্রথমে
-                  </Button>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant={viewMode === 'grid' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                    className="min-w-[44px] min-h-[44px]"
-                  >
-                    <Grid className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                    className="min-w-[44px] min-h-[44px]"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                </div>
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  placeholder="ডকুমেন্ট খুঁজুন... (যেমন: আইডি কার্ড, রসিদ)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-12 h-12 md:h-14 text-base border-2 focus:border-primary"
+                  data-testid="input-search"
+                />
               </div>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="lg"
+                  onClick={() => setViewMode('grid')}
+                  className="h-12 md:h-14 px-4"
+                  data-testid="button-view-grid"
+                >
+                  <Grid3x3 className="h-5 w-5" />
+                  <span className="ml-2 hidden sm:inline">Grid</span>
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="lg"
+                  onClick={() => setViewMode('list')}
+                  className="h-12 md:h-14 px-4"
+                  data-testid="button-view-list"
+                >
+                  <Rows3 className="h-5 w-5" />
+                  <span className="ml-2 hidden sm:inline">List</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="h-12 md:h-14 px-4"
+                  data-testid="button-toggle-filters"
+                >
+                  <SlidersHorizontal className="h-5 w-5" />
+                  <span className="ml-2 hidden sm:inline">Filters</span>
+                </Button>
+              </div>
+            </div>
 
-              {/* Category Filter Chips */}
-              <div className="flex flex-wrap gap-3">
-                {categoryConfigs.map((category) => {
-                  const IconComponent = category.icon;
-                  return (
+            {showFilters && (
+              <Card className="border-2 border-primary/20 shadow-sm" data-testid="filters-panel">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                      <Filter className="h-5 w-5" />
+                      ফিল্টার
+                    </h3>
                     <Button
-                      key={category.id}
-                      variant={selectedCategory === category.id ? 'default' : 'outline'}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className="min-h-[44px] space-x-2"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedCategory('all');
+                        setSortBy('popular');
+                        setSearchQuery('');
+                      }}
+                      data-testid="button-clear-filters"
                     >
-                      <IconComponent />
-                      <span>{language === 'bn' ? category.nameBn : category.name}</span>
-                      <Badge variant="secondary" className="ml-2">
-                        {category.count}
-                      </Badge>
+                      <X className="h-4 w-4 mr-2" />
+                      Clear
                     </Button>
-                  );
-                })}
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <ArrowUpDown className="h-4 w-4" />
+                      সাজান
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { value: 'popular', label: '⭐ জনপ্রিয়', icon: Star },
+                        { value: 'usage', label: '📈 বেশি ব্যবহৃত', icon: TrendingUp },
+                        { value: 'name', label: '📝 নাম', icon: FileText },
+                        { value: 'category', label: '📂 ক্যাটাগরি', icon: FolderOpen }
+                      ].map((option) => (
+                        <Button
+                          key={option.value}
+                          variant={sortBy === option.value ? 'default' : 'outline'}
+                          onClick={() => setSortBy(option.value as any)}
+                          className="justify-start h-auto py-3"
+                          data-testid={`button-sort-${option.value}`}
+                        >
+                          <option.icon className="h-4 w-4 mr-2" />
+                          <span className="text-sm">{option.label}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <LayoutGrid className="h-4 w-4" />
+                      ক্যাটাগরি
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {categoryConfigs.map((category) => {
+                        const IconComponent = category.icon;
+                        return (
+                          <Button
+                            key={category.id}
+                            variant={selectedCategory === category.id ? 'default' : 'outline'}
+                            onClick={() => setSelectedCategory(category.id)}
+                            className={cn(
+                              "justify-start h-auto py-3 transition-all duration-200",
+                              selectedCategory === category.id && "shadow-md"
+                            )}
+                            data-testid={`button-category-${category.id}`}
+                          >
+                            <IconComponent className="h-4 w-4 mr-2 flex-shrink-0" />
+                            <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                              <span className="text-sm truncate">{language === 'bn' ? category.nameBn : category.name}</span>
+                              <Badge variant="secondary" className="text-xs px-1.5 py-0.5 flex-shrink-0">
+                                {category.count}
+                              </Badge>
+                            </div>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {templatesLoading ? (
+              <div className={cn(
+                "grid gap-4 md:gap-6",
+                viewMode === 'grid' 
+                  ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" 
+                  : "grid-cols-1"
+              )}>
+                {[...Array(6)].map((_, i) => (
+                  <Card key={i} className="animate-pulse border-0 shadow-sm">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex justify-between">
+                        <div className="h-12 w-12 bg-gray-200 rounded-xl"></div>
+                        <div className="h-6 w-16 bg-gray-200 rounded"></div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-6 bg-gray-300 rounded w-3/4"></div>
+                        <div className="h-4 bg-gray-200 rounded w-full"></div>
+                        <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                      </div>
+                      <div className="flex gap-4 pt-2">
+                        <div className="h-4 bg-gray-200 rounded w-20"></div>
+                        <div className="h-4 bg-gray-200 rounded w-16"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-
-              {/* Document Grid */}
-              {templatesLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(6)].map((_, i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-6">
-                        <div className="h-12 bg-gray-200 rounded w-12 mb-4"></div>
-                        <div className="h-6 bg-gray-300 rounded w-3/4 mb-2"></div>
-                        <div className="h-4 bg-gray-200 rounded w-full mb-4"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className={cn(
-                  "grid gap-6",
-                  viewMode === 'grid' 
-                    ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" 
-                    : "grid-cols-1"
-                )}>
-                  {sortedAndFilteredDocuments.map((doc: any) => (
-                    <DocumentCard key={doc.id} doc={doc} />
-                  ))}
-                </div>
-              )}
-
-              {sortedAndFilteredDocuments.length === 0 && !templatesLoading && (
-                <div className="text-center py-12">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">কোনো ডকুমেন্ট পাওয়া যায়নি</h3>
-                  <p className="text-muted-foreground">
+            ) : sortedAndFilteredDocuments.length > 0 ? (
+              <div className={cn(
+                "grid gap-4 md:gap-6",
+                viewMode === 'grid' 
+                  ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+                  : "grid-cols-1 max-w-4xl mx-auto"
+              )}>
+                {sortedAndFilteredDocuments.map((doc: any) => (
+                  <DocumentCard key={doc.id} doc={doc} />
+                ))}
+              </div>
+            ) : (
+              <Card className="border-2 border-dashed" data-testid="empty-state">
+                <CardContent className="p-12 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                    <FileText className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">কোনো ডকুমেন্ট পাওয়া যায়নি</h3>
+                  <p className="text-muted-foreground mb-6">
                     অন্য কিওয়ার্ড দিয়ে খোঁজ করুন বা ফিল্টার পরিবর্তন করুন
                   </p>
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Categories Tab */}
-            <TabsContent value="categories" className="space-y-6">
-              <div className="grid gap-6">
-                {categoryConfigs.slice(1).map((category) => {
-                  const IconComponent = category.icon;
-                  const categoryDocs = (allTemplatesData || []).filter((d: any) => d.category === category.id);
-                  
-                  return (
-                    <Card key={category.id} className="overflow-hidden">
-                      <CardHeader className={cn("pb-4", category.bgColor)}>
-                        <div className="flex items-center space-x-3">
-                          <div className={cn("p-3 rounded-lg bg-white", category.color)}>
-                            <IconComponent />
-                          </div>
-                          <div>
-                            <CardTitle className="text-xl">{category.nameBn}</CardTitle>
-                            <CardDescription className="text-gray-600">
-                              {category.description} • {category.count} টি ডকুমেন্ট
-                            </CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {categoryDocs.map((doc: any) => (
-                            <Button
-                              key={doc.id}
-                              variant="ghost"
-                              className="h-auto p-4 justify-start text-left"
-                              onClick={() => handleDocumentAccess(doc.name, doc.creditsRequired || 1)}
-                            >
-                              <div className="flex items-center space-x-3 w-full">
-                                <span className="text-2xl">{doc.icon || '📄'}</span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium truncate">{language === 'bn' ? doc.nameBn : doc.name}</div>
-                                  <div className="text-sm text-muted-foreground flex items-center space-x-2">
-                                    <span>{doc.creditsRequired || 1} ক্রেডিট</span>
-                                    <span>•</span>
-                                    <span>{doc.estimatedTime || '২-৩ মিনিট'}</span>
-                                  </div>
-                                </div>
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            </Button>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </TabsContent>
-
-            {/* Popular Tab */}
-            <TabsContent value="popular" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Star className="h-5 w-5 text-orange-500" />
-                    <span>সবচেয়ে জনপ্রিয় ডকুমেন্ট</span>
-                  </CardTitle>
-                  <CardDescription>
-                    অন্যান্য স্কুল সবচেয়ে বেশি যে ডকুমেন্টগুলো ব্যবহার করে
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {popularDocuments.map((doc: any) => (
-                      <DocumentCard key={doc.id} doc={doc} />
-                    ))}
-                  </div>
+                  <Button 
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedCategory('all');
+                    }}
+                    data-testid="button-reset-search"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    ফিল্টার রিসেট করুন
+                  </Button>
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            {/* Document Costs Tab */}
-            <TabsContent value="costs" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <DollarSign className="h-5 w-5 text-green-500" />
-                    <span>ডকুমেন্ট মূল্য তালিকা</span>
-                  </CardTitle>
-                  <CardDescription>
-                    প্রতিটি ডকুমেন্ট তৈরির জন্য প্রয়োজনীয় ক্রেডিট
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {costsLoading ? (
-                    <div className="space-y-3">
-                      {[...Array(10)].map((_, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 border rounded-lg animate-pulse">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-gray-200 rounded"></div>
-                            <div className="w-48 h-4 bg-gray-200 rounded"></div>
-                          </div>
-                          <div className="w-16 h-4 bg-gray-200 rounded"></div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : documentCosts && documentCosts.length > 0 ? (
-                    <div className="space-y-3">
-                      {documentCosts.map((doc: any) => (
-                        <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <FileText className="h-4 w-4 text-blue-600" />
-                            </div>
-                            <div>
-                              <div className="font-medium">{language === 'bn' ? doc.nameBn : doc.name}</div>
-                              {doc.category && (
-                                <div className="text-sm text-gray-500 capitalize">{doc.category}</div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <Badge variant="outline" className="font-semibold text-orange-600">
-                              {doc.requiredCredits || 1} ক্রেডিট
-                            </Badge>
-                            <Button
-                              size="sm"
-                              onClick={() => handleQuickGenerate(doc.id, doc.requiredCredits || 1)}
-                              disabled={generateDocumentMutation.isPending}
-                              className="flex items-center space-x-1"
-                            >
-                              <Zap className="h-3 w-3" />
-                              <span>তৈরি করুন</span>
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">মূল্য তথ্য লোড হচ্ছে</h3>
-                      <p className="text-gray-600">ডকুমেন্ট মূল্য তালিকা শীঘ্রই দেখা যাবে</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Credit Purchase Reminder */}
-              <Card className="border-orange-200 bg-orange-50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-orange-100 rounded-lg">
-                        <CreditCard className="h-6 w-6 text-orange-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-orange-800">ক্রেডিট প্রয়োজন?</h3>
-                        <p className="text-orange-700">আরও ডকুমেন্ট তৈরির জন্য ক্রেডিট কিনুন</p>
-                      </div>
-                    </div>
-                    <Link href="/credits/supabase-dashboard">
-                      <Button className="bg-orange-600 hover:bg-orange-700">
-                        ক্রেডিট কিনুন
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
         </div>
       </ResponsivePageLayout>
     </AppShell>
