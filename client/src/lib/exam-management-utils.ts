@@ -61,11 +61,25 @@ export interface Teacher {
 
 export interface DutyAssignment {
   teacherId: number;
+  roomName: string;
   roomNumber: string;
   dutyType: 'chief' | 'assistant';
+  date: string;
   dutyDate: string;
   startTime: string;
   endTime: string;
+}
+
+export interface DutyAssignmentResult {
+  assignments: DutyAssignment[];
+  stats: {
+    totalAssignments: number;
+    chiefAssignments: number;
+    assistantAssignments: number;
+    teachersUsed: number;
+    datesAssigned: number;
+    roomsAssigned: number;
+  };
 }
 
 export interface ConflictResult {
@@ -390,46 +404,42 @@ export class AutoDutyAssigner {
    * Intelligently assign invigilation duties
    */
   static async assignDuties(
-    teachers: Teacher[],
-    examSchedules: any[],
+    teachers: Array<{ id: number; name: string; email?: string; availability?: any[] }>,
+    rooms: Array<{ id: number; name: string; capacity: number }>,
+    dates: string[],
     options: {
-      chiefToAssistantRatio?: number; // Default: 1:3 (1 chief per 3 rooms)
+      chiefRatio?: number;
+      assistantRatio?: number;
       respectAvailability?: boolean;
       avoidOwnClass?: boolean;
       balanceLoad?: boolean;
     } = {}
-  ): Promise<DutyAssignment[]> {
+  ): Promise<DutyAssignmentResult> {
     const {
-      chiefToAssistantRatio = 0.33,
+      chiefRatio = 1,
+      assistantRatio = 3,
       respectAvailability = true,
-      avoidOwnClass = true,
       balanceLoad = true,
     } = options;
     
     const assignments: DutyAssignment[] = [];
     const teacherDutyCount = new Map<number, number>();
+    const roomsSet = new Set<string>();
     
     // Initialize duty counts
     teachers.forEach(t => teacherDutyCount.set(t.id, 0));
     
-    // Group schedules by date and time
-    const scheduleGroups = this.groupSchedulesByDateTime(examSchedules);
-    
-    for (const group of scheduleGroups) {
-      const { date, startTime, endTime, schedules } = group;
-      const roomsNeeded = schedules.length;
-      const chiefsNeeded = Math.max(1, Math.ceil(roomsNeeded * chiefToAssistantRatio));
-      const assistantsNeeded = roomsNeeded - chiefsNeeded;
+    // For each date, assign duties to all rooms
+    for (const date of dates) {
+      // Shuffle rooms for fair distribution
+      const roomsForDate = [...rooms];
       
-      // Get available teachers (check availability if option enabled)
-      let availableTeachers = [...teachers];
-      
-      if (avoidOwnClass) {
-        const examClasses = new Set(schedules.map(s => s.class));
-        availableTeachers = availableTeachers.filter(
-          t => !examClasses.has(t.class)
-        );
-      }
+      // Get available teachers for this date
+      let availableTeachers = teachers.filter(t => {
+        if (!respectAvailability || !t.availability) return true;
+        // Check if teacher is available on this date
+        return !t.availability.some((unavail: any) => unavail.date === date);
+      });
       
       // Sort teachers by current duty count (for load balancing)
       if (balanceLoad) {
@@ -440,42 +450,73 @@ export class AutoDutyAssigner {
         });
       }
       
-      // Assign chiefs
-      for (let i = 0; i < chiefsNeeded && i < availableTeachers.length; i++) {
-        const teacher = availableTeachers[i];
-        const schedule = schedules[i];
-        
-        assignments.push({
-          teacherId: teacher.id,
-          roomNumber: schedule.room || `Room ${i + 1}`,
-          dutyType: 'chief',
-          dutyDate: date,
-          startTime,
-          endTime,
-        });
-        
-        teacherDutyCount.set(teacher.id, (teacherDutyCount.get(teacher.id) || 0) + 1);
-      }
+      // Calculate how many chiefs and assistants needed per room based on ratio
+      const totalDutiesPerRoom = chiefRatio + assistantRatio;
+      const chiefsPerRoom = Math.floor(chiefRatio);
+      const assistantsPerRoom = Math.floor(assistantRatio);
       
-      // Assign assistants
-      for (let i = 0; i < assistantsNeeded && (i + chiefsNeeded) < availableTeachers.length; i++) {
-        const teacher = availableTeachers[i + chiefsNeeded];
-        const schedule = schedules[i + chiefsNeeded] || schedules[i % schedules.length];
+      let teacherIndex = 0;
+      
+      // Assign duties for each room on this date
+      for (const room of roomsForDate) {
+        roomsSet.add(room.name);
         
-        assignments.push({
-          teacherId: teacher.id,
-          roomNumber: schedule.room || `Room ${i + chiefsNeeded + 1}`,
-          dutyType: 'assistant',
-          dutyDate: date,
-          startTime,
-          endTime,
-        });
+        // Assign chief invigilators for this room
+        for (let c = 0; c < chiefsPerRoom && teacherIndex < availableTeachers.length; c++) {
+          const teacher = availableTeachers[teacherIndex];
+          
+          assignments.push({
+            teacherId: teacher.id,
+            roomName: room.name,
+            roomNumber: room.name,
+            dutyType: 'chief',
+            date: date,
+            dutyDate: date,
+            startTime: '09:00',
+            endTime: '12:00',
+          });
+          
+          teacherDutyCount.set(teacher.id, (teacherDutyCount.get(teacher.id) || 0) + 1);
+          teacherIndex++;
+        }
         
-        teacherDutyCount.set(teacher.id, (teacherDutyCount.get(teacher.id) || 0) + 1);
+        // Assign assistant invigilators for this room
+        for (let a = 0; a < assistantsPerRoom && teacherIndex < availableTeachers.length; a++) {
+          const teacher = availableTeachers[teacherIndex];
+          
+          assignments.push({
+            teacherId: teacher.id,
+            roomName: room.name,
+            roomNumber: room.name,
+            dutyType: 'assistant',
+            date: date,
+            dutyDate: date,
+            startTime: '09:00',
+            endTime: '12:00',
+          });
+          
+          teacherDutyCount.set(teacher.id, (teacherDutyCount.get(teacher.id) || 0) + 1);
+          teacherIndex++;
+        }
       }
     }
     
-    return assignments;
+    // Calculate statistics
+    const chiefCount = assignments.filter(a => a.dutyType === 'chief').length;
+    const assistantCount = assignments.filter(a => a.dutyType === 'assistant').length;
+    const teachersUsed = new Set(assignments.map(a => a.teacherId)).size;
+    
+    return {
+      assignments,
+      stats: {
+        totalAssignments: assignments.length,
+        chiefAssignments: chiefCount,
+        assistantAssignments: assistantCount,
+        teachersUsed,
+        datesAssigned: dates.length,
+        roomsAssigned: roomsSet.size,
+      },
+    };
   }
   
   private static groupSchedulesByDateTime(schedules: any[]): Array<{
@@ -710,18 +751,22 @@ export class ExamPDFGenerator {
   }
   
   /**
-   * Generate duty roster PDF (teacher-wise)
+   * Generate duty roster PDF (teacher-wise or room-wise)
    */
   static async generateDutyRosterPDF(
     examName: string,
     duties: Array<{
       teacherName: string;
-      room: string;
+      roomNumber?: string;
+      room?: string;
       date: string;
-      time: string;
+      startTime?: string;
+      endTime?: string;
+      time?: string;
       dutyType: string;
     }>,
-    schoolInfo: { name: string }
+    schoolInfo: { name: string; address?: string },
+    type: 'teacher' | 'room' = 'teacher'
   ): Promise<jsPDF> {
     const doc = new jsPDF();
     
@@ -730,16 +775,18 @@ export class ExamPDFGenerator {
     doc.text(schoolInfo.name, 105, 20, { align: 'center' });
     doc.setFontSize(14);
     doc.text(`Invigilation Duty Roster - ${examName}`, 105, 30, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(type === 'teacher' ? 'Teacher-wise' : 'Room-wise', 105, 38, { align: 'center' });
     
     // Table
     autoTable(doc, {
-      startY: 40,
+      startY: 45,
       head: [['Teacher Name', 'Room', 'Date', 'Time', 'Duty Type']],
       body: duties.map(d => [
         d.teacherName,
-        d.room,
+        d.roomNumber || d.room || 'N/A',
         d.date,
-        d.time,
+        d.time || `${d.startTime} - ${d.endTime}`,
         d.dutyType,
       ]),
       theme: 'grid',

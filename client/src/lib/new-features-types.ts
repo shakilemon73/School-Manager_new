@@ -526,3 +526,119 @@ export interface ReportTemplate {
   school_id: number;
   created_at: string;
 }
+
+// EXAM MANAGEMENT ENHANCEMENT TYPES
+export interface ExamRoom {
+  id: number;
+  school_id: number;
+  name: string;
+  building?: string;
+  floor?: string;
+  capacity: number;
+  rows_count: number;
+  seats_per_row: number;
+  features?: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeacherAvailability {
+  id: number;
+  school_id: number;
+  teacher_id: number;
+  date: string;
+  is_available: boolean;
+  reason?: string;
+  leave_type?: 'sick' | 'casual' | 'emergency' | 'approved_leave';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeacherDutyPreference {
+  id: number;
+  school_id: number;
+  teacher_id: number;
+  preferred_times?: string[];
+  preferred_duty_type?: 'chief' | 'assistant' | 'supervisor';
+  max_duties_per_week?: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamScheduleTemplate {
+  id: number;
+  school_id: number;
+  name: string;
+  description?: string;
+  exam_type?: string;
+  class_id?: number;
+  subjects?: any;
+  start_time: string;
+  end_time: string;
+  break_duration?: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamNotification {
+  id: number;
+  school_id: number;
+  exam_id?: number;
+  notification_type: 'schedule' | 'duty_assignment' | 'reminder' | 'change_alert';
+  recipient_type: 'student' | 'teacher' | 'parent' | 'all';
+  recipient_ids?: number[];
+  title: string;
+  message: string;
+  channels: string[];
+  status: 'pending' | 'sent' | 'failed';
+  scheduled_at?: string;
+  sent_at?: string;
+  error_message?: string;
+  metadata?: any;
+  created_at: string;
+}
+
+export interface DutyShift {
+  id: number;
+  school_id: number;
+  name: string;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReliefDuty {
+  id: number;
+  school_id: number;
+  original_duty_id?: number;
+  relief_teacher_id: number;
+  original_teacher_id: number;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approved_by?: number;
+  approved_at?: string;
+  created_at: string;
+}
+
+export interface ExamExtended {
+  id: number;
+  name: string;
+  description?: string;
+  type: string;
+  academic_year_id: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  is_published: boolean;
+  is_locked: boolean;
+  locked_by?: number;
+  locked_at?: string;
+  school_id: number;
+  created_at: string;
+  updated_at?: string;
+}
