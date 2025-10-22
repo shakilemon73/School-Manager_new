@@ -41,7 +41,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CalendarIcon, Plus, Pencil, Trash2, FileText, Users, BookOpen, Download, Copy, Lock, Unlock, Building, MoreVertical } from "lucide-react";
+import { CalendarIcon, Plus, Pencil, Trash2, FileText, Users, BookOpen, Download, Copy, Lock, Unlock, Building, MoreVertical, Eye, EyeOff } from "lucide-react";
 import { format } from "date-fns";
 import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { AppShell } from "@/components/layout/app-shell";
@@ -135,6 +135,20 @@ const translations = {
     clone: "Clone",
     locked: "Locked",
     unlocked: "Unlocked",
+    publish: "Publish",
+    unpublish: "Unpublish",
+    published: "Published",
+    draft: "Draft",
+    lock: "Lock",
+    unlock: "Unlock",
+    publishedOn: "Published On",
+    lockedOn: "Locked On",
+    examPublished: "Exam published successfully",
+    examUnpublished: "Exam unpublished successfully",
+    examLocked: "Exam locked successfully",
+    examUnlocked: "Exam unlocked successfully",
+    delete: "Delete",
+    edit: "Edit",
   },
   bn: {
     title: "পরীক্ষা ব্যবস্থাপনা",
@@ -175,6 +189,20 @@ const translations = {
     totalExams: "মোট পরীক্ষা",
     activeExams: "সক্রিয় পরীক্ষা",
     upcomingExams: "আসন্ন পরীক্ষা",
+    publish: "প্রকাশ করুন",
+    unpublish: "প্রকাশ বাতিল করুন",
+    published: "প্রকাশিত",
+    draft: "খসড়া",
+    lock: "লক করুন",
+    unlock: "আনলক করুন",
+    publishedOn: "প্রকাশিত হয়েছে",
+    lockedOn: "লক হয়েছে",
+    examPublished: "পরীক্ষা সফলভাবে প্রকাশিত হয়েছে",
+    examUnpublished: "পরীক্ষা প্রকাশ বাতিল হয়েছে",
+    examLocked: "পরীক্ষা সফলভাবে লক হয়েছে",
+    examUnlocked: "পরীক্ষা সফলভাবে আনলক হয়েছে",
+    delete: "মুছে ফেলুন",
+    edit: "সম্পাদনা করুন",
   },
 };
 
@@ -322,6 +350,68 @@ function ExamManagementContent() {
       toast({
         title: t.success,
         description: t.examDeleted,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: t.error,
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const togglePublishMutation = useMutation({
+    mutationFn: async ({ id, isPublished }: { id: number; isPublished: boolean }) => {
+      if (!schoolId) throw new Error('School ID not found');
+      const { error } = await supabase
+        .from("exams")
+        .update({
+          is_published: isPublished,
+          publish_status: isPublished ? 'published' : 'draft',
+          published_at: isPublished ? new Date().toISOString() : null,
+        })
+        .eq("id", id)
+        .eq("school_id", schoolId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["exams", schoolId] });
+      toast({
+        title: t.success,
+        description: variables.isPublished ? t.examPublished : t.examUnpublished,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: t.error,
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleLockMutation = useMutation({
+    mutationFn: async ({ id, isLocked, userId }: { id: number; isLocked: boolean; userId?: string }) => {
+      if (!schoolId) throw new Error('School ID not found');
+      const { error } = await supabase
+        .from("exams")
+        .update({
+          is_locked: isLocked,
+          locked_by: isLocked ? userId : null,
+          locked_at: isLocked ? new Date().toISOString() : null,
+        })
+        .eq("id", id)
+        .eq("school_id", schoolId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["exams", schoolId] });
+      toast({
+        title: t.success,
+        description: variables.isLocked ? t.examLocked : t.examUnlocked,
       });
     },
     onError: (error: any) => {
@@ -626,29 +716,87 @@ function ExamManagementContent() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={status.color === 'green' ? 'default' : status.color === 'blue' ? 'secondary' : 'outline'}>
-                          {status.label}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant={status.color === 'green' ? 'default' : status.color === 'blue' ? 'secondary' : 'outline'} data-testid={`badge-status-${exam.id}`}>
+                            {status.label}
+                          </Badge>
+                          {exam.is_published === true && (
+                            <Badge variant="default" className="bg-green-500" data-testid={`badge-published-${exam.id}`}>
+                              {t.published}
+                            </Badge>
+                          )}
+                          {exam.is_published === false && (
+                            <Badge variant="secondary" data-testid={`badge-draft-${exam.id}`}>
+                              {t.draft}
+                            </Badge>
+                          )}
+                          {exam.is_locked === true && (
+                            <Badge variant="outline" className="border-yellow-500 text-yellow-600" data-testid={`badge-locked-${exam.id}`}>
+                              {t.locked}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(exam)}
-                            data-testid={`button-edit-${exam.id}`}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(exam.id)}
-                            data-testid={`button-delete-${exam.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" data-testid={`button-actions-${exam.id}`}>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => togglePublishMutation.mutate({ id: exam.id, isPublished: !exam.is_published })}
+                              disabled={exam.is_locked === true}
+                              data-testid={`menu-item-publish-${exam.id}`}
+                            >
+                              {exam.is_published ? (
+                                <>
+                                  <EyeOff className="mr-2 h-4 w-4" />
+                                  {t.unpublish}
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  {t.publish}
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => toggleLockMutation.mutate({ id: exam.id, isLocked: !exam.is_locked })}
+                              data-testid={`menu-item-lock-${exam.id}`}
+                            >
+                              {exam.is_locked ? (
+                                <>
+                                  <Unlock className="mr-2 h-4 w-4" />
+                                  {t.unlock}
+                                </>
+                              ) : (
+                                <>
+                                  <Lock className="mr-2 h-4 w-4" />
+                                  {t.lock}
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleEdit(exam)}
+                              disabled={exam.is_locked === true}
+                              data-testid={`menu-item-edit-${exam.id}`}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              {t.edit}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(exam.id)}
+                              disabled={exam.is_locked === true}
+                              data-testid={`menu-item-delete-${exam.id}`}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                              {t.delete}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );
