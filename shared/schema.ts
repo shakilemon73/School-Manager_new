@@ -1954,6 +1954,10 @@ export const invigilationDuties = pgTable("invigilation_duties", {
   teacherId: integer("teacher_id").notNull(),
   roomNumber: text("room_number").notNull(),
   dutyType: text("duty_type"),
+  dutyDate: date("duty_date"),
+  startTime: time("start_time"),
+  endTime: time("end_time"),
+  notes: text("notes"),
   schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -959,24 +959,6 @@ function SeatingArrangementsContent() {
                     />
                   )}
 
-                  <FormField
-                    control={form.control}
-                    name="instructions"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t.instructions}</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            data-testid="input-instructions"
-                            placeholder={t.enterInstructions}
-                            rows={3}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   <div className="flex justify-end gap-2">
                     <Button

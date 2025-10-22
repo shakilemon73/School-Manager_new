@@ -66,6 +66,10 @@ const invigilationDutySchema = z.object({
   teacherId: z.number().min(1, "Teacher is required"),
   roomNumber: z.string().min(1, "Room number is required"),
   dutyType: z.string().min(1, "Duty type is required"),
+  dutyDate: z.string().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 type InvigilationDutyForm = z.infer<typeof invigilationDutySchema>;
@@ -366,6 +370,10 @@ function InvigilationDutiesContent() {
       teacherId: 0,
       roomNumber: "",
       dutyType: "",
+      dutyDate: "",
+      startTime: "",
+      endTime: "",
+      notes: "",
     },
   });
 
@@ -399,6 +407,10 @@ function InvigilationDutiesContent() {
           teacher_id: data.teacherId,
           room_number: data.roomNumber,
           duty_type: data.dutyType,
+          duty_date: data.dutyDate || null,
+          start_time: data.startTime || null,
+          end_time: data.endTime || null,
+          notes: data.notes || null,
           school_id: schoolId 
         }]);
       if (error) throw error;
@@ -424,6 +436,10 @@ function InvigilationDutiesContent() {
           teacher_id: data.teacherId,
           room_number: data.roomNumber,
           duty_type: data.dutyType,
+          duty_date: data.dutyDate || null,
+          start_time: data.startTime || null,
+          end_time: data.endTime || null,
+          notes: data.notes || null,
         })
         .eq("id", id);
       if (error) throw error;
@@ -809,7 +825,7 @@ function InvigilationDutiesContent() {
                 <form onSubmit={autoForm.handleSubmit(onAutoAssign)} className="space-y-4">
                   <FormField
                     control={autoForm.control}
-                    name="examId"
+                    name="examScheduleId"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t.exam}</FormLabel>
@@ -825,7 +841,7 @@ function InvigilationDutiesContent() {
                           <SelectContent>
                             {exams?.map((exam) => (
                               <SelectItem key={exam.id} value={exam.id.toString()}>
-                                {exam.name}
+                                {exam.subject} - {exam.exam_date}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -933,7 +949,7 @@ function InvigilationDutiesContent() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="examId"
+                      name="examScheduleId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t.exam}</FormLabel>
@@ -949,7 +965,7 @@ function InvigilationDutiesContent() {
                             <SelectContent>
                               {exams?.map((exam) => (
                                 <SelectItem key={exam.id} value={exam.id.toString()}>
-                                  {exam.name}
+                                  {exam.subject} - {exam.exam_date}
                                 </SelectItem>
                               ))}
                             </SelectContent>
