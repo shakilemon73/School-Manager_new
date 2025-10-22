@@ -1093,16 +1093,16 @@ export type Exam = typeof exams.$inferSelect;
 export const examSchedules = pgTable("exam_schedules", {
   id: serial("id").primaryKey(),
   examId: integer("exam_id").references(() => exams.id).notNull(),
+  classId: integer("class_id").references(() => classes.id).notNull(),
   subject: text("subject").notNull(),
   date: date("date").notNull(),
   startTime: time("start_time").notNull(),
   endTime: time("end_time").notNull(),
-  fullMarks: integer("full_marks").notNull(),
-  passMarks: integer("pass_marks").notNull(),
-  classId: integer("class_id").references(() => classes.id),
+  venue: text("venue"),
+  breakDuration: integer("break_duration"),
   roomId: integer("room_id"),
   teacherId: integer("teacher_id"),
-  schoolId: integer("school_id").notNull(),
+  schoolId: integer("school_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -1925,7 +1925,7 @@ export type AnnouncementCategory = typeof announcementCategories.$inferSelect;
 // Seating Arrangements
 export const seatingArrangements = pgTable("seating_arrangements", {
   id: serial("id").primaryKey(),
-  examId: integer("exam_id").notNull(),
+  examScheduleId: integer("exam_schedule_id").notNull(),
   studentId: integer("student_id").notNull(),
   roomNumber: text("room_number").notNull(),
   seatNumber: text("seat_number").notNull(),
@@ -1937,10 +1937,10 @@ export const seatingArrangements = pgTable("seating_arrangements", {
   approvalStatus: text("approval_status").default("pending"),
   approvedBy: integer("approved_by"),
   approvedAt: timestamp("approved_at"),
-  instructions: text("instructions"),
+  isReserved: boolean("is_reserved").default(false),
+  reservedReason: text("reserved_reason"),
   schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const seatingArrangementsInsertSchema = createInsertSchema(seatingArrangements);
@@ -1950,14 +1950,10 @@ export type SeatingArrangement = typeof seatingArrangements.$inferSelect;
 // Invigilation Duties
 export const invigilationDuties = pgTable("invigilation_duties", {
   id: serial("id").primaryKey(),
-  examId: integer("exam_id").notNull(),
+  examScheduleId: integer("exam_schedule_id").notNull(),
   teacherId: integer("teacher_id").notNull(),
   roomNumber: text("room_number").notNull(),
-  dutyType: text("duty_type").default("main"),
-  dutyDate: date("duty_date").notNull(),
-  startTime: time("start_time").notNull(),
-  endTime: time("end_time").notNull(),
-  notes: text("notes"),
+  dutyType: text("duty_type"),
   schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -2001,6 +1997,23 @@ export const teacherAvailability = pgTable("teacher_availability", {
 export const teacherAvailabilityInsertSchema = createInsertSchema(teacherAvailability);
 export type InsertTeacherAvailability = z.infer<typeof teacherAvailabilityInsertSchema>;
 export type TeacherAvailability = typeof teacherAvailability.$inferSelect;
+
+// Exam Schedule Templates - for auto-generating schedules
+export const examScheduleTemplates = pgTable("exam_schedule_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  description: text("description"),
+  examType: text("exam_type").notNull(), // midterm, final, etc.
+  templateData: json("template_data").notNull(), // {subjects: [{subject, duration, breaks}], startTime, dayGap}
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const examScheduleTemplatesInsertSchema = createInsertSchema(examScheduleTemplates);
+export type InsertExamScheduleTemplate = z.infer<typeof examScheduleTemplatesInsertSchema>;
+export type ExamScheduleTemplate = typeof examScheduleTemplates.$inferSelect;
 
 // Duty Swaps
 export const dutySwaps = pgTable("duty_swaps", {

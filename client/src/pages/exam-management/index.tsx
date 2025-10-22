@@ -44,14 +44,16 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CalendarIcon, Plus, Pencil, Trash2, FileText, Users, BookOpen, Download, Copy, Lock, Unlock, Building, MoreVertical, Eye, EyeOff, DoorOpen } from "lucide-react";
-import { format } from "date-fns";
+import { CalendarIcon, Plus, Pencil, Trash2, FileText, Users, BookOpen, Download, Copy, Lock, Unlock, Building, MoreVertical, Eye, EyeOff, DoorOpen, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameDay, isSameMonth, addMonths, subMonths } from "date-fns";
 import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { AppShell } from "@/components/layout/app-shell";
 import { ResponsivePageLayout } from "@/components/layout/responsive-page-layout";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { BulkOperations, ExamPDFGenerator } from "@/lib/exam-management-utils";
 import { utils as xlsxUtils, write as xlsxWrite } from "xlsx";
 
@@ -184,6 +186,19 @@ const translations = {
     selectFeatures: "Select room features",
     roomsSubtitle: "Manage exam rooms and their facilities",
     buildingFloor: "Building/Floor",
+    calendarView: "Calendar View",
+    previousMonth: "Previous Month",
+    nextMonth: "Next Month",
+    noExamsOnThisDay: "No exams scheduled on this day",
+    examsOnThisDay: "Exams on this day",
+    viewDetails: "View Details",
+    sunday: "Sun",
+    monday: "Mon",
+    tuesday: "Tue",
+    wednesday: "Wed",
+    thursday: "Thu",
+    friday: "Fri",
+    saturday: "Sat",
   },
   bn: {
     title: "পরীক্ষা ব্যবস্থাপনা",
@@ -269,6 +284,19 @@ const translations = {
     selectFeatures: "কক্ষের সুবিধা নির্বাচন করুন",
     roomsSubtitle: "পরীক্ষা কক্ষ এবং তাদের সুবিধাদি পরিচালনা করুন",
     buildingFloor: "ভবন/তলা",
+    calendarView: "ক্যালেন্ডার ভিউ",
+    previousMonth: "পূর্ববর্তী মাস",
+    nextMonth: "পরবর্তী মাস",
+    noExamsOnThisDay: "এই দিনে কোন পরীক্ষা নির্ধারিত নেই",
+    examsOnThisDay: "এই দিনের পরীক্ষা",
+    viewDetails: "বিস্তারিত দেখুন",
+    sunday: "রবি",
+    monday: "সোম",
+    tuesday: "মঙ্গল",
+    wednesday: "বুধ",
+    thursday: "বৃহঃ",
+    friday: "শুক্র",
+    saturday: "শনি",
   },
 };
 
@@ -281,6 +309,8 @@ function ExamManagementContent() {
   const [editingExam, setEditingExam] = useState<any>(null);
   const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<any>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
   // Exam queries
   const { data: exams, isLoading } = useQuery({
@@ -310,7 +340,7 @@ function ExamManagementContent() {
         .from("academic_years")
         .select("*")
         .eq("school_id", schoolId)
-        .order("year", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -697,6 +727,36 @@ function ExamManagementContent() {
     return { label: t.ongoing, color: "green" };
   };
 
+  const generateCalendarDays = () => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const calendarStart = startOfWeek(monthStart);
+    const calendarEnd = endOfWeek(monthEnd);
+    
+    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  };
+
+  const getExamsForDay = (day: Date) => {
+    if (!exams) return [];
+    return exams.filter((exam: any) => {
+      const examStart = new Date(exam.start_date);
+      const examEnd = new Date(exam.end_date);
+      return day >= examStart && day <= examEnd;
+    });
+  };
+
+  const handlePreviousMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
+  const weekDays = [
+    t.sunday, t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday
+  ];
+
   if (!authReady) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -727,7 +787,7 @@ function ExamManagementContent() {
 
       {/* Tabs */}
       <Tabs defaultValue="exams" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-2xl grid-cols-3">
           <TabsTrigger value="exams" data-testid="tab-exams">
             <BookOpen className="mr-2 h-4 w-4" />
             {t.exams}
@@ -735,6 +795,10 @@ function ExamManagementContent() {
           <TabsTrigger value="rooms" data-testid="tab-rooms">
             <Building className="mr-2 h-4 w-4" />
             {t.rooms}
+          </TabsTrigger>
+          <TabsTrigger value="calendar" data-testid="tab-calendar">
+            <Calendar className="mr-2 h-4 w-4" />
+            {t.calendarView}
           </TabsTrigger>
         </TabsList>
 
@@ -816,7 +880,7 @@ function ExamManagementContent() {
                             <SelectContent>
                               {academicYears?.map((year: any) => (
                                 <SelectItem key={year.id} value={year.id.toString()}>
-                                  {year.year}
+                                  {year.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -967,7 +1031,7 @@ function ExamManagementContent() {
                           <TableCell>
                             {examType ? (language === 'bn' ? examType.labelBn : examType.labelEn) : exam.type}
                           </TableCell>
-                          <TableCell>{exam.academic_years?.year || 'N/A'}</TableCell>
+                          <TableCell>{exam.academic_years?.name || 'N/A'}</TableCell>
                           <TableCell>
                             <div className="flex items-center text-sm">
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -1424,6 +1488,220 @@ function ExamManagementContent() {
                   {t.noRooms}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Calendar View Tab */}
+        <TabsContent value="calendar" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>{t.calendarView}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousMonth}
+                    data-testid="button-previous-month"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    {t.previousMonth}
+                  </Button>
+                  <div className="text-lg font-semibold px-4" data-testid="text-current-month">
+                    {format(currentMonth, 'MMMM yyyy')}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextMonth}
+                    data-testid="button-next-month"
+                  >
+                    {t.nextMonth}
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Week days header */}
+                <div className="grid grid-cols-7 gap-2">
+                  {weekDays.map((day, index) => (
+                    <div
+                      key={index}
+                      className="text-center font-semibold text-sm py-2 border-b"
+                      data-testid={`weekday-${index}`}
+                    >
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Calendar grid */}
+                <div className="grid grid-cols-7 gap-2">
+                  {generateCalendarDays().map((day, index) => {
+                    const dayExams = getExamsForDay(day);
+                    const isCurrentMonth = isSameMonth(day, currentMonth);
+                    const isToday = isSameDay(day, new Date());
+                    
+                    const upcomingExams = dayExams.filter(e => {
+                      const status = getExamStatus(e);
+                      return status.color === 'blue';
+                    });
+                    const ongoingExams = dayExams.filter(e => {
+                      const status = getExamStatus(e);
+                      return status.color === 'green';
+                    });
+                    const completedExams = dayExams.filter(e => {
+                      const status = getExamStatus(e);
+                      return status.color === 'gray';
+                    });
+
+                    return (
+                      <Sheet key={index}>
+                        <SheetTrigger asChild>
+                          <button
+                            className={`
+                              relative min-h-[80px] p-2 rounded-lg border transition-colors
+                              ${!isCurrentMonth ? 'opacity-40' : ''}
+                              ${isToday ? 'border-blue-500 border-2 bg-blue-50 dark:bg-blue-950' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}
+                              ${dayExams.length > 0 ? 'cursor-pointer' : 'cursor-default'}
+                            `}
+                            disabled={dayExams.length === 0}
+                            data-testid={`day-cell-${format(day, 'yyyy-MM-dd')}`}
+                          >
+                            <div className="text-sm font-medium text-left">
+                              {format(day, 'd')}
+                            </div>
+                            
+                            {dayExams.length > 0 && (
+                              <div className="mt-1 space-y-1">
+                                {upcomingExams.length > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                                    <span className="text-xs" data-testid={`badge-upcoming-${format(day, 'yyyy-MM-dd')}`}>
+                                      {upcomingExams.length}
+                                    </span>
+                                  </div>
+                                )}
+                                {ongoingExams.length > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                                    <span className="text-xs" data-testid={`badge-ongoing-${format(day, 'yyyy-MM-dd')}`}>
+                                      {ongoingExams.length}
+                                    </span>
+                                  </div>
+                                )}
+                                {completedExams.length > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-gray-400" />
+                                    <span className="text-xs" data-testid={`badge-completed-${format(day, 'yyyy-MM-dd')}`}>
+                                      {completedExams.length}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </button>
+                        </SheetTrigger>
+
+                        {dayExams.length > 0 && (
+                          <SheetContent className="overflow-y-auto">
+                            <SheetHeader>
+                              <SheetTitle>
+                                {t.examsOnThisDay}
+                              </SheetTitle>
+                              <p className="text-sm text-muted-foreground">
+                                {format(day, 'EEEE, MMMM d, yyyy')}
+                              </p>
+                            </SheetHeader>
+                            
+                            <div className="mt-6 space-y-4">
+                              {dayExams.map((exam: any) => {
+                                const status = getExamStatus(exam);
+                                const examType = examTypes.find(t => t.value === exam.type);
+                                
+                                return (
+                                  <Card key={exam.id} data-testid={`exam-card-${exam.id}`}>
+                                    <CardHeader className="pb-3">
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <CardTitle className="text-base">
+                                            {exam.name}
+                                          </CardTitle>
+                                          <CardDescription className="mt-1">
+                                            {examType ? (language === 'bn' ? examType.labelBn : examType.labelEn) : exam.type}
+                                          </CardDescription>
+                                        </div>
+                                      </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                      <div className="flex items-center text-sm text-muted-foreground">
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {format(new Date(exam.start_date), 'MMM dd')} - {format(new Date(exam.end_date), 'MMM dd, yyyy')}
+                                      </div>
+                                      
+                                      <div className="flex flex-wrap gap-2">
+                                        <Badge 
+                                          variant={status.color === 'green' ? 'default' : status.color === 'blue' ? 'secondary' : 'outline'}
+                                          data-testid={`exam-status-${exam.id}`}
+                                        >
+                                          {status.label}
+                                        </Badge>
+                                        
+                                        {exam.is_published === true && (
+                                          <Badge variant="default" className="bg-green-500">
+                                            {t.published}
+                                          </Badge>
+                                        )}
+                                        {exam.is_published === false && (
+                                          <Badge variant="secondary">
+                                            {t.draft}
+                                          </Badge>
+                                        )}
+                                        {exam.is_locked === true && (
+                                          <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                                            {t.locked}
+                                          </Badge>
+                                        )}
+                                      </div>
+
+                                      {exam.description && (
+                                        <p className="text-sm text-muted-foreground">
+                                          {exam.description}
+                                        </p>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </SheetContent>
+                        )}
+                      </Sheet>
+                    );
+                  })}
+                </div>
+
+                {/* Legend */}
+                <div className="mt-6 pt-4 border-t">
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-blue-500" />
+                      <span>{t.upcoming}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-green-500" />
+                      <span>{t.ongoing}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-gray-400" />
+                      <span>{t.completed}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

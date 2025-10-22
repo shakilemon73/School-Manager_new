@@ -62,13 +62,12 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { AutoSeatingEngine, ExamPDFGenerator, type SeatingPattern } from "@/lib/exam-management-utils";
 
 const seatingArrangementSchema = z.object({
-  examId: z.number().min(1, "Exam is required"),
+  examScheduleId: z.number().min(1, "Exam schedule is required"),
   studentId: z.number().min(1, "Student is required"),
   roomNumber: z.string().min(1, "Room number is required"),
   seatNumber: z.string().min(1, "Seat number is required"),
   rowNumber: z.number().min(1, "Row number is required"),
   columnNumber: z.number().min(1, "Column number is required"),
-  instructions: z.string().optional(),
   isSpecialNeeds: z.boolean().default(false),
   specialNeedsNote: z.string().optional(),
 });
@@ -76,7 +75,7 @@ const seatingArrangementSchema = z.object({
 type SeatingArrangementForm = z.infer<typeof seatingArrangementSchema>;
 
 const autoSeatingSchema = z.object({
-  examId: z.number().min(1, "Exam is required"),
+  examScheduleId: z.number().min(1, "Exam schedule is required"),
   pattern: z.enum(['zigzag', 'class-mixing', 'roll-sequential', 'roll-random']),
   prioritizeSpecialNeeds: z.boolean().default(true),
   preventClassAdjacency: z.boolean().default(true),
@@ -259,7 +258,7 @@ function SeatingArrangementsContent() {
         .from("seating_arrangements")
         .select(`
           *,
-          exams (id, name, type),
+          exam_schedules (id, subject, exam_date, start_time, end_time),
           students (id, name, roll_number, class, section)
         `)
         .eq("school_id", schoolId)
@@ -267,7 +266,7 @@ function SeatingArrangementsContent() {
         .order("seat_number", { ascending: true });
       
       if (selectedExam) {
-        query = query.eq("exam_id", selectedExam);
+        query = query.eq("exam_schedule_id", selectedExam);
       }
 
       const { data, error } = await query;
@@ -279,14 +278,14 @@ function SeatingArrangementsContent() {
   });
 
   const { data: exams } = useQuery({
-    queryKey: ["exams", schoolId],
+    queryKey: ["exam-schedules", schoolId],
     queryFn: async () => {
       if (!schoolId) throw new Error('School ID not found');
       const { data, error } = await supabase
-        .from("exams")
+        .from("exam_schedules")
         .select("*")
         .eq("school_id", schoolId)
-        .order("name");
+        .order("exam_date", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -328,13 +327,12 @@ function SeatingArrangementsContent() {
   const form = useForm<SeatingArrangementForm>({
     resolver: zodResolver(seatingArrangementSchema),
     defaultValues: {
-      examId: 0,
+      examScheduleId: 0,
       studentId: 0,
       roomNumber: "",
       seatNumber: "",
       rowNumber: 1,
       columnNumber: 1,
-      instructions: "",
       isSpecialNeeds: false,
       specialNeedsNote: "",
     },
@@ -343,7 +341,7 @@ function SeatingArrangementsContent() {
   const autoForm = useForm<AutoSeatingForm>({
     resolver: zodResolver(autoSeatingSchema),
     defaultValues: {
-      examId: 0,
+      examScheduleId: 0,
       pattern: 'zigzag',
       prioritizeSpecialNeeds: true,
       preventClassAdjacency: true,
@@ -357,13 +355,12 @@ function SeatingArrangementsContent() {
       const { error } = await supabase
         .from("seating_arrangements")
         .insert([{
-          exam_id: data.examId,
+          exam_schedule_id: data.examScheduleId,
           student_id: data.studentId,
           room_number: data.roomNumber,
           seat_number: data.seatNumber,
           row_number: data.rowNumber,
           column_number: data.columnNumber,
-          instructions: data.instructions,
           is_special_needs: data.isSpecialNeeds,
           special_needs_note: data.specialNeedsNote,
           school_id: schoolId,
@@ -387,13 +384,12 @@ function SeatingArrangementsContent() {
       const { error } = await supabase
         .from("seating_arrangements")
         .update({
-          exam_id: data.examId,
+          exam_schedule_id: data.examScheduleId,
           student_id: data.studentId,
           room_number: data.roomNumber,
           seat_number: data.seatNumber,
           row_number: data.rowNumber,
           column_number: data.columnNumber,
-          instructions: data.instructions,
           is_special_needs: data.isSpecialNeeds,
           special_needs_note: data.specialNeedsNote,
           school_id: schoolId,
@@ -478,12 +474,12 @@ function SeatingArrangementsContent() {
       await supabase
         .from("seating_arrangements")
         .delete()
-        .eq("exam_id", data.examId)
+        .eq("exam_schedule_id", data.examScheduleId)
         .eq("school_id", schoolId);
 
       // Insert new arrangements
       const insertData = result.arrangements.map(arr => ({
-        exam_id: data.examId,
+        exam_schedule_id: data.examScheduleId,
         student_id: arr.studentId,
         room_id: arr.roomId,
         room_number: arr.roomNumber,
@@ -547,7 +543,7 @@ function SeatingArrangementsContent() {
           approved_by: user.id,
           approved_at: new Date().toISOString(),
         })
-        .eq("exam_id", selectedExam)
+        .eq("exam_schedule_id", selectedExam)
         .eq("school_id", schoolId)
         .eq("approval_status", "pending");
       if (error) throw error;
@@ -574,13 +570,12 @@ function SeatingArrangementsContent() {
   const handleEdit = (arrangement: any) => {
     setEditingArrangement(arrangement);
     form.reset({
-      examId: arrangement.exam_id,
+      examScheduleId: arrangement.exam_schedule_id,
       studentId: arrangement.student_id,
       roomNumber: arrangement.room_number,
       seatNumber: arrangement.seat_number,
       rowNumber: arrangement.row_number,
       columnNumber: arrangement.column_number,
-      instructions: arrangement.instructions || "",
       isSpecialNeeds: arrangement.is_special_needs || false,
       specialNeedsNote: arrangement.special_needs_note || "",
     });
@@ -665,7 +660,7 @@ function SeatingArrangementsContent() {
                 <form onSubmit={autoForm.handleSubmit(onAutoGenerate)} className="space-y-4">
                   <FormField
                     control={autoForm.control}
-                    name="examId"
+                    name="examScheduleId"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t.exam}</FormLabel>
@@ -681,7 +676,7 @@ function SeatingArrangementsContent() {
                           <SelectContent>
                             {exams?.map((exam) => (
                               <SelectItem key={exam.id} value={exam.id.toString()}>
-                                {exam.name}
+                                {exam.subject} - {exam.exam_date}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -803,7 +798,7 @@ function SeatingArrangementsContent() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="examId"
+                      name="examScheduleId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t.exam}</FormLabel>
@@ -819,7 +814,7 @@ function SeatingArrangementsContent() {
                             <SelectContent>
                               {exams?.map((exam) => (
                                 <SelectItem key={exam.id} value={exam.id.toString()}>
-                                  {exam.name}
+                                  {exam.subject} - {exam.exam_date}
                                 </SelectItem>
                               ))}
                             </SelectContent>

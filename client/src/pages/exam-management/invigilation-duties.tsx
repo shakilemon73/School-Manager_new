@@ -62,20 +62,16 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { AutoDutyAssigner, ExamPDFGenerator } from "@/lib/exam-management-utils";
 
 const invigilationDutySchema = z.object({
-  examId: z.number().min(1, "Exam is required"),
+  examScheduleId: z.number().min(1, "Exam schedule is required"),
   teacherId: z.number().min(1, "Teacher is required"),
   roomNumber: z.string().min(1, "Room number is required"),
   dutyType: z.string().min(1, "Duty type is required"),
-  dutyDate: z.string().min(1, "Duty date is required"),
-  startTime: z.string().min(1, "Start time is required"),
-  endTime: z.string().min(1, "End time is required"),
-  notes: z.string().optional(),
 });
 
 type InvigilationDutyForm = z.infer<typeof invigilationDutySchema>;
 
 const autoAssignSchema = z.object({
-  examId: z.number().min(1, "Exam is required"),
+  examScheduleId: z.number().min(1, "Exam schedule is required"),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
   chiefToAssistantRatio: z.string().default("1:3"),
@@ -266,15 +262,14 @@ function InvigilationDutiesContent() {
         .from("invigilation_duties")
         .select(`
           *,
-          exams (id, name, type),
+          exam_schedules (id, subject, exam_date, start_time, end_time),
           teachers (id, name, email)
         `)
         .eq("school_id", schoolId)
-        .order("duty_date", { ascending: true })
-        .order("start_time", { ascending: true });
+        .order("created_at", { ascending: false });
 
       if (selectedExam) {
-        query = query.eq("exam_id", selectedExam);
+        query = query.eq("exam_schedule_id", selectedExam);
       }
 
       const { data, error } = await query;
@@ -286,14 +281,14 @@ function InvigilationDutiesContent() {
   });
 
   const { data: exams } = useQuery({
-    queryKey: ["exams", schoolId],
+    queryKey: ["exam-schedules", schoolId],
     queryFn: async () => {
       if (!schoolId) throw new Error('School ID not found');
       const { data, error } = await supabase
-        .from("exams")
+        .from("exam_schedules")
         .select("*")
         .eq("school_id", schoolId)
-        .order("name");
+        .order("exam_date", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -367,21 +362,17 @@ function InvigilationDutiesContent() {
   const form = useForm<InvigilationDutyForm>({
     resolver: zodResolver(invigilationDutySchema),
     defaultValues: {
-      examId: 0,
+      examScheduleId: 0,
       teacherId: 0,
       roomNumber: "",
       dutyType: "",
-      dutyDate: "",
-      startTime: "",
-      endTime: "",
-      notes: "",
     },
   });
 
   const autoForm = useForm<AutoAssignForm>({
     resolver: zodResolver(autoAssignSchema),
     defaultValues: {
-      examId: 0,
+      examScheduleId: 0,
       startDate: "",
       endDate: "",
       chiefToAssistantRatio: "1:3",
@@ -404,14 +395,10 @@ function InvigilationDutiesContent() {
       const { error } = await supabase
         .from("invigilation_duties")
         .insert([{ 
-          exam_id: data.examId,
+          exam_schedule_id: data.examScheduleId,
           teacher_id: data.teacherId,
           room_number: data.roomNumber,
           duty_type: data.dutyType,
-          duty_date: data.dutyDate,
-          start_time: data.startTime,
-          end_time: data.endTime,
-          notes: data.notes,
           school_id: schoolId 
         }]);
       if (error) throw error;
@@ -433,14 +420,10 @@ function InvigilationDutiesContent() {
       const { error } = await supabase
         .from("invigilation_duties")
         .update({ 
-          exam_id: data.examId,
+          exam_schedule_id: data.examScheduleId,
           teacher_id: data.teacherId,
           room_number: data.roomNumber,
           duty_type: data.dutyType,
-          duty_date: data.dutyDate,
-          start_time: data.startTime,
-          end_time: data.endTime,
-          notes: data.notes,
         })
         .eq("id", id);
       if (error) throw error;
@@ -520,24 +503,19 @@ function InvigilationDutiesContent() {
         { chiefRatio, assistantRatio }
       );
 
-      // Delete existing duties for this exam in the date range
+      // Delete existing duties for this exam schedule
       await supabase
         .from("invigilation_duties")
         .delete()
-        .eq("exam_id", data.examId)
-        .gte("duty_date", data.startDate)
-        .lte("duty_date", data.endDate)
+        .eq("exam_schedule_id", data.examScheduleId)
         .eq("school_id", schoolId);
 
       // Insert new duties
       const insertData = result.assignments.map(duty => ({
-        exam_id: data.examId,
+        exam_schedule_id: data.examScheduleId,
         teacher_id: duty.teacherId,
         room_number: duty.roomName,
         duty_type: duty.dutyType,
-        duty_date: duty.date,
-        start_time: "09:00", // Default time, could be enhanced
-        end_time: "12:00",
         school_id: schoolId,
       }));
 
@@ -650,7 +628,7 @@ function InvigilationDutiesContent() {
     mutationFn: async () => {
       if (!schoolId || !selectedExam) throw new Error('Required data not found');
       
-      const examDuties = duties?.filter(d => d.exam_id === selectedExam);
+      const examDuties = duties?.filter(d => d.exam_schedule_id === selectedExam);
       if (!examDuties || examDuties.length === 0) {
         throw new Error('No duties found for this exam');
       }
@@ -661,8 +639,8 @@ function InvigilationDutiesContent() {
       const notifications = uniqueTeachers.map(teacherId => ({
         title: `Invigilation Duty Assigned`,
         title_bn: `তত্ত্বাবধান দায়িত্ব নিয়োগ`,
-        message: `You have been assigned invigilation duty for ${exam?.name || 'exam'}. Please check your schedule.`,
-        message_bn: `আপনাকে ${exam?.name || 'পরীক্ষার'} জন্য তত্ত্বাবধান দায়িত্ব দেওয়া হয়েছে। অনুগ্রহ করে আপনার সময়সূচী দেখুন।`,
+        message: `You have been assigned invigilation duty for ${exam?.subject || 'exam'}. Please check your schedule.`,
+        message_bn: `আপনাকে ${exam?.subject || 'পরীক্ষার'} জন্য তত্ত্বাবধান দায়িত্ব দেওয়া হয়েছে। অনুগ্রহ করে আপনার সময়সূচী দেখুন।`,
         type: 'info',
         priority: 'high',
         category: 'Invigilation',
@@ -687,7 +665,7 @@ function InvigilationDutiesContent() {
     
     try {
       const exam = exams?.find(e => e.id === selectedExam);
-      const examName = exam?.name || "Exam";
+      const examName = exam?.subject || "Exam";
 
       if (type === 'teacher') {
         const groupedByTeacher = duties.reduce((acc: any, duty: any) => {
@@ -764,14 +742,10 @@ function InvigilationDutiesContent() {
   const handleEdit = (duty: any) => {
     setEditingDuty(duty);
     form.reset({
-      examId: duty.exam_id,
+      examScheduleId: duty.exam_schedule_id,
       teacherId: duty.teacher_id,
       roomNumber: duty.room_number,
       dutyType: duty.duty_type,
-      dutyDate: duty.duty_date,
-      startTime: duty.start_time,
-      endTime: duty.end_time,
-      notes: duty.notes || "",
     });
     setIsDialogOpen(true);
   };
@@ -807,7 +781,7 @@ function InvigilationDutiesContent() {
   const currentRatio = stats.chief > 0 ? `1:${Math.round(stats.assistant / stats.chief)}` : '0:0';
 
   const filteredDuties = selectedExam
-    ? duties?.filter((d) => d.exam_id === selectedExam)
+    ? duties?.filter((d) => d.exam_schedule_id === selectedExam)
     : duties;
 
   return (
