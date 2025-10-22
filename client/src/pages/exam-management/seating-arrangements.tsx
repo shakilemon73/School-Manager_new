@@ -53,7 +53,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { 
   Users, Plus, Pencil, Trash2, Wand2, Filter, Download, CheckCircle, 
-  XCircle, AlertCircle, BarChart3, Grid3x3, Printer
+  XCircle, AlertCircle, BarChart3, Grid3x3, Printer, ListTodo
 } from "lucide-react";
 import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { AppShell } from "@/components/layout/app-shell";
@@ -311,7 +311,7 @@ function SeatingArrangementsContent() {
     queryKey: ["exam-rooms", schoolId],
     queryFn: async () => {
       if (!schoolId) throw new Error('School ID not found');
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from("exam_rooms")
         .select("*")
         .eq("school_id", schoolId)
@@ -439,7 +439,7 @@ function SeatingArrangementsContent() {
         class: s.class || '',
         section: s.section || '',
         rollNumber: s.roll_number || '',
-        isSpecialNeeds: false, // Could be enhanced to read from student record
+        isSpecialNeeds: false,
       }));
 
       if (examStudents.length === 0) {
@@ -607,9 +607,8 @@ function SeatingArrangementsContent() {
             rollNumber: a.students?.roll_number || '',
             studentName: a.students?.name || '',
             class: a.students?.class || '',
-            studentId: a.students?.student_id || '',
-          })),
-          { name: "School Name", address: "School Address" }
+            section: a.students?.section || '',
+          }))
         );
         pdf.save(`seating-${roomNumber}.pdf`);
       }
@@ -620,182 +619,57 @@ function SeatingArrangementsContent() {
     }
   };
 
-  if (!authReady) {
-    return <div className="flex items-center justify-center h-screen"><div className="text-center py-8">{t.loading}</div></div>;
-  }
-
-  // Calculate statistics
+  // Calculate stats
   const stats = {
     total: arrangements?.length || 0,
-    specialNeeds: arrangements?.filter((a: any) => a.is_special_needs).length || 0,
     pending: arrangements?.filter((a: any) => a.approval_status === 'pending').length || 0,
     approved: arrangements?.filter((a: any) => a.approval_status === 'approved').length || 0,
+    specialNeeds: arrangements?.filter((a: any) => a.is_special_needs).length || 0,
   };
 
-  const totalCapacity = rooms?.reduce((sum, r) => sum + r.capacity, 0) || 0;
+  const totalCapacity = rooms?.reduce((sum, room) => sum + (room.capacity || 0), 0) || 0;
   const available = totalCapacity - stats.total;
 
+  if (!authReady) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center py-8">{t.loading}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{t.title}</h1>
-          <p className="text-muted-foreground mt-1">{t.subtitle}</p>
+          <h1 className="text-xl sm:text-2xl font-semibold">{t.title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
-        <div className="flex gap-2">
-          <Dialog open={isAutoDialogOpen} onOpenChange={setIsAutoDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-auto-generate" size="lg" variant="default">
-                <Wand2 className="mr-2 h-4 w-4" />
-                {t.autoGenerate}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>{t.autoGeneratingTitle}</DialogTitle>
-                <DialogDescription>{t.autoGeneratingDesc}</DialogDescription>
-              </DialogHeader>
-              <Form {...autoForm}>
-                <form onSubmit={autoForm.handleSubmit(onAutoGenerate)} className="space-y-4">
-                  <FormField
-                    control={autoForm.control}
-                    name="examScheduleId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t.exam}</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(Number(value))}
-                          value={field.value?.toString()}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-auto-exam">
-                              <SelectValue placeholder={t.selectExam} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {exams?.map((exam) => (
-                              <SelectItem key={exam.id} value={exam.id.toString()}>
-                                {exam.subject} - {exam.exam_date}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={autoForm.control}
-                    name="pattern"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t.pattern}</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-pattern">
-                              <SelectValue placeholder={t.selectPattern} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {seatingPatterns.map((pattern) => (
-                              <SelectItem key={pattern.value} value={pattern.value}>
-                                <div className="flex flex-col">
-                                  <span>{language === 'bn' ? pattern.labelBn : pattern.labelEn}</span>
-                                  <span className="text-xs text-muted-foreground">{pattern.desc}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={autoForm.control}
-                    name="prioritizeSpecialNeeds"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="checkbox-special-needs"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>{t.prioritizeSpecialNeeds}</FormLabel>
-                          <FormDescription>
-                            Assign front row seats to students with special needs
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={autoForm.control}
-                    name="preventClassAdjacency"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="checkbox-prevent-adjacency"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>{t.preventClassAdjacency}</FormLabel>
-                          <FormDescription>
-                            Mix students from different classes to prevent cheating
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsAutoDialogOpen(false)}
-                      data-testid="button-cancel-auto"
-                    >
-                      {t.cancel}
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={autoGenerateMutation.isPending}
-                      data-testid="button-submit-auto"
-                    >
-                      {autoGenerateMutation.isPending ? t.loading : t.generate}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => setIsAutoDialogOpen(true)}
+            data-testid="button-auto-generate"
+            className="h-11 w-full sm:w-auto"
+          >
+            <Wand2 className="mr-2 h-4 w-4" />
+            {t.autoGenerate}
+          </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button data-testid="button-add-arrangement">
+              <Button data-testid="button-add-arrangement" className="h-11 w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 {t.addArrangement}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>
-                  {editingArrangement ? t.editArrangement : t.createArrangement}
-                </DialogTitle>
+                <DialogTitle>{editingArrangement ? t.editArrangement : t.createArrangement}</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="examScheduleId"
@@ -807,14 +681,14 @@ function SeatingArrangementsContent() {
                             value={field.value?.toString()}
                           >
                             <FormControl>
-                              <SelectTrigger data-testid="select-exam">
+                              <SelectTrigger data-testid="select-exam" className="h-11">
                                 <SelectValue placeholder={t.selectExam} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {exams?.map((exam) => (
                                 <SelectItem key={exam.id} value={exam.id.toString()}>
-                                  {exam.subject} - {exam.exam_date}
+                                  {exam.subject}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -835,7 +709,7 @@ function SeatingArrangementsContent() {
                             value={field.value?.toString()}
                           >
                             <FormControl>
-                              <SelectTrigger data-testid="select-student">
+                              <SelectTrigger data-testid="select-student" className="h-11">
                                 <SelectValue placeholder={t.selectStudent} />
                               </SelectTrigger>
                             </FormControl>
@@ -853,7 +727,7 @@ function SeatingArrangementsContent() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="roomNumber"
@@ -861,7 +735,7 @@ function SeatingArrangementsContent() {
                         <FormItem>
                           <FormLabel>{t.roomNumber}</FormLabel>
                           <FormControl>
-                            <Input {...field} data-testid="input-room" placeholder={t.enterRoom} />
+                            <Input {...field} placeholder={t.enterRoom} data-testid="input-room-number" className="h-11" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -875,7 +749,7 @@ function SeatingArrangementsContent() {
                         <FormItem>
                           <FormLabel>{t.seatNumber}</FormLabel>
                           <FormControl>
-                            <Input {...field} data-testid="input-seat" placeholder={t.enterSeat} />
+                            <Input {...field} placeholder={t.enterSeat} data-testid="input-seat-number" className="h-11" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -883,7 +757,7 @@ function SeatingArrangementsContent() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="rowNumber"
@@ -894,8 +768,10 @@ function SeatingArrangementsContent() {
                             <Input
                               {...field}
                               type="number"
-                              data-testid="input-row"
+                              min="1"
                               onChange={(e) => field.onChange(Number(e.target.value))}
+                              data-testid="input-row-number"
+                              className="h-11"
                             />
                           </FormControl>
                           <FormMessage />
@@ -913,8 +789,10 @@ function SeatingArrangementsContent() {
                             <Input
                               {...field}
                               type="number"
-                              data-testid="input-column"
+                              min="1"
                               onChange={(e) => field.onChange(Number(e.target.value))}
+                              data-testid="input-column-number"
+                              className="h-11"
                             />
                           </FormControl>
                           <FormMessage />
@@ -927,17 +805,17 @@ function SeatingArrangementsContent() {
                     control={form.control}
                     name="isSpecialNeeds"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border p-4">
                         <FormControl>
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
-                            data-testid="checkbox-special-needs-form"
+                            data-testid="checkbox-special-needs"
                           />
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel>{t.specialNeeds}</FormLabel>
-                          <FormDescription>{t.specialNeedsDesc}</FormDescription>
+                          <FormDescription className="text-xs">{t.specialNeedsDesc}</FormDescription>
                         </div>
                       </FormItem>
                     )}
@@ -951,7 +829,12 @@ function SeatingArrangementsContent() {
                         <FormItem>
                           <FormLabel>{t.specialNeedsNote}</FormLabel>
                           <FormControl>
-                            <Textarea {...field} data-testid="input-special-needs-note" rows={2} />
+                            <Textarea
+                              {...field}
+                              placeholder={t.enterInstructions}
+                              data-testid="textarea-special-needs-note"
+                              rows={3}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -959,8 +842,7 @@ function SeatingArrangementsContent() {
                     />
                   )}
 
-
-                  <div className="flex justify-end gap-2">
+                  <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
                     <Button
                       type="button"
                       variant="outline"
@@ -970,6 +852,7 @@ function SeatingArrangementsContent() {
                         form.reset();
                       }}
                       data-testid="button-cancel"
+                      className="h-11 w-full sm:w-auto"
                     >
                       {t.cancel}
                     </Button>
@@ -977,6 +860,7 @@ function SeatingArrangementsContent() {
                       type="submit"
                       disabled={createMutation.isPending || updateMutation.isPending}
                       data-testid="button-submit"
+                      className="h-11 w-full sm:w-auto"
                     >
                       {editingArrangement ? t.update : t.create}
                     </Button>
@@ -988,71 +872,72 @@ function SeatingArrangementsContent() {
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.totalSeats}</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+      {/* Statistics Cards - Minimalistic Design */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border shadow-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t.totalSeats}</CardTitle>
+            <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalCapacity}</div>
+            <div className="text-2xl sm:text-3xl font-semibold" data-testid="stat-total-seats">{totalCapacity}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.filledSeats}</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+        <Card className="border shadow-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t.filledSeats}</CardTitle>
+            <CheckCircle className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-2xl sm:text-3xl font-semibold" data-testid="stat-filled-seats">{stats.total}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.availableSeats}</CardTitle>
-            <XCircle className="h-4 w-4 text-blue-600" />
+        <Card className="border shadow-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t.availableSeats}</CardTitle>
+            <XCircle className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{available}</div>
+            <div className="text-2xl sm:text-3xl font-semibold" data-testid="stat-available-seats">{available}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.specialNeedsSeats}</CardTitle>
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
+        <Card className="border shadow-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t.specialNeedsSeats}</CardTitle>
+            <AlertCircle className="h-5 w-5 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.specialNeeds}</div>
+            <div className="text-2xl sm:text-3xl font-semibold" data-testid="stat-special-needs">{stats.specialNeeds}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filter and Actions */}
-      <div className="flex justify-between items-center">
+      {/* Filter and Actions - Responsive */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <Select
           value={selectedExam?.toString() || "all"}
           onValueChange={(value) => setSelectedExam(value === "all" ? null : Number(value))}
         >
-          <SelectTrigger className="w-64" data-testid="filter-exam">
+          <SelectTrigger className="w-full sm:w-64 h-11" data-testid="filter-exam">
             <SelectValue placeholder={t.exam} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Exams</SelectItem>
             {exams?.map((exam) => (
               <SelectItem key={exam.id} value={exam.id.toString()}>
-                {exam.name}
+                {exam.subject}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {selectedExam && stats.pending > 0 && (
             <Button
               onClick={() => approveAllMutation.mutate()}
               disabled={approveAllMutation.isPending}
               data-testid="button-approve-all"
+              className="h-11 flex-1 sm:flex-initial"
             >
               <CheckCircle className="mr-2 h-4 w-4" />
               {t.approveAll}
@@ -1061,7 +946,7 @@ function SeatingArrangementsContent() {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" data-testid="button-export">
+              <Button variant="outline" data-testid="button-export" className="h-11 flex-1 sm:flex-initial">
                 <Download className="mr-2 h-4 w-4" />
                 {t.exportPDF}
               </Button>
@@ -1077,125 +962,141 @@ function SeatingArrangementsContent() {
       </div>
 
       {/* Main Content */}
-      <Card>
+      <Card className="border shadow-none">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>{t.seatingArrangements}</CardTitle>
-            <Tabs value={currentView} onValueChange={(v: any) => setCurrentView(v)}>
-              <TabsList>
-                <TabsTrigger value="list" data-testid="tab-list">
-                  {t.listView}
-                </TabsTrigger>
-                <TabsTrigger value="grid" data-testid="tab-grid">
-                  <Grid3x3 className="h-4 w-4 mr-2" />
-                  {t.gridView}
-                </TabsTrigger>
-                <TabsTrigger value="stats" data-testid="tab-stats">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  {t.statsView}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="w-full sm:w-auto">
+              <CardTitle className="text-lg">{t.seatingArrangements}</CardTitle>
+              <CardDescription className="mt-1">
+                {arrangements?.length || 0} {t.seatingArrangements.toLowerCase()}
+              </CardDescription>
+            </div>
+            <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0 w-full sm:w-auto">
+              <Tabs value={currentView} onValueChange={(v: any) => setCurrentView(v)} className="w-full">
+                <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
+                  <TabsTrigger value="list" data-testid="tab-list" className="flex-1 sm:flex-initial">
+                    <ListTodo className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">{t.listView}</span>
+                    <span className="sm:hidden">List</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="grid" data-testid="tab-grid" className="flex-1 sm:flex-initial">
+                    <Grid3x3 className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">{t.gridView}</span>
+                    <span className="sm:hidden">Grid</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="stats" data-testid="tab-stats" className="flex-1 sm:flex-initial">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">{t.statsView}</span>
+                    <span className="sm:hidden">Stats</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
-          <CardDescription>
-            {arrangements?.length || 0} {t.seatingArrangements.toLowerCase()}
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">{t.loading}</div>
+            <div className="text-center py-12 text-muted-foreground">{t.loading}</div>
           ) : currentView === "list" ? (
             arrangements && arrangements.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.exam}</TableHead>
-                    <TableHead>{t.student}</TableHead>
-                    <TableHead>{t.room}</TableHead>
-                    <TableHead>{t.seat}</TableHead>
-                    <TableHead>{t.position}</TableHead>
-                    <TableHead>{t.approvalStatus}</TableHead>
-                    <TableHead>{t.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {arrangements.map((arrangement: any) => (
-                    <TableRow key={arrangement.id} data-testid={`row-arrangement-${arrangement.id}`}>
-                      <TableCell>{arrangement.exams?.name || 'N/A'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {arrangement.students?.name || 'N/A'}
-                          {arrangement.students?.roll_number && ` (${arrangement.students.roll_number})`}
-                          {arrangement.is_special_needs && (
-                            <Badge variant="outline" className="text-yellow-600">
-                              {t.specialNeeds}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{arrangement.room_number}</TableCell>
-                      <TableCell>{arrangement.seat_number}</TableCell>
-                      <TableCell>
-                        {t.row} {arrangement.row_number}, {t.column} {arrangement.column_number}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            arrangement.approval_status === 'approved'
-                              ? 'default'
-                              : arrangement.approval_status === 'rejected'
-                              ? 'destructive'
-                              : 'secondary'
-                          }
-                        >
-                          {t[arrangement.approval_status || 'pending']}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {arrangement.approval_status === 'pending' && (
+              <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[120px]">{t.exam}</TableHead>
+                      <TableHead className="min-w-[180px]">{t.student}</TableHead>
+                      <TableHead>{t.room}</TableHead>
+                      <TableHead>{t.seat}</TableHead>
+                      <TableHead className="hidden md:table-cell">{t.position}</TableHead>
+                      <TableHead>{t.approvalStatus}</TableHead>
+                      <TableHead className="w-[120px]">{t.actions}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {arrangements.map((arrangement: any) => (
+                      <TableRow key={arrangement.id} data-testid={`row-arrangement-${arrangement.id}`}>
+                        <TableCell className="text-sm">{arrangement.exams?.subject || 'N/A'}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-medium">{arrangement.students?.name || 'N/A'}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {arrangement.students?.roll_number && `Roll: ${arrangement.students.roll_number}`}
+                            </span>
+                            {arrangement.is_special_needs && (
+                              <Badge variant="outline" className="text-yellow-600 w-fit text-xs">
+                                {t.specialNeeds}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{arrangement.room_number}</TableCell>
+                        <TableCell className="text-sm font-medium">{arrangement.seat_number}</TableCell>
+                        <TableCell className="hidden md:table-cell text-sm">
+                          {t.row} {arrangement.row_number}, {t.column} {arrangement.column_number}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              arrangement.approval_status === 'approved'
+                                ? 'default'
+                                : arrangement.approval_status === 'rejected'
+                                ? 'destructive'
+                                : 'secondary'
+                            }
+                          >
+                            {t[arrangement.approval_status || 'pending']}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {arrangement.approval_status === 'pending' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => approveMutation.mutate(arrangement.id)}
+                                data-testid={`button-approve-${arrangement.id}`}
+                                className="h-9 w-9 p-0"
+                              >
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => approveMutation.mutate(arrangement.id)}
-                              data-testid={`button-approve-${arrangement.id}`}
+                              onClick={() => handleEdit(arrangement)}
+                              data-testid={`button-edit-${arrangement.id}`}
+                              className="h-9 w-9 p-0"
                             >
-                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <Pencil className="h-4 w-4" />
                             </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(arrangement)}
-                            data-testid={`button-edit-${arrangement.id}`}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(arrangement.id)}
-                            data-testid={`button-delete-${arrangement.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(arrangement.id)}
+                              data-testid={`button-delete-${arrangement.id}`}
+                              className="h-9 w-9 p-0"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                {t.noArrangements}
+              <div className="text-center py-12">
+                <Grid3x3 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">{t.noArrangements}</p>
               </div>
             )
           ) : currentView === "grid" ? (
-            <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
               {arrangements?.map((arrangement: any) => (
                 <div
                   key={arrangement.id}
-                  className={`p-3 border rounded-lg text-center cursor-pointer hover:shadow-md transition-shadow ${
+                  className={`p-2 sm:p-3 border rounded-lg text-center cursor-pointer hover:shadow-md transition-shadow ${
                     arrangement.is_special_needs ? 'bg-yellow-50 border-yellow-300' : 'bg-blue-50 border-blue-300'
                   }`}
                   title={`${arrangement.students?.name} - ${arrangement.seat_number}`}
@@ -1208,33 +1109,33 @@ function SeatingArrangementsContent() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Card className="border shadow-none">
                   <CardHeader>
                     <CardTitle className="text-sm">Approval Status</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>{t.pending}:</span>
-                        <span className="font-bold">{stats.pending}</span>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">{t.pending}:</span>
+                        <span className="font-bold text-lg">{stats.pending}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>{t.approved}:</span>
-                        <span className="font-bold text-green-600">{stats.approved}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">{t.approved}:</span>
+                        <span className="font-bold text-lg text-green-600">{stats.approved}</span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="border shadow-none">
                   <CardHeader>
                     <CardTitle className="text-sm">Capacity Usage</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Utilization:</span>
-                        <span className="font-bold">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Utilization:</span>
+                        <span className="font-bold text-lg">
                           {totalCapacity > 0 ? Math.round((stats.total / totalCapacity) * 100) : 0}%
                         </span>
                       </div>
@@ -1252,6 +1153,132 @@ function SeatingArrangementsContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Auto-Generate Dialog */}
+      <Dialog open={isAutoDialogOpen} onOpenChange={setIsAutoDialogOpen}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-auto-generate">
+          <DialogHeader>
+            <DialogTitle>{t.autoGeneratingTitle}</DialogTitle>
+            <DialogDescription>{t.autoGeneratingDesc}</DialogDescription>
+          </DialogHeader>
+          <Form {...autoForm}>
+            <form onSubmit={autoForm.handleSubmit(onAutoGenerate)} className="space-y-4">
+              <FormField
+                control={autoForm.control}
+                name="examScheduleId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t.exam}</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(Number(value))}
+                      value={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-auto-exam" className="h-11">
+                          <SelectValue placeholder={t.selectExam} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {exams?.map((exam) => (
+                          <SelectItem key={exam.id} value={exam.id.toString()}>
+                            {exam.subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={autoForm.control}
+                name="pattern"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t.pattern}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-pattern" className="h-11">
+                          <SelectValue placeholder={t.selectPattern} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {seatingPatterns.map((pattern) => (
+                          <SelectItem key={pattern.value} value={pattern.value}>
+                            {language === 'bn' ? pattern.labelBn : pattern.labelEn}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="space-y-3">
+                <FormField
+                  control={autoForm.control}
+                  name="prioritizeSpecialNeeds"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-prioritize-special-needs"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>{t.prioritizeSpecialNeeds}</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={autoForm.control}
+                  name="preventClassAdjacency"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-prevent-class-adjacency"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>{t.preventClassAdjacency}</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAutoDialogOpen(false)}
+                  data-testid="button-auto-cancel"
+                  className="h-11 w-full sm:w-auto"
+                >
+                  {t.cancel}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={autoGenerateMutation.isPending}
+                  data-testid="button-auto-submit"
+                  className="h-11 w-full sm:w-auto"
+                >
+                  {t.generate}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

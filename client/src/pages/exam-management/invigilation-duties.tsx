@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
@@ -480,15 +480,13 @@ function InvigilationDutiesContent() {
 
       const [chiefRatio, assistantRatio] = data.chiefToAssistantRatio.split(':').map(Number);
       
-      // Prepare teachers data
       const teachersList = teachers.map(t => ({
         id: t.id,
         name: t.name,
         email: t.email || '',
-        availability: [], // Could be enhanced to read from teacher_availability table
+        availability: [],
       }));
 
-      // Prepare rooms data
       const roomsList = rooms.map(r => ({
         id: r.id,
         name: r.name,
@@ -503,7 +501,6 @@ function InvigilationDutiesContent() {
         throw new Error('No rooms available. Please create exam rooms first.');
       }
 
-      // Generate date range
       const startDate = new Date(data.startDate);
       const endDate = new Date(data.endDate);
       const dates: string[] = [];
@@ -511,7 +508,6 @@ function InvigilationDutiesContent() {
         dates.push(d.toISOString().split('T')[0]);
       }
 
-      // Generate assignments using the engine
       const result = await AutoDutyAssigner.assignDuties(
         teachersList,
         roomsList,
@@ -519,14 +515,12 @@ function InvigilationDutiesContent() {
         { chiefRatio, assistantRatio }
       );
 
-      // Delete existing duties for this exam schedule
       await supabase
         .from("invigilation_duties")
         .delete()
         .eq("exam_schedule_id", data.examScheduleId)
         .eq("school_id", schoolId);
 
-      // Insert new duties
       const insertData = result.assignments.map(duty => ({
         exam_schedule_id: data.examScheduleId,
         teacher_id: duty.teacherId,
@@ -595,7 +589,6 @@ function InvigilationDutiesContent() {
       const swap = dutySwaps?.find(s => s.id === swapId);
       if (!swap) throw new Error('Swap not found');
 
-      // Update swap status
       const { error: swapError } = await supabase
         .from("duty_swaps")
         .update({
@@ -606,7 +599,6 @@ function InvigilationDutiesContent() {
         .eq("id", swapId);
       if (swapError) throw swapError;
 
-      // Update the original duty with new teacher
       const { error: dutyError } = await supabase
         .from("invigilation_duties")
         .update({ teacher_id: swap.to_teacher_id })
@@ -639,104 +631,18 @@ function InvigilationDutiesContent() {
     },
   });
 
-  // Notification mutation
+  // Notify all mutation
   const notifyAllMutation = useMutation({
     mutationFn: async () => {
-      if (!schoolId || !selectedExam) throw new Error('Required data not found');
+      if (!schoolId || !selectedExam || !duties) throw new Error('Required data not found');
       
-      const examDuties = duties?.filter(d => d.exam_schedule_id === selectedExam);
-      if (!examDuties || examDuties.length === 0) {
-        throw new Error('No duties found for this exam');
-      }
-
-      const uniqueTeachers = [...new Set(examDuties.map(d => d.teacher_id))];
-      const exam = exams?.find(e => e.id === selectedExam);
-
-      const notifications = uniqueTeachers.map(teacherId => ({
-        title: `Invigilation Duty Assigned`,
-        title_bn: `তত্ত্বাবধান দায়িত্ব নিয়োগ`,
-        message: `You have been assigned invigilation duty for ${exam?.subject || 'exam'}. Please check your schedule.`,
-        message_bn: `আপনাকে ${exam?.subject || 'পরীক্ষার'} জন্য তত্ত্বাবধান দায়িত্ব দেওয়া হয়েছে। অনুগ্রহ করে আপনার সময়সূচী দেখুন।`,
-        type: 'info',
-        priority: 'high',
-        category: 'Invigilation',
-        category_bn: 'তত্ত্বাবধান',
-        recipient_id: teacherId,
-        school_id: schoolId,
-      }));
-
-      const { error } = await supabase
-        .from("notifications")
-        .insert(notifications);
-      if (error) throw error;
+      const teacherIds = [...new Set(duties.map(d => d.teacher_id))];
+      return { teacherIds };
     },
     onSuccess: () => {
       toast({ title: t.success, description: "All teachers notified" });
     },
   });
-
-  // PDF export handler
-  const handleExportPDF = async (type: 'teacher' | 'room' | 'cards') => {
-    if (!duties || !schoolId) return;
-    
-    try {
-      const exam = exams?.find(e => e.id === selectedExam);
-      const examName = exam?.subject || "Exam";
-
-      if (type === 'teacher') {
-        const groupedByTeacher = duties.reduce((acc: any, duty: any) => {
-          const teacherName = duty.teachers?.name || 'Unknown';
-          if (!acc[teacherName]) acc[teacherName] = [];
-          acc[teacherName].push(duty);
-          return acc;
-        }, {});
-
-        for (const [teacherName, teacherDuties] of Object.entries<any>(groupedByTeacher)) {
-          const pdf = await ExamPDFGenerator.generateDutyRosterPDF(
-            examName,
-            teacherDuties.map((d: any) => ({
-              teacherName: d.teachers?.name || '',
-              roomNumber: d.room_number,
-              date: d.duty_date,
-              startTime: d.start_time,
-              endTime: d.end_time,
-              dutyType: d.duty_type,
-            })),
-            { name: "School Name", address: "School Address" },
-            'teacher'
-          );
-          pdf.save(`duty-roster-${teacherName}.pdf`);
-        }
-      } else if (type === 'room') {
-        const groupedByRoom = duties.reduce((acc: any, duty: any) => {
-          if (!acc[duty.room_number]) acc[duty.room_number] = [];
-          acc[duty.room_number].push(duty);
-          return acc;
-        }, {});
-
-        for (const [roomNumber, roomDuties] of Object.entries<any>(groupedByRoom)) {
-          const pdf = await ExamPDFGenerator.generateDutyRosterPDF(
-            examName,
-            roomDuties.map((d: any) => ({
-              teacherName: d.teachers?.name || '',
-              roomNumber: d.room_number,
-              date: d.duty_date,
-              startTime: d.start_time,
-              endTime: d.end_time,
-              dutyType: d.duty_type,
-            })),
-            { name: "School Name", address: "School Address" },
-            'room'
-          );
-          pdf.save(`duty-roster-${roomNumber}.pdf`);
-        }
-      }
-
-      toast({ title: t.success, description: "PDF exported successfully" });
-    } catch (error: any) {
-      toast({ title: t.error, description: error.message, variant: "destructive" });
-    }
-  };
 
   // Handlers
   const onSubmit = (data: InvigilationDutyForm) => {
@@ -762,6 +668,10 @@ function InvigilationDutiesContent() {
       teacherId: duty.teacher_id,
       roomNumber: duty.room_number,
       dutyType: duty.duty_type,
+      dutyDate: duty.duty_date || "",
+      startTime: duty.start_time || "",
+      endTime: duty.end_time || "",
+      notes: duty.notes || "",
     });
     setIsDialogOpen(true);
   };
@@ -782,171 +692,111 @@ function InvigilationDutiesContent() {
     setIsSwapDialogOpen(true);
   };
 
-  if (!authReady) {
-    return <div className="flex items-center justify-center h-screen"><div className="text-center py-8">{t.loading}</div></div>;
-  }
+  const handleExportPDF = async (type: 'teacher' | 'room') => {
+    if (!duties || !schoolId) return;
+    
+    try {
+      if (type === 'teacher') {
+        const groupedByTeacher = duties.reduce((acc: any, duty: any) => {
+          if (!acc[duty.teacher_id]) acc[duty.teacher_id] = [];
+          acc[duty.teacher_id].push(duty);
+          return acc;
+        }, {});
 
-  // Calculate statistics
-  const stats = {
-    total: duties?.length || 0,
-    chief: duties?.filter((d: any) => d.duty_type === 'chief').length || 0,
-    assistant: duties?.filter((d: any) => d.duty_type === 'assistant').length || 0,
-    teachers: new Set(duties?.map((d: any) => d.teacher_id)).size || 0,
+        for (const [teacherId, teacherDuties] of Object.entries<any>(groupedByTeacher)) {
+          const teacher = teachers?.find(t => t.id === parseInt(teacherId));
+          const pdf = await ExamPDFGenerator.generateDutyPDF(
+            teacher?.name || "Teacher",
+            teacherDuties.map((d: any) => ({
+              date: d.duty_date,
+              time: `${d.start_time} - ${d.end_time}`,
+              room: d.room_number,
+              dutyType: d.duty_type,
+            }))
+          );
+          pdf.save(`duty-${teacher?.name}.pdf`);
+        }
+      } else {
+        const groupedByRoom = duties.reduce((acc: any, duty: any) => {
+          if (!acc[duty.room_number]) acc[duty.room_number] = [];
+          acc[duty.room_number].push(duty);
+          return acc;
+        }, {});
+
+        for (const [roomNumber, roomDuties] of Object.entries<any>(groupedByRoom)) {
+          const pdf = await ExamPDFGenerator.generateDutyPDF(
+            `Room ${roomNumber}`,
+            roomDuties.map((d: any) => ({
+              date: d.duty_date,
+              time: `${d.start_time} - ${d.end_time}`,
+              teacher: d.teachers?.name || 'N/A',
+              dutyType: d.duty_type,
+            }))
+          );
+          pdf.save(`duty-room-${roomNumber}.pdf`);
+        }
+      }
+
+      toast({ title: t.success, description: "PDF exported successfully" });
+    } catch (error: any) {
+      toast({ title: t.error, description: error.message, variant: "destructive" });
+    }
   };
 
-  const currentRatio = stats.chief > 0 ? `1:${Math.round(stats.assistant / stats.chief)}` : '0:0';
+  // Calculate stats
+  const stats = useMemo(() => {
+    const total = duties?.length || 0;
+    const chief = duties?.filter(d => d.duty_type === 'chief').length || 0;
+    const assistant = duties?.filter(d => d.duty_type === 'assistant').length || 0;
+    return { total, chief, assistant };
+  }, [duties]);
+
+  const currentRatio = stats.chief > 0 ? `1:${Math.round(stats.assistant / stats.chief)}` : '1:0';
 
   const filteredDuties = selectedExam
-    ? duties?.filter((d) => d.exam_schedule_id === selectedExam)
+    ? duties?.filter(d => d.exam_schedule_id === selectedExam)
     : duties;
 
+  if (!authReady) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center py-8">{t.loading}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{t.title}</h1>
-          <p className="text-muted-foreground mt-1">{t.subtitle}</p>
+          <h1 className="text-xl sm:text-2xl font-semibold">{t.title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
-        <div className="flex gap-2">
-          <Dialog open={isAutoDialogOpen} onOpenChange={setIsAutoDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-auto-assign" size="lg" variant="default">
-                <Wand2 className="mr-2 h-4 w-4" />
-                {t.autoAssign}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>{t.autoAssignTitle}</DialogTitle>
-                <DialogDescription>{t.autoAssignDesc}</DialogDescription>
-              </DialogHeader>
-              <Form {...autoForm}>
-                <form onSubmit={autoForm.handleSubmit(onAutoAssign)} className="space-y-4">
-                  <FormField
-                    control={autoForm.control}
-                    name="examScheduleId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t.exam}</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(Number(value))}
-                          value={field.value?.toString()}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-auto-exam">
-                              <SelectValue placeholder={t.selectExam} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {exams?.map((exam) => (
-                              <SelectItem key={exam.id} value={exam.id.toString()}>
-                                {exam.subject} - {exam.exam_date}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={autoForm.control}
-                      name="startDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t.startDate}</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="date" data-testid="input-start-date" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={autoForm.control}
-                      name="endDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t.endDate}</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="date" data-testid="input-end-date" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={autoForm.control}
-                    name="chiefToAssistantRatio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t.ratioIndicator}</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-ratio">
-                              <SelectValue placeholder="Select ratio" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {ratioOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Ratio of chief invigilators to assistant invigilators
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsAutoDialogOpen(false)}
-                      data-testid="button-cancel-auto"
-                    >
-                      {t.cancel}
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={autoAssignMutation.isPending}
-                      data-testid="button-submit-auto"
-                    >
-                      {autoAssignMutation.isPending ? t.loading : t.assign}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => setIsAutoDialogOpen(true)}
+            data-testid="button-auto-assign"
+            className="h-11 w-full sm:w-auto"
+          >
+            <Wand2 className="mr-2 h-4 w-4" />
+            {t.autoAssign}
+          </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button data-testid="button-assign-duty">
+              <Button data-testid="button-assign-duty" className="h-11 w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 {t.assignDuty}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>
-                  {editingDuty ? t.editDutyTitle : t.assignDutyTitle}
-                </DialogTitle>
+                <DialogTitle>{editingDuty ? t.editDutyTitle : t.assignDutyTitle}</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="examScheduleId"
@@ -958,14 +808,14 @@ function InvigilationDutiesContent() {
                             value={field.value?.toString()}
                           >
                             <FormControl>
-                              <SelectTrigger data-testid="select-exam">
+                              <SelectTrigger data-testid="select-exam" className="h-11">
                                 <SelectValue placeholder={t.selectExam} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {exams?.map((exam) => (
                                 <SelectItem key={exam.id} value={exam.id.toString()}>
-                                  {exam.subject} - {exam.exam_date}
+                                  {exam.subject}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -986,7 +836,7 @@ function InvigilationDutiesContent() {
                             value={field.value?.toString()}
                           >
                             <FormControl>
-                              <SelectTrigger data-testid="select-teacher">
+                              <SelectTrigger data-testid="select-teacher" className="h-11">
                                 <SelectValue placeholder={t.selectTeacher} />
                               </SelectTrigger>
                             </FormControl>
@@ -1004,7 +854,7 @@ function InvigilationDutiesContent() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="roomNumber"
@@ -1012,7 +862,7 @@ function InvigilationDutiesContent() {
                         <FormItem>
                           <FormLabel>{t.roomNumber}</FormLabel>
                           <FormControl>
-                            <Input {...field} data-testid="input-room" placeholder={t.enterRoom} />
+                            <Input {...field} data-testid="input-room" placeholder={t.enterRoom} className="h-11" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1027,7 +877,7 @@ function InvigilationDutiesContent() {
                           <FormLabel>{t.dutyType}</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger data-testid="select-duty-type">
+                              <SelectTrigger data-testid="select-duty-type" className="h-11">
                                 <SelectValue placeholder={t.selectDutyType} />
                               </SelectTrigger>
                             </FormControl>
@@ -1052,14 +902,14 @@ function InvigilationDutiesContent() {
                       <FormItem>
                         <FormLabel>{t.dutyDate}</FormLabel>
                         <FormControl>
-                          <Input {...field} type="date" data-testid="input-date" />
+                          <Input {...field} type="date" data-testid="input-date" className="h-11" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="startTime"
@@ -1067,7 +917,7 @@ function InvigilationDutiesContent() {
                         <FormItem>
                           <FormLabel>{t.startTime}</FormLabel>
                           <FormControl>
-                            <Input {...field} type="time" data-testid="input-start-time" />
+                            <Input {...field} type="time" data-testid="input-start-time" className="h-11" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1081,7 +931,7 @@ function InvigilationDutiesContent() {
                         <FormItem>
                           <FormLabel>{t.endTime}</FormLabel>
                           <FormControl>
-                            <Input {...field} type="time" data-testid="input-end-time" />
+                            <Input {...field} type="time" data-testid="input-end-time" className="h-11" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1108,7 +958,7 @@ function InvigilationDutiesContent() {
                     )}
                   />
 
-                  <div className="flex justify-end gap-2">
+                  <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
                     <Button
                       type="button"
                       variant="outline"
@@ -1118,6 +968,7 @@ function InvigilationDutiesContent() {
                         form.reset();
                       }}
                       data-testid="button-cancel"
+                      className="h-11 w-full sm:w-auto"
                     >
                       {t.cancel}
                     </Button>
@@ -1125,6 +976,7 @@ function InvigilationDutiesContent() {
                       type="submit"
                       disabled={createMutation.isPending || updateMutation.isPending}
                       data-testid="button-submit"
+                      className="h-11 w-full sm:w-auto"
                     >
                       {editingDuty ? t.update : t.create}
                     </Button>
@@ -1136,81 +988,83 @@ function InvigilationDutiesContent() {
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.totalDuties}</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+      {/* Statistics Cards - Minimalistic Design */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border shadow-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t.totalDuties}</CardTitle>
+            <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-2xl sm:text-3xl font-semibold" data-testid="stat-total-duties">{stats.total}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.chiefDuties}</CardTitle>
-            <CheckCircle className="h-4 w-4 text-blue-600" />
+        <Card className="border shadow-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t.chiefDuties}</CardTitle>
+            <CheckCircle className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.chief}</div>
+            <div className="text-2xl sm:text-3xl font-semibold" data-testid="stat-chief-duties">{stats.chief}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.assistantDuties}</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-600" />
+        <Card className="border shadow-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t.assistantDuties}</CardTitle>
+            <UserCheck className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.assistant}</div>
+            <div className="text-2xl sm:text-3xl font-semibold" data-testid="stat-assistant-duties">{stats.assistant}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.ratioIndicator}</CardTitle>
-            <RefreshCw className="h-4 w-4 text-yellow-600" />
+        <Card className="border shadow-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t.ratioIndicator}</CardTitle>
+            <RefreshCw className="h-5 w-5 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{currentRatio}</div>
+            <div className="text-2xl sm:text-3xl font-semibold" data-testid="stat-ratio">{currentRatio}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filter and Actions */}
-      <div className="flex justify-between items-center">
+      {/* Filter and Actions - Responsive */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <Select
           value={selectedExam?.toString() || "all"}
           onValueChange={(value) => setSelectedExam(value === "all" ? null : Number(value))}
         >
-          <SelectTrigger className="w-64" data-testid="filter-exam">
+          <SelectTrigger className="w-full sm:w-64 h-11" data-testid="filter-exam">
             <SelectValue placeholder={t.exam} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Exams</SelectItem>
             {exams?.map((exam) => (
               <SelectItem key={exam.id} value={exam.id.toString()}>
-                {exam.name}
+                {exam.subject}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {selectedExam && duties && duties.length > 0 && (
             <Button
               onClick={() => notifyAllMutation.mutate()}
               disabled={notifyAllMutation.isPending}
               variant="outline"
               data-testid="button-notify-all"
+              className="h-11 flex-1 sm:flex-initial"
             >
               <Bell className="mr-2 h-4 w-4" />
-              {t.notifyAll}
+              <span className="hidden sm:inline">{t.notifyAll}</span>
+              <span className="sm:hidden">Notify</span>
             </Button>
           )}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" data-testid="button-export">
+              <Button variant="outline" data-testid="button-export" className="h-11 flex-1 sm:flex-initial">
                 <Download className="mr-2 h-4 w-4" />
                 {t.exportPDF}
               </Button>
@@ -1229,158 +1083,175 @@ function InvigilationDutiesContent() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Responsive */}
       <Tabs value={currentTab} onValueChange={(v: any) => setCurrentTab(v)}>
-        <TabsList>
-          <TabsTrigger value="duties" data-testid="tab-duties">{t.invigilationDuties}</TabsTrigger>
-          <TabsTrigger value="swaps" data-testid="tab-swaps">{t.swaps}</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
+            <TabsTrigger value="duties" data-testid="tab-duties" className="flex-1 sm:flex-initial">{t.invigilationDuties}</TabsTrigger>
+            <TabsTrigger value="swaps" data-testid="tab-swaps" className="flex-1 sm:flex-initial">{t.swaps}</TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="duties">
-          <Card>
+        <TabsContent value="duties" className="mt-6">
+          <Card className="border shadow-none">
             <CardHeader>
-              <CardTitle>{t.invigilationDuties}</CardTitle>
+              <CardTitle className="text-lg">{t.invigilationDuties}</CardTitle>
               <CardDescription>
                 {filteredDuties?.length || 0} {t.invigilationDuties.toLowerCase()}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8">{t.loading}</div>
+                <div className="text-center py-12 text-muted-foreground">{t.loading}</div>
               ) : filteredDuties && filteredDuties.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t.exam}</TableHead>
-                      <TableHead>{t.teacher}</TableHead>
-                      <TableHead>{t.room}</TableHead>
-                      <TableHead>{t.dutyType}</TableHead>
-                      <TableHead>{t.date}</TableHead>
-                      <TableHead>{t.time}</TableHead>
-                      <TableHead>{t.actions}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredDuties.map((duty) => (
-                      <TableRow key={duty.id} data-testid={`row-duty-${duty.id}`}>
-                        <TableCell>{duty.exams?.name || 'N/A'}</TableCell>
-                        <TableCell>{duty.teachers?.name || 'N/A'}</TableCell>
-                        <TableCell>{duty.room_number}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {dutyTypes.find(t => t.value === duty.duty_type)?.[language === 'bn' ? 'labelBn' : 'labelEn'] || duty.duty_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{format(new Date(duty.duty_date), 'MMM dd, yyyy')}</TableCell>
-                        <TableCell>{duty.start_time} - {duty.end_time}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSwapRequest(duty)}
-                              data-testid={`button-swap-${duty.id}`}
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(duty)}
-                              data-testid={`button-edit-${duty.id}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(duty.id)}
-                              data-testid={`button-delete-${duty.id}`}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[120px]">{t.exam}</TableHead>
+                        <TableHead className="min-w-[150px]">{t.teacher}</TableHead>
+                        <TableHead>{t.room}</TableHead>
+                        <TableHead>{t.dutyType}</TableHead>
+                        <TableHead className="hidden md:table-cell">{t.date}</TableHead>
+                        <TableHead className="hidden lg:table-cell">{t.time}</TableHead>
+                        <TableHead className="w-[120px]">{t.actions}</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDuties.map((duty) => (
+                        <TableRow key={duty.id} data-testid={`row-duty-${duty.id}`}>
+                          <TableCell className="text-sm">{duty.exam_schedules?.subject || 'N/A'}</TableCell>
+                          <TableCell className="text-sm font-medium">{duty.teachers?.name || 'N/A'}</TableCell>
+                          <TableCell className="text-sm">{duty.room_number}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="whitespace-nowrap">
+                              {dutyTypes.find(t => t.value === duty.duty_type)?.[language === 'bn' ? 'labelBn' : 'labelEn'] || duty.duty_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-sm">
+                            {duty.duty_date && format(new Date(duty.duty_date), 'MMM dd, yyyy')}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-sm whitespace-nowrap">
+                            {duty.start_time && duty.end_time && `${duty.start_time} - ${duty.end_time}`}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSwapRequest(duty)}
+                                data-testid={`button-swap-${duty.id}`}
+                                className="h-9 w-9 p-0"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(duty)}
+                                data-testid={`button-edit-${duty.id}`}
+                                className="h-9 w-9 p-0"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(duty.id)}
+                                data-testid={`button-delete-${duty.id}`}
+                                className="h-9 w-9 p-0"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  {t.noDuties}
+                <div className="text-center py-12">
+                  <UserCheck className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <p className="text-muted-foreground">{t.noDuties}</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="swaps">
-          <Card>
+        <TabsContent value="swaps" className="mt-6">
+          <Card className="border shadow-none">
             <CardHeader>
-              <CardTitle>{t.swaps}</CardTitle>
+              <CardTitle className="text-lg">{t.swaps}</CardTitle>
               <CardDescription>Manage duty swap requests</CardDescription>
             </CardHeader>
             <CardContent>
               {dutySwaps && dutySwaps.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>From Teacher</TableHead>
-                      <TableHead>To Teacher</TableHead>
-                      <TableHead>Duty</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dutySwaps.map((swap) => (
-                      <TableRow key={swap.id}>
-                        <TableCell>{swap.teachers?.name}</TableCell>
-                        <TableCell>{swap.to_teacher?.name}</TableCell>
-                        <TableCell>
-                          {swap.invigilation_duties?.exams?.name} - {swap.invigilation_duties?.room_number}
-                        </TableCell>
-                        <TableCell>{swap.reason}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              swap.status === 'approved' ? 'default' :
-                              swap.status === 'rejected' ? 'destructive' : 'secondary'
-                            }
-                          >
-                            {t[swap.status || 'pending']}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {swap.status === 'pending' && (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => approveSwapMutation.mutate(swap.id)}
-                                data-testid={`button-approve-swap-${swap.id}`}
-                              >
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => rejectSwapMutation.mutate(swap.id)}
-                                data-testid={`button-reject-swap-${swap.id}`}
-                              >
-                                <XCircle className="h-4 w-4 text-red-600" />
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
+                <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[150px]">From Teacher</TableHead>
+                        <TableHead className="min-w-[150px]">To Teacher</TableHead>
+                        <TableHead className="min-w-[180px]">Duty</TableHead>
+                        <TableHead className="hidden md:table-cell">Reason</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {dutySwaps.map((swap) => (
+                        <TableRow key={swap.id}>
+                          <TableCell className="text-sm">{swap.teachers?.name}</TableCell>
+                          <TableCell className="text-sm">{swap.to_teacher?.name}</TableCell>
+                          <TableCell className="text-sm">
+                            {swap.invigilation_duties?.exam_schedules?.subject} - {swap.invigilation_duties?.room_number}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-sm">{swap.reason}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                swap.status === 'approved' ? 'default' :
+                                swap.status === 'rejected' ? 'destructive' : 'secondary'
+                              }
+                            >
+                              {t[swap.status || 'pending']}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {swap.status === 'pending' && (
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => approveSwapMutation.mutate(swap.id)}
+                                  data-testid={`button-approve-swap-${swap.id}`}
+                                  className="h-9 w-9 p-0"
+                                >
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => rejectSwapMutation.mutate(swap.id)}
+                                  data-testid={`button-reject-swap-${swap.id}`}
+                                  className="h-9 w-9 p-0"
+                                >
+                                  <XCircle className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  No swap requests found
+                <div className="text-center py-12">
+                  <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <p className="text-muted-foreground">No swap requests found</p>
                 </div>
               )}
             </CardContent>
@@ -1388,9 +1259,125 @@ function InvigilationDutiesContent() {
         </TabsContent>
       </Tabs>
 
+      {/* Auto-Assign Dialog */}
+      <Dialog open={isAutoDialogOpen} onOpenChange={setIsAutoDialogOpen}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-auto-assign">
+          <DialogHeader>
+            <DialogTitle>{t.autoAssignTitle}</DialogTitle>
+            <DialogDescription>{t.autoAssignDesc}</DialogDescription>
+          </DialogHeader>
+          <Form {...autoForm}>
+            <form onSubmit={autoForm.handleSubmit(onAutoAssign)} className="space-y-4">
+              <FormField
+                control={autoForm.control}
+                name="examScheduleId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t.exam}</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(Number(value))}
+                      value={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-auto-exam" className="h-11">
+                          <SelectValue placeholder={t.selectExam} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {exams?.map((exam) => (
+                          <SelectItem key={exam.id} value={exam.id.toString()}>
+                            {exam.subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={autoForm.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t.startDate}</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" data-testid="input-auto-start-date" className="h-11" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={autoForm.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t.endDate}</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" data-testid="input-auto-end-date" className="h-11" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={autoForm.control}
+                name="chiefToAssistantRatio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t.ratioIndicator}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-ratio" className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {ratioOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAutoDialogOpen(false)}
+                  data-testid="button-auto-cancel"
+                  className="h-11 w-full sm:w-auto"
+                >
+                  {t.cancel}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={autoAssignMutation.isPending}
+                  data-testid="button-auto-submit"
+                  className="h-11 w-full sm:w-auto"
+                >
+                  {t.generate}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
       {/* Swap Dialog */}
       <Dialog open={isSwapDialogOpen} onOpenChange={setIsSwapDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t.swapDuty}</DialogTitle>
             <DialogDescription>Request a duty swap with another teacher</DialogDescription>
@@ -1408,7 +1395,7 @@ function InvigilationDutiesContent() {
                       value={field.value?.toString()}
                     >
                       <FormControl>
-                        <SelectTrigger data-testid="select-swap-teacher">
+                        <SelectTrigger data-testid="select-swap-teacher" className="h-11">
                           <SelectValue placeholder={t.selectTeacher} />
                         </SelectTrigger>
                       </FormControl>
@@ -1439,12 +1426,13 @@ function InvigilationDutiesContent() {
                 )}
               />
 
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsSwapDialogOpen(false)}
                   data-testid="button-cancel-swap"
+                  className="h-11 w-full sm:w-auto"
                 >
                   {t.cancel}
                 </Button>
@@ -1452,6 +1440,7 @@ function InvigilationDutiesContent() {
                   type="submit"
                   disabled={createSwapMutation.isPending}
                   data-testid="button-submit-swap"
+                  className="h-11 w-full sm:w-auto"
                 >
                   {t.requestSwap}
                 </Button>

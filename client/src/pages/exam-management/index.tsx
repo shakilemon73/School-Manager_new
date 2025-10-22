@@ -48,7 +48,6 @@ import { CalendarIcon, Plus, Pencil, Trash2, FileText, Users, BookOpen, Download
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameDay, isSameMonth, addMonths, subMonths } from "date-fns";
 import { useSupabaseDirectAuth } from "@/hooks/use-supabase-direct-auth";
 import { AppShell } from "@/components/layout/app-shell";
-import { ResponsivePageLayout } from "@/components/layout/responsive-page-layout";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -719,31 +718,49 @@ function ExamManagementContent() {
 
   const getExamStatus = (exam: any) => {
     const today = new Date();
-    const startDate = new Date(exam.start_date);
-    const endDate = new Date(exam.end_date);
+    const start = new Date(exam.start_date);
+    const end = new Date(exam.end_date);
 
-    if (today < startDate) return { label: t.upcoming, color: "blue" };
-    if (today > endDate) return { label: t.completed, color: "gray" };
-    return { label: t.ongoing, color: "green" };
+    if (today < start) {
+      return { label: t.upcoming, color: 'blue' };
+    } else if (today > end) {
+      return { label: t.completed, color: 'gray' };
+    } else {
+      return { label: t.ongoing, color: 'green' };
+    }
   };
 
+  const stats = {
+    total: exams?.length || 0,
+    active: exams?.filter((e: any) => e.is_active).length || 0,
+    upcoming: exams?.filter((e: any) => {
+      const status = getExamStatus(e);
+      return status.color === 'blue';
+    }).length || 0,
+  };
+
+  const roomStats = {
+    total: rooms?.length || 0,
+    active: rooms?.filter((r: any) => r.is_active).length || 0,
+    totalCapacity: rooms?.reduce((sum: number, r: any) => sum + (r.capacity || 0), 0) || 0,
+  };
+
+  // Calendar utilities
   const generateCalendarDays = () => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-    const calendarStart = startOfWeek(monthStart);
-    const calendarEnd = endOfWeek(monthEnd);
-    
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+    const start = startOfWeek(startOfMonth(currentMonth));
+    const end = endOfWeek(endOfMonth(currentMonth));
+    return eachDayOfInterval({ start, end });
   };
 
   const getExamsForDay = (day: Date) => {
-    if (!exams) return [];
-    return exams.filter((exam: any) => {
+    return exams?.filter((exam: any) => {
       const examStart = new Date(exam.start_date);
       const examEnd = new Date(exam.end_date);
       return day >= examStart && day <= examEnd;
-    });
+    }) || [];
   };
+
+  const weekDays = [t.sunday, t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday];
 
   const handlePreviousMonth = () => {
     setCurrentMonth(subMonths(currentMonth, 1));
@@ -753,382 +770,350 @@ function ExamManagementContent() {
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  const weekDays = [
-    t.sunday, t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday
-  ];
-
-  if (!authReady) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center py-8">{t.loading}</div>
-      </div>
-    );
-  }
-
-  const stats = {
-    total: exams?.length || 0,
-    active: exams?.filter((e: any) => e.is_active).length || 0,
-    upcoming: exams?.filter((e: any) => new Date(e.start_date) > new Date()).length || 0,
-  };
-
-  const roomStats = {
-    total: rooms?.length || 0,
-    active: rooms?.filter((r: any) => r.is_active).length || 0,
-    totalCapacity: rooms?.reduce((sum: number, r: any) => sum + (r.capacity || 0), 0) || 0,
-  };
-
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">{t.title}</h1>
-        <p className="text-muted-foreground mt-1">{t.subtitle}</p>
+    <div className="space-y-6">
+      {/* Header with Create Button */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-semibold">{t.title}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-add-exam" className="h-11 w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              {t.addExam}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingExam ? t.editExam : t.createExam}
+              </DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t.examName}</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-exam-name" placeholder={t.enterName} className="h-11" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t.description}</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} data-testid="input-exam-description" placeholder={t.enterDescription} rows={3} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t.type}</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} data-testid="select-exam-type">
+                          <FormControl>
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder={t.selectType} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {examTypes.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {language === 'bn' ? type.labelBn : type.labelEn}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="academicYearId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t.academicYear}</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(Number(value))}
+                          value={field.value ? String(field.value) : ""}
+                          data-testid="select-academic-year"
+                        >
+                          <FormControl>
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder={t.selectYear} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {academicYears?.map((year: any) => (
+                              <SelectItem key={year.id} value={String(year.id)}>
+                                {year.name || year.year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t.startDate}</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="date" data-testid="input-start-date" className="h-11" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t.endDate}</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="date" data-testid="input-end-date" className="h-11" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsDialogOpen(false);
+                      setEditingExam(null);
+                      form.reset();
+                    }}
+                    data-testid="button-cancel"
+                    className="h-11 w-full sm:w-auto"
+                  >
+                    {t.cancel}
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                    data-testid="button-submit"
+                    className="h-11 w-full sm:w-auto"
+                  >
+                    {editingExam ? t.update : t.create}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Tabs */}
       <Tabs defaultValue="exams" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-3">
-          <TabsTrigger value="exams" data-testid="tab-exams">
-            <BookOpen className="mr-2 h-4 w-4" />
-            {t.exams}
-          </TabsTrigger>
-          <TabsTrigger value="rooms" data-testid="tab-rooms">
-            <Building className="mr-2 h-4 w-4" />
-            {t.rooms}
-          </TabsTrigger>
-          <TabsTrigger value="calendar" data-testid="tab-calendar">
-            <Calendar className="mr-2 h-4 w-4" />
-            {t.calendarView}
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
+            <TabsTrigger value="exams" className="flex-1 sm:flex-initial">{t.exams}</TabsTrigger>
+            <TabsTrigger value="rooms" className="flex-1 sm:flex-initial">{t.rooms}</TabsTrigger>
+            <TabsTrigger value="calendar" className="flex-1 sm:flex-initial">{t.calendarView}</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Exams Tab */}
-        <TabsContent value="exams" className="space-y-6">
-          <div className="flex justify-end">
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-exam" size="lg">
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t.addExam}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingExam ? t.editExam : t.createExam}
-                  </DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t.examName}</FormLabel>
-                          <FormControl>
-                            <Input {...field} data-testid="input-exam-name" placeholder={t.enterName} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t.type}</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-exam-type">
-                                <SelectValue placeholder={t.selectType} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {examTypes.map((type) => (
-                                <SelectItem key={type.value} value={type.value}>
-                                  {language === 'bn' ? type.labelBn : type.labelEn}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="academicYearId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t.academicYear}</FormLabel>
-                          <Select
-                            onValueChange={(value) => field.onChange(Number(value))}
-                            value={field.value?.toString()}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-academic-year">
-                                <SelectValue placeholder={t.selectYear} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {academicYears?.map((year: any) => (
-                                <SelectItem key={year.id} value={year.id.toString()}>
-                                  {year.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="startDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t.startDate}</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="date" data-testid="input-start-date" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="endDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t.endDate}</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="date" data-testid="input-end-date" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t.description}</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              {...field}
-                              data-testid="input-description"
-                              placeholder={t.enterDescription}
-                              rows={3}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setIsDialogOpen(false);
-                          setEditingExam(null);
-                          form.reset();
-                        }}
-                        data-testid="button-cancel-exam"
-                      >
-                        {t.cancel}
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={createMutation.isPending || updateMutation.isPending}
-                        data-testid="button-submit-exam"
-                      >
-                        {editingExam ? t.update : t.create}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t.totalExams}</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
+        <TabsContent value="exams" className="space-y-6 mt-6">
+          {/* Stats Cards - Minimalistic Design */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card className="border shadow-none">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t.totalExams}</CardTitle>
+                <BookOpen className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-total-exams">{stats.total}</div>
+                <div className="text-3xl font-semibold" data-testid="stat-total-exams">{stats.total}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t.activeExams}</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+            <Card className="border shadow-none">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t.activeExams}</CardTitle>
+                <FileText className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-active-exams">{stats.active}</div>
+                <div className="text-3xl font-semibold" data-testid="stat-active-exams">{stats.active}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t.upcomingExams}</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+            <Card className="border shadow-none">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t.upcomingExams}</CardTitle>
+                <Users className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-upcoming-exams">{stats.upcoming}</div>
+                <div className="text-3xl font-semibold" data-testid="stat-upcoming-exams">{stats.upcoming}</div>
               </CardContent>
             </Card>
           </div>
 
           {/* Exams Table */}
-          <Card>
+          <Card className="border shadow-none">
             <CardHeader>
-              <CardTitle>{t.exams}</CardTitle>
+              <CardTitle className="text-lg">{t.exams}</CardTitle>
               <CardDescription>
                 {exams?.length || 0} {t.exams.toLowerCase()}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8">{t.loading}</div>
+                <div className="text-center py-12 text-muted-foreground">{t.loading}</div>
               ) : exams && exams.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t.examName}</TableHead>
-                      <TableHead>{t.type}</TableHead>
-                      <TableHead>{t.academicYear}</TableHead>
-                      <TableHead>{t.duration}</TableHead>
-                      <TableHead>{t.status}</TableHead>
-                      <TableHead>{t.actions}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {exams.map((exam: any) => {
-                      const status = getExamStatus(exam);
-                      const examType = examTypes.find(t => t.value === exam.type);
-                      
-                      return (
-                        <TableRow key={exam.id} data-testid={`row-exam-${exam.id}`}>
-                          <TableCell className="font-medium">{exam.name}</TableCell>
-                          <TableCell>
-                            {examType ? (language === 'bn' ? examType.labelBn : examType.labelEn) : exam.type}
-                          </TableCell>
-                          <TableCell>{exam.academic_years?.name || 'N/A'}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center text-sm">
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {format(new Date(exam.start_date), 'MMM dd')} - {format(new Date(exam.end_date), 'MMM dd, yyyy')}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              <Badge variant={status.color === 'green' ? 'default' : status.color === 'blue' ? 'secondary' : 'outline'} data-testid={`badge-status-${exam.id}`}>
-                                {status.label}
-                              </Badge>
-                              {exam.is_published === true && (
-                                <Badge variant="default" className="bg-green-500" data-testid={`badge-published-${exam.id}`}>
-                                  {t.published}
+                <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[150px]">{t.examName}</TableHead>
+                        <TableHead className="min-w-[120px]">{t.type}</TableHead>
+                        <TableHead className="hidden sm:table-cell">{t.academicYear}</TableHead>
+                        <TableHead className="min-w-[180px]">{t.duration}</TableHead>
+                        <TableHead className="min-w-[120px]">{t.status}</TableHead>
+                        <TableHead className="w-[60px]">{t.actions}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {exams.map((exam: any) => {
+                        const status = getExamStatus(exam);
+                        const examType = examTypes.find(t => t.value === exam.type);
+                        
+                        return (
+                          <TableRow key={exam.id} data-testid={`row-exam-${exam.id}`}>
+                            <TableCell className="font-medium">{exam.name}</TableCell>
+                            <TableCell className="text-sm">
+                              {examType ? (language === 'bn' ? examType.labelBn : examType.labelEn) : exam.type}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-sm">{exam.academic_years?.name || 'N/A'}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center text-sm">
+                                <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                                <span className="whitespace-nowrap">{format(new Date(exam.start_date), 'MMM dd')} - {format(new Date(exam.end_date), 'MMM dd, yyyy')}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                <Badge variant={status.color === 'green' ? 'default' : status.color === 'blue' ? 'secondary' : 'outline'} data-testid={`badge-status-${exam.id}`}>
+                                  {status.label}
                                 </Badge>
-                              )}
-                              {exam.is_published === false && (
-                                <Badge variant="secondary" data-testid={`badge-draft-${exam.id}`}>
-                                  {t.draft}
-                                </Badge>
-                              )}
-                              {exam.is_locked === true && (
-                                <Badge variant="outline" className="border-yellow-500 text-yellow-600" data-testid={`badge-locked-${exam.id}`}>
-                                  {t.locked}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" data-testid={`button-actions-${exam.id}`}>
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => togglePublishMutation.mutate({ id: exam.id, isPublished: !exam.is_published })}
-                                  disabled={exam.is_locked === true}
-                                  data-testid={`menu-item-publish-${exam.id}`}
-                                >
-                                  {exam.is_published ? (
-                                    <>
-                                      <EyeOff className="mr-2 h-4 w-4" />
-                                      {t.unpublish}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Eye className="mr-2 h-4 w-4" />
-                                      {t.publish}
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => toggleLockMutation.mutate({ id: exam.id, isLocked: !exam.is_locked })}
-                                  data-testid={`menu-item-lock-${exam.id}`}
-                                >
-                                  {exam.is_locked ? (
-                                    <>
-                                      <Unlock className="mr-2 h-4 w-4" />
-                                      {t.unlock}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Lock className="mr-2 h-4 w-4" />
-                                      {t.lock}
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleEdit(exam)}
-                                  disabled={exam.is_locked === true}
-                                  data-testid={`menu-item-edit-${exam.id}`}
-                                >
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  {t.edit}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(exam.id)}
-                                  disabled={exam.is_locked === true}
-                                  data-testid={`menu-item-delete-${exam.id}`}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4 text-red-500" />
-                                  {t.delete}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                                {exam.is_published === true && (
+                                  <Badge variant="default" className="bg-green-500" data-testid={`badge-published-${exam.id}`}>
+                                    {t.published}
+                                  </Badge>
+                                )}
+                                {exam.is_published === false && (
+                                  <Badge variant="secondary" data-testid={`badge-draft-${exam.id}`}>
+                                    {t.draft}
+                                  </Badge>
+                                )}
+                                {exam.is_locked === true && (
+                                  <Badge variant="outline" className="border-yellow-500 text-yellow-600" data-testid={`badge-locked-${exam.id}`}>
+                                    {t.locked}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0" data-testid={`button-actions-${exam.id}`}>
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => togglePublishMutation.mutate({ id: exam.id, isPublished: !exam.is_published })}
+                                    disabled={exam.is_locked === true}
+                                    data-testid={`menu-item-publish-${exam.id}`}
+                                  >
+                                    {exam.is_published ? (
+                                      <>
+                                        <EyeOff className="mr-2 h-4 w-4" />
+                                        {t.unpublish}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        {t.publish}
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => toggleLockMutation.mutate({ id: exam.id, isLocked: !exam.is_locked })}
+                                    data-testid={`menu-item-lock-${exam.id}`}
+                                  >
+                                    {exam.is_locked ? (
+                                      <>
+                                        <Unlock className="mr-2 h-4 w-4" />
+                                        {t.unlock}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Lock className="mr-2 h-4 w-4" />
+                                        {t.lock}
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleEdit(exam)}
+                                    disabled={exam.is_locked === true}
+                                    data-testid={`menu-item-edit-${exam.id}`}
+                                  >
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    {t.edit}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(exam.id)}
+                                    disabled={exam.is_locked === true}
+                                    data-testid={`menu-item-delete-${exam.id}`}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                                    {t.delete}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  {t.noExams}
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <p className="text-muted-foreground">{t.noExams}</p>
                 </div>
               )}
             </CardContent>
@@ -1136,11 +1121,11 @@ function ExamManagementContent() {
         </TabsContent>
 
         {/* Rooms Tab */}
-        <TabsContent value="rooms" className="space-y-6">
+        <TabsContent value="rooms" className="space-y-6 mt-6">
           <div className="flex justify-end">
             <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
               <DialogTrigger asChild>
-                <Button data-testid="button-add-room" size="lg">
+                <Button data-testid="button-add-room" className="h-11 w-full sm:w-auto">
                   <Building className="mr-2 h-4 w-4" />
                   {t.addRoom}
                 </Button>
@@ -1153,7 +1138,7 @@ function ExamManagementContent() {
                 </DialogHeader>
                 <Form {...roomForm}>
                   <form onSubmit={roomForm.handleSubmit(onRoomSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={roomForm.control}
                         name="name"
@@ -1161,7 +1146,7 @@ function ExamManagementContent() {
                           <FormItem>
                             <FormLabel>{t.roomName}</FormLabel>
                             <FormControl>
-                              <Input {...field} data-testid="input-room-name" placeholder={t.enterRoomName} />
+                              <Input {...field} data-testid="input-room-name" placeholder={t.enterRoomName} className="h-11" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1175,7 +1160,7 @@ function ExamManagementContent() {
                           <FormItem>
                             <FormLabel>{t.roomNameBn}</FormLabel>
                             <FormControl>
-                              <Input {...field} data-testid="input-room-name-bn" placeholder={t.enterRoomNameBn} />
+                              <Input {...field} data-testid="input-room-name-bn" placeholder={t.enterRoomNameBn} className="h-11" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1183,7 +1168,7 @@ function ExamManagementContent() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={roomForm.control}
                         name="building"
@@ -1191,7 +1176,7 @@ function ExamManagementContent() {
                           <FormItem>
                             <FormLabel>{t.building}</FormLabel>
                             <FormControl>
-                              <Input {...field} data-testid="input-building" placeholder={t.enterBuilding} />
+                              <Input {...field} data-testid="input-building" placeholder={t.enterBuilding} className="h-11" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1205,7 +1190,7 @@ function ExamManagementContent() {
                           <FormItem>
                             <FormLabel>{t.floor}</FormLabel>
                             <FormControl>
-                              <Input {...field} data-testid="input-floor" placeholder={t.enterFloor} />
+                              <Input {...field} data-testid="input-floor" placeholder={t.enterFloor} className="h-11" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1213,7 +1198,7 @@ function ExamManagementContent() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <FormField
                         control={roomForm.control}
                         name="capacity"
@@ -1227,6 +1212,7 @@ function ExamManagementContent() {
                                 min="1"
                                 data-testid="input-capacity"
                                 onChange={(e) => field.onChange(Number(e.target.value))}
+                                className="h-11"
                               />
                             </FormControl>
                             <FormMessage />
@@ -1247,6 +1233,7 @@ function ExamManagementContent() {
                                 min="1"
                                 data-testid="input-rows-count"
                                 onChange={(e) => field.onChange(Number(e.target.value))}
+                                className="h-11"
                               />
                             </FormControl>
                             <FormMessage />
@@ -1267,6 +1254,7 @@ function ExamManagementContent() {
                                 min="1"
                                 data-testid="input-seats-per-row"
                                 onChange={(e) => field.onChange(Number(e.target.value))}
+                                className="h-11"
                               />
                             </FormControl>
                             <FormMessage />
@@ -1281,10 +1269,10 @@ function ExamManagementContent() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t.features}</FormLabel>
-                          <FormDescription>{t.selectFeatures}</FormDescription>
-                          <div className="space-y-2">
+                          <FormDescription className="text-xs">{t.selectFeatures}</FormDescription>
+                          <div className="space-y-3 pt-2">
                             {roomFeatures.map((feature) => (
-                              <div key={feature.value} className="flex items-center space-x-2">
+                              <div key={feature.value} className="flex items-center space-x-3">
                                 <Checkbox
                                   id={`feature-${feature.value}`}
                                   checked={field.value?.includes(feature.value)}
@@ -1300,7 +1288,7 @@ function ExamManagementContent() {
                                 />
                                 <label
                                   htmlFor={`feature-${feature.value}`}
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                                 >
                                   {language === 'bn' ? feature.labelBn : feature.labelEn}
                                 </label>
@@ -1319,7 +1307,7 @@ function ExamManagementContent() {
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                           <div className="space-y-0.5">
                             <FormLabel className="text-base">{t.isActive}</FormLabel>
-                            <FormDescription>
+                            <FormDescription className="text-xs">
                               {field.value ? t.active : t.inactive}
                             </FormDescription>
                           </div>
@@ -1334,7 +1322,7 @@ function ExamManagementContent() {
                       )}
                     />
 
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
                       <Button
                         type="button"
                         variant="outline"
@@ -1344,6 +1332,7 @@ function ExamManagementContent() {
                           roomForm.reset();
                         }}
                         data-testid="button-cancel-room"
+                        className="h-11 w-full sm:w-auto"
                       >
                         {t.cancel}
                       </Button>
@@ -1351,6 +1340,7 @@ function ExamManagementContent() {
                         type="submit"
                         disabled={createRoomMutation.isPending || updateRoomMutation.isPending}
                         data-testid="button-submit-room"
+                        className="h-11 w-full sm:w-auto"
                       >
                         {editingRoom ? t.update : t.create}
                       </Button>
@@ -1361,131 +1351,136 @@ function ExamManagementContent() {
             </Dialog>
           </div>
 
-          {/* Room Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t.totalRooms}</CardTitle>
-                <DoorOpen className="h-4 w-4 text-muted-foreground" />
+          {/* Room Stats Cards - Minimalistic Design */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card className="border shadow-none">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t.totalRooms}</CardTitle>
+                <DoorOpen className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-total-rooms">{roomStats.total}</div>
+                <div className="text-3xl font-semibold" data-testid="stat-total-rooms">{roomStats.total}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t.activeRooms}</CardTitle>
-                <Building className="h-4 w-4 text-muted-foreground" />
+            <Card className="border shadow-none">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t.activeRooms}</CardTitle>
+                <Building className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-active-rooms">{roomStats.active}</div>
+                <div className="text-3xl font-semibold" data-testid="stat-active-rooms">{roomStats.active}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t.totalCapacity}</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+            <Card className="border shadow-none">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t.totalCapacity}</CardTitle>
+                <Users className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-total-capacity">{roomStats.totalCapacity}</div>
+                <div className="text-3xl font-semibold" data-testid="stat-total-capacity">{roomStats.totalCapacity}</div>
               </CardContent>
             </Card>
           </div>
 
           {/* Rooms Table */}
-          <Card>
+          <Card className="border shadow-none">
             <CardHeader>
-              <CardTitle>{t.rooms}</CardTitle>
+              <CardTitle className="text-lg">{t.rooms}</CardTitle>
               <CardDescription>
                 {rooms?.length || 0} {t.rooms.toLowerCase()}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {roomsLoading ? (
-                <div className="text-center py-8">{t.loading}</div>
+                <div className="text-center py-12 text-muted-foreground">{t.loading}</div>
               ) : rooms && rooms.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t.roomName}</TableHead>
-                      <TableHead>{t.buildingFloor}</TableHead>
-                      <TableHead>{t.capacity}</TableHead>
-                      <TableHead>{t.features}</TableHead>
-                      <TableHead>{t.status}</TableHead>
-                      <TableHead>{t.actions}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rooms.map((room: any) => (
-                      <TableRow key={room.id} data-testid={`row-room-${room.id}`}>
-                        <TableCell className="font-medium">
-                          <div>
-                            <div>{room.name}</div>
-                            {room.name_bn && (
-                              <div className="text-xs text-muted-foreground">{room.name_bn}</div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {[room.building, room.floor].filter(Boolean).join(' / ') || '-'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            <span data-testid={`capacity-${room.id}`}>{room.capacity}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {room.features && room.features.length > 0 ? (
-                              room.features.map((feature: string) => {
-                                const featureInfo = roomFeatures.find(f => f.value === feature);
-                                return (
-                                  <Badge key={feature} variant="secondary" data-testid={`badge-feature-${room.id}-${feature}`}>
-                                    {featureInfo ? (language === 'bn' ? featureInfo.labelBn : featureInfo.labelEn) : feature}
-                                  </Badge>
-                                );
-                              })
-                            ) : (
-                              <span className="text-sm text-muted-foreground">-</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={room.is_active ? "default" : "secondary"}
-                            data-testid={`badge-room-status-${room.id}`}
-                          >
-                            {room.is_active ? t.active : t.inactive}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditRoom(room)}
-                              data-testid={`button-edit-room-${room.id}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteRoom(room.id)}
-                              data-testid={`button-delete-room-${room.id}`}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[150px]">{t.roomName}</TableHead>
+                        <TableHead className="hidden sm:table-cell">{t.buildingFloor}</TableHead>
+                        <TableHead>{t.capacity}</TableHead>
+                        <TableHead className="min-w-[150px]">{t.features}</TableHead>
+                        <TableHead>{t.status}</TableHead>
+                        <TableHead className="w-[100px]">{t.actions}</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {rooms.map((room: any) => (
+                        <TableRow key={room.id} data-testid={`row-room-${room.id}`}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <div>{room.name}</div>
+                              {room.name_bn && (
+                                <div className="text-xs text-muted-foreground">{room.name_bn}</div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-sm">
+                            {[room.building, room.floor].filter(Boolean).join(' / ') || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5">
+                              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span data-testid={`capacity-${room.id}`} className="text-sm">{room.capacity}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {room.features && room.features.length > 0 ? (
+                                room.features.map((feature: string) => {
+                                  const featureInfo = roomFeatures.find(f => f.value === feature);
+                                  return (
+                                    <Badge key={feature} variant="secondary" className="text-xs" data-testid={`badge-feature-${room.id}-${feature}`}>
+                                      {featureInfo ? (language === 'bn' ? featureInfo.labelBn : featureInfo.labelEn) : feature}
+                                    </Badge>
+                                  );
+                                })
+                              ) : (
+                                <span className="text-sm text-muted-foreground">-</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={room.is_active ? "default" : "secondary"}
+                              data-testid={`badge-room-status-${room.id}`}
+                            >
+                              {room.is_active ? t.active : t.inactive}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0"
+                                onClick={() => handleEditRoom(room)}
+                                data-testid={`button-edit-room-${room.id}`}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0"
+                                onClick={() => handleDeleteRoom(room.id)}
+                                data-testid={`button-delete-room-${room.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  {t.noRooms}
+                <div className="text-center py-12">
+                  <DoorOpen className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <p className="text-muted-foreground">{t.noRooms}</p>
                 </div>
               )}
             </CardContent>
@@ -1493,22 +1488,23 @@ function ExamManagementContent() {
         </TabsContent>
 
         {/* Calendar View Tab */}
-        <TabsContent value="calendar" className="space-y-6">
-          <Card>
+        <TabsContent value="calendar" className="space-y-6 mt-6">
+          <Card className="border shadow-none">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>{t.calendarView}</CardTitle>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <CardTitle className="text-lg">{t.calendarView}</CardTitle>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handlePreviousMonth}
                     data-testid="button-previous-month"
+                    className="h-10 flex-1 sm:flex-initial"
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    {t.previousMonth}
+                    <span className="ml-1 hidden sm:inline">{t.previousMonth}</span>
                   </Button>
-                  <div className="text-lg font-semibold px-4" data-testid="text-current-month">
+                  <div className="text-base sm:text-lg font-semibold px-2 sm:px-4 text-center flex-1 sm:flex-initial" data-testid="text-current-month">
                     {format(currentMonth, 'MMMM yyyy')}
                   </div>
                   <Button
@@ -1516,8 +1512,9 @@ function ExamManagementContent() {
                     size="sm"
                     onClick={handleNextMonth}
                     data-testid="button-next-month"
+                    className="h-10 flex-1 sm:flex-initial"
                   >
-                    {t.nextMonth}
+                    <span className="mr-1 hidden sm:inline">{t.nextMonth}</span>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -1526,11 +1523,11 @@ function ExamManagementContent() {
             <CardContent>
               <div className="space-y-4">
                 {/* Week days header */}
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {weekDays.map((day, index) => (
                     <div
                       key={index}
-                      className="text-center font-semibold text-sm py-2 border-b"
+                      className="text-center font-semibold text-xs sm:text-sm py-2 border-b"
                       data-testid={`weekday-${index}`}
                     >
                       {day}
@@ -1539,7 +1536,7 @@ function ExamManagementContent() {
                 </div>
 
                 {/* Calendar grid */}
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {generateCalendarDays().map((day, index) => {
                     const dayExams = getExamsForDay(day);
                     const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -1563,40 +1560,40 @@ function ExamManagementContent() {
                         <SheetTrigger asChild>
                           <button
                             className={`
-                              relative min-h-[80px] p-2 rounded-lg border transition-colors
+                              relative min-h-[60px] sm:min-h-[80px] p-1.5 sm:p-2 rounded-lg border transition-colors
                               ${!isCurrentMonth ? 'opacity-40' : ''}
-                              ${isToday ? 'border-blue-500 border-2 bg-blue-50 dark:bg-blue-950' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}
+                              ${isToday ? 'border-primary border-2 bg-primary/5' : 'hover:bg-accent'}
                               ${dayExams.length > 0 ? 'cursor-pointer' : 'cursor-default'}
                             `}
                             disabled={dayExams.length === 0}
                             data-testid={`day-cell-${format(day, 'yyyy-MM-dd')}`}
                           >
-                            <div className="text-sm font-medium text-left">
+                            <div className="text-xs sm:text-sm font-medium text-left">
                               {format(day, 'd')}
                             </div>
                             
                             {dayExams.length > 0 && (
-                              <div className="mt-1 space-y-1">
+                              <div className="mt-1 space-y-0.5 sm:space-y-1">
                                 {upcomingExams.length > 0 && (
                                   <div className="flex items-center gap-1">
-                                    <div className="h-2 w-2 rounded-full bg-blue-500" />
-                                    <span className="text-xs" data-testid={`badge-upcoming-${format(day, 'yyyy-MM-dd')}`}>
+                                    <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-blue-500" />
+                                    <span className="text-[10px] sm:text-xs" data-testid={`badge-upcoming-${format(day, 'yyyy-MM-dd')}`}>
                                       {upcomingExams.length}
                                     </span>
                                   </div>
                                 )}
                                 {ongoingExams.length > 0 && (
                                   <div className="flex items-center gap-1">
-                                    <div className="h-2 w-2 rounded-full bg-green-500" />
-                                    <span className="text-xs" data-testid={`badge-ongoing-${format(day, 'yyyy-MM-dd')}`}>
+                                    <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500" />
+                                    <span className="text-[10px] sm:text-xs" data-testid={`badge-ongoing-${format(day, 'yyyy-MM-dd')}`}>
                                       {ongoingExams.length}
                                     </span>
                                   </div>
                                 )}
                                 {completedExams.length > 0 && (
                                   <div className="flex items-center gap-1">
-                                    <div className="h-2 w-2 rounded-full bg-gray-400" />
-                                    <span className="text-xs" data-testid={`badge-completed-${format(day, 'yyyy-MM-dd')}`}>
+                                    <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-gray-400" />
+                                    <span className="text-[10px] sm:text-xs" data-testid={`badge-completed-${format(day, 'yyyy-MM-dd')}`}>
                                       {completedExams.length}
                                     </span>
                                   </div>
@@ -1607,7 +1604,7 @@ function ExamManagementContent() {
                         </SheetTrigger>
 
                         {dayExams.length > 0 && (
-                          <SheetContent className="overflow-y-auto">
+                          <SheetContent className="overflow-y-auto w-full sm:max-w-lg">
                             <SheetHeader>
                               <SheetTitle>
                                 {t.examsOnThisDay}
@@ -1623,14 +1620,14 @@ function ExamManagementContent() {
                                 const examType = examTypes.find(t => t.value === exam.type);
                                 
                                 return (
-                                  <Card key={exam.id} data-testid={`exam-card-${exam.id}`}>
+                                  <Card key={exam.id} data-testid={`exam-card-${exam.id}`} className="border shadow-none">
                                     <CardHeader className="pb-3">
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                           <CardTitle className="text-base">
                                             {exam.name}
                                           </CardTitle>
-                                          <CardDescription className="mt-1">
+                                          <CardDescription className="mt-1 text-sm">
                                             {examType ? (language === 'bn' ? examType.labelBn : examType.labelEn) : exam.type}
                                           </CardDescription>
                                         </div>
@@ -1686,17 +1683,17 @@ function ExamManagementContent() {
 
                 {/* Legend */}
                 <div className="mt-6 pt-4 border-t">
-                  <div className="flex flex-wrap gap-4 text-sm">
+                  <div className="flex flex-wrap gap-4 text-xs sm:text-sm">
                     <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-blue-500" />
+                      <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-blue-500" />
                       <span>{t.upcoming}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-green-500" />
+                      <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-green-500" />
                       <span>{t.ongoing}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-gray-400" />
+                      <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-gray-400" />
                       <span>{t.completed}</span>
                     </div>
                   </div>
@@ -1713,9 +1710,7 @@ function ExamManagementContent() {
 export default function ExamManagement() {
   return (
     <AppShell>
-      <ResponsivePageLayout title="Exam Management" backButton={false}>
-        <ExamManagementContent />
-      </ResponsivePageLayout>
+      <ExamManagementContent />
     </AppShell>
   );
 }
