@@ -1,0 +1,105 @@
+🏠 Dashboard & Home (3 pages)
+/ - Main Dashboard (Responsive Dashboard)
+/dashboard - Dashboard (alternate route)
+/welcome - Welcome Page
+🌐 Public Website Pages (9 pages)
+/public - Public Homepage
+/about - About Page
+/academics - Academics Page
+/admissions - Admissions Page
+/contact - Contact Page
+/student-portal - Public Student Portal (no auth)
+/results - Public Results Page
+/fees - Public Fees Page
+/diagnostic - Diagnostic Page
+🎓 Student Portal (8 pages)
+/student - Student Portal Dashboard
+/student/profile - Student Profile
+/student/attendance - Student Attendance
+/student/fees - Student Fees
+/student/library - Student Library
+/student/results - Student Results
+/student/schedule - Student Schedule
+/student/notifications - Student Notifications
+👨‍🏫 Teacher Portal (4 pages)
+/teacher - Teacher Dashboard
+/teacher/marks - Mark Entry
+/teacher/attendance - Attendance Marking
+/teacher-portal-new - New Teacher Portal
+👥 Parent Portal (3 pages)
+/parent - Parent Portal
+/parent-portal - Parent Portal Simple
+/parent-login - Parent Login
+📋 Management Pages (7 pages)
+/management/students - Students Management
+/management/teachers - Teachers Management
+/management/finances - Finances Management
+/management/staff - Staff Management
+/management/parents - Parents Management
+/management/library - Library Management
+/management/inventory - Inventory Management
+/management/transport - Transport Management
+📚 Academic Management (6 pages)
+/academic/subjects - Subjects Management
+/academic/assignments - Assignments Management
+/academic/timetable - Timetable
+/academic/gradebook - Gradebook
+/academic/results-management - Results Management
+/academic/attendance-management - Attendance Management (Admin)
+👔 HR & Payroll (4 pages)
+/hr/leave-management - Leave Management
+/hr/staff-attendance - Staff Attendance
+/hr/payroll - Payroll System
+/hr/performance-appraisal - Performance Appraisal
+📊 Reports & Analytics (2 pages)
+/reports - Reports Dashboard
+/reports/custom-builder - Custom Report Builder
+🏨 Hostel Management (4 pages)
+/hostel - Hostel Management
+/hostel/rooms - Room Management
+/hostel/meals - Meal Management
+/hostel/attendance - Hostel Attendance
+📖 Library System (1 page)
+/library - Library Management
+📦 Inventory System (4 pages)
+/inventory - Inventory Management
+/inventory/vendors - Vendors Management
+/inventory/purchase-orders - Purchase Orders
+/inventory/stock-alerts - Stock Alerts
+🚌 Transport System (1 page)
+/transport - Transport Management
+🎓 Admission Portal (3 pages)
+/admission - Admission Portal
+/admission/tests - Admission Tests
+/admission/interviews - Admission Interviews
+📝 Exam Management (5 pages)
+/exam-management - Exam Management Dashboard
+/exam-management/scheduling - Exam Scheduling
+/exam-management/seating-arrangements - Seating Arrangements
+/exam-management/invigilation-duties - Invigilation Duties
+/exam-management/public-portal-settings - Public Portal Settings
+💬 Communication System (3 pages)
+/communication/announcements - Announcements Board
+/communication/notifications - Notifications System
+/communication/messaging - Parent-Teacher Messaging
+🏥 Student Welfare (5 pages)
+/student-welfare/activities - Co-Curricular Activities
+/student-welfare/disciplinary - Disciplinary Records
+/student-welfare/health - Health Records
+/student-welfare/medical-checkups - Medical Checkups
+/student-welfare/vaccinations - Vaccinations
+⚙️ Settings (4 pages)
+/settings/templates - Templates
+/settings/admin - Admin Settings
+/settings/school - School Settings
+/settings/academic-years - Academic Years
+💰 Credits & Payment (5 pages)
+/credits - Credits Dashboard
+/credits/buy - Buy Credits
+/credits/payment/:packageId - Payment Options
+/credits/transactions - Transactions
+/payment - Payment Gateway
+🔔 Notifications (3 pages)
+/notifications - Notifications Page
+/notifications/live - Live Notifications
+/calendar - Calendar
