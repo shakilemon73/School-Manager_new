@@ -258,7 +258,7 @@ function SeatingArrangementsContent() {
         .from("seating_arrangements")
         .select(`
           *,
-          exam_schedules (id, subject, exam_date, start_time, end_time),
+          exam_schedules (id, subject, date, start_time, end_time),
           students (id, name, roll_number, class, section)
         `)
         .eq("school_id", schoolId)
@@ -285,7 +285,7 @@ function SeatingArrangementsContent() {
         .from("exam_schedules")
         .select("*")
         .eq("school_id", schoolId)
-        .order("exam_date", { ascending: false });
+        .order("date", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -606,9 +606,14 @@ function SeatingArrangementsContent() {
             seatNumber: a.seat_number,
             rollNumber: a.students?.roll_number || '',
             studentName: a.students?.name || '',
+            studentId: a.students?.student_id || '',
             class: a.students?.class || '',
             section: a.students?.section || '',
-          }))
+          })),
+          {
+            name: "School",
+            address: ""
+          }
         );
         pdf.save(`seating-${roomNumber}.pdf`);
       }

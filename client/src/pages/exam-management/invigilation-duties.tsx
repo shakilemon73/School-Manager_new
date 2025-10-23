@@ -266,7 +266,7 @@ function InvigilationDutiesContent() {
         .from("invigilation_duties")
         .select(`
           *,
-          exam_schedules (id, subject, exam_date, start_time, end_time),
+          exam_schedules (id, subject, date, start_time, end_time),
           teachers (id, name, email)
         `)
         .eq("school_id", schoolId)
@@ -292,7 +292,7 @@ function InvigilationDutiesContent() {
         .from("exam_schedules")
         .select("*")
         .eq("school_id", schoolId)
-        .order("exam_date", { ascending: false });
+        .order("date", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -705,14 +705,21 @@ function InvigilationDutiesContent() {
 
         for (const [teacherId, teacherDuties] of Object.entries<any>(groupedByTeacher)) {
           const teacher = teachers?.find(t => t.id === parseInt(teacherId));
-          const pdf = await ExamPDFGenerator.generateDutyPDF(
-            teacher?.name || "Teacher",
+          const pdf = await ExamPDFGenerator.generateDutyRosterPDF(
+            "Exam Duties",
             teacherDuties.map((d: any) => ({
-              date: d.duty_date,
-              time: `${d.start_time} - ${d.end_time}`,
-              room: d.room_number,
+              teacherName: teacher?.name || "Teacher",
+              roomNumber: d.room_number,
+              date: d.duty_date || '',
+              startTime: d.start_time || '',
+              endTime: d.end_time || '',
               dutyType: d.duty_type,
-            }))
+            })),
+            {
+              name: "School",
+              address: ""
+            },
+            'teacher'
           );
           pdf.save(`duty-${teacher?.name}.pdf`);
         }
@@ -724,14 +731,21 @@ function InvigilationDutiesContent() {
         }, {});
 
         for (const [roomNumber, roomDuties] of Object.entries<any>(groupedByRoom)) {
-          const pdf = await ExamPDFGenerator.generateDutyPDF(
-            `Room ${roomNumber}`,
+          const pdf = await ExamPDFGenerator.generateDutyRosterPDF(
+            "Exam Duties",
             roomDuties.map((d: any) => ({
-              date: d.duty_date,
-              time: `${d.start_time} - ${d.end_time}`,
-              teacher: d.teachers?.name || 'N/A',
+              teacherName: d.teachers?.name || 'N/A',
+              roomNumber: roomNumber,
+              date: d.duty_date || '',
+              startTime: d.start_time || '',
+              endTime: d.end_time || '',
               dutyType: d.duty_type,
-            }))
+            })),
+            {
+              name: "School",
+              address: ""
+            },
+            'room'
           );
           pdf.save(`duty-room-${roomNumber}.pdf`);
         }
