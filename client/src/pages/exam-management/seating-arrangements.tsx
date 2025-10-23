@@ -649,7 +649,6 @@ function SeatingArrangementsContent() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold">{t.title}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button
@@ -1291,7 +1290,7 @@ function SeatingArrangementsContent() {
 export default function SeatingArrangements() {
   return (
     <AppShell>
-      <ResponsivePageLayout title="Seating Arrangements" backButton={false}>
+      <ResponsivePageLayout backButton={false}>
         <SeatingArrangementsContent />
       </ResponsivePageLayout>
     </AppShell>

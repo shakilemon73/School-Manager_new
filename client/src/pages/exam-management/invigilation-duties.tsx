@@ -785,7 +785,6 @@ function InvigilationDutiesContent() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold">{t.title}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button
@@ -1470,7 +1469,7 @@ function InvigilationDutiesContent() {
 export default function InvigilationDuties() {
   return (
     <AppShell>
-      <ResponsivePageLayout title="Invigilation Duties" backButton={false}>
+      <ResponsivePageLayout backButton={false}>
         <InvigilationDutiesContent />
       </ResponsivePageLayout>
     </AppShell>
