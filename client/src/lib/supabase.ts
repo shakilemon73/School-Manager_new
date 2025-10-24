@@ -101,6 +101,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export { supabase };
 
+// Type definitions for RBAC
+export type UserRole = 'super_admin' | 'school_admin' | 'teacher' | 'student' | 'parent';
+
 // Helper functions for authentication
 export const auth = {
   signUp: async (email: string, password: string, userData: any) => {

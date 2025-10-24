@@ -8,7 +8,10 @@ import {
   timestamp, 
   date, 
   time, 
-  json 
+  json,
+  varchar,
+  jsonb,
+  unique
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -3019,3 +3022,96 @@ export const notificationQueueInsertSchema = createInsertSchema(notificationQueu
 });
 export type InsertNotificationQueue = z.infer<typeof notificationQueueInsertSchema>;
 export type NotificationQueue = typeof notificationQueue.$inferSelect;
+
+// ============================================================================
+// RBAC (Role-Based Access Control) Tables
+// ============================================================================
+
+// User Accounts table - Links Supabase auth users to school roles
+export const userAccounts = pgTable('user_accounts', {
+  id: varchar('id').primaryKey(), // references auth.users
+  schoolId: integer('school_id').references(() => schools.id),
+  defaultRole: text('default_role'), // 'super_admin' | 'school_admin' | 'teacher' | 'student' | 'parent'
+  metadata: jsonb('metadata').$type<{ isSuperAdmin?: boolean }>(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const userAccountsInsertSchema = createInsertSchema(userAccounts).omit({
+  createdAt: true,
+});
+export type InsertUserAccount = z.infer<typeof userAccountsInsertSchema>;
+export type UserAccount = typeof userAccounts.$inferSelect;
+
+// Role Assignments table - Multi-role support for users
+export const roleAssignments = pgTable('role_assignments', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id').notNull(), // references auth.users
+  schoolId: integer('school_id').references(() => schools.id),
+  role: text('role').notNull(), // 'super_admin' | 'school_admin' | 'teacher' | 'student' | 'parent'
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  uniqueUserSchoolRole: unique().on(table.userId, table.schoolId, table.role),
+}));
+
+export const roleAssignmentsInsertSchema = createInsertSchema(roleAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertRoleAssignment = z.infer<typeof roleAssignmentsInsertSchema>;
+export type RoleAssignment = typeof roleAssignments.$inferSelect;
+
+// Teacher Class Subjects table - Teachers assigned to classes and subjects
+export const teacherClassSubjects = pgTable('teacher_class_subjects', {
+  id: serial('id').primaryKey(),
+  teacherId: varchar('teacher_id').notNull(), // references auth.users
+  classId: integer('class_id').references(() => classes.id),
+  subjectId: integer('subject_id').references(() => subjects.id),
+  academicYearId: integer('academic_year_id').references(() => academicYears.id),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  uniqueTeacherClassSubject: unique().on(table.teacherId, table.classId, table.subjectId, table.academicYearId),
+}));
+
+export const teacherClassSubjectsInsertSchema = createInsertSchema(teacherClassSubjects).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTeacherClassSubject = z.infer<typeof teacherClassSubjectsInsertSchema>;
+export type TeacherClassSubject = typeof teacherClassSubjects.$inferSelect;
+
+// Parent Student Links table - Links parents to their children
+export const parentStudentLinks = pgTable('parent_student_links', {
+  id: serial('id').primaryKey(),
+  parentId: varchar('parent_id').notNull(), // references auth.users
+  studentId: integer('student_id').references(() => students.id),
+  relationshipType: text('relationship_type'), // 'father' | 'mother' | 'guardian'
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  uniqueParentStudent: unique().on(table.parentId, table.studentId),
+}));
+
+export const parentStudentLinksInsertSchema = createInsertSchema(parentStudentLinks).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertParentStudentLink = z.infer<typeof parentStudentLinksInsertSchema>;
+export type ParentStudentLink = typeof parentStudentLinks.$inferSelect;
+
+// Role Audit Logs table - Track all role changes for compliance
+export const roleAuditLogs = pgTable('role_audit_logs', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id').notNull(),
+  schoolId: integer('school_id'),
+  action: text('action').notNull(), // 'assigned' | 'removed' | 'modified'
+  roleType: text('role_type'),
+  performedBy: varchar('performed_by').notNull(),
+  timestamp: timestamp('timestamp').defaultNow(),
+  details: jsonb('details'),
+});
+
+export const roleAuditLogsInsertSchema = createInsertSchema(roleAuditLogs).omit({
+  id: true,
+  timestamp: true,
+});
+export type InsertRoleAuditLog = z.infer<typeof roleAuditLogsInsertSchema>;
+export type RoleAuditLog = typeof roleAuditLogs.$inferSelect;
