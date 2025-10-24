@@ -152,7 +152,7 @@ aside, main {
 
 /* Language-specific font families */
 :lang(bn) {
-  font-family: 'Hind Siliguri', sans-serif;
+  font-family: 'Noto Sans Bengali', sans-serif;
 }
 
 :lang(ar) {
@@ -164,7 +164,7 @@ aside, main {
 }
 
 .font-hind {
-  font-family: 'Hind Siliguri', sans-serif;
+  font-family: 'Noto Sans Bengali', sans-serif;
 }
 
 .font-arabic {

@@ -10,7 +10,7 @@ document.head.appendChild(linkElement);
 
 // Import fonts
 const fontLink = document.createElement('link');
-fontLink.href = "https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Noto+Sans+Arabic:wght@300;400;500;700&display=swap";
+fontLink.href = "https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700&family=Noto+Sans+Arabic:wght@300;400;500;700&display=swap";
 fontLink.rel = "stylesheet";
 document.head.appendChild(fontLink);
 
