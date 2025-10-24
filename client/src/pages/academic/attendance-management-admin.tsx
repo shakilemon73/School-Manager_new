@@ -336,7 +336,7 @@ export default function AttendanceManagementAdmin() {
     return { student, rate, totalCount };
   }).filter(s => s.rate < 75 && s.totalCount > 0);
 
-  const handleExportAttendance = async (format: 'csv' | 'pdf' | 'excel') => {
+  const handleExportAttendance = async (exportFormat: 'csv' | 'pdf' | 'excel') => {
     if (students.length === 0) {
       toast({
         title: language === 'bn' ? 'ত্রুটি' : 'Error',
@@ -411,8 +411,8 @@ export default function AttendanceManagementAdmin() {
         },
       ];
 
-      if (format === 'csv' || format === 'excel') {
-        if (format === 'csv') {
+      if (exportFormat === 'csv' || exportFormat === 'excel') {
+        if (exportFormat === 'csv') {
           exportUtils.exportWithStats({
             filename: 'attendance-report',
             columns,
@@ -426,7 +426,7 @@ export default function AttendanceManagementAdmin() {
             data: exportData,
           }, statsData, 'excel');
         }
-      } else if (format === 'pdf') {
+      } else if (exportFormat === 'pdf') {
         exportUtils.exportWithStats({
           filename: 'attendance-report',
           title,
@@ -440,8 +440,8 @@ export default function AttendanceManagementAdmin() {
       toast({
         title: language === 'bn' ? 'সফল' : 'Success',
         description: language === 'bn' 
-          ? `উপস্থিতি রিপোর্ট ${format.toUpperCase()} ফরম্যাটে রপ্তানি হয়েছে` 
-          : `Attendance report exported as ${format.toUpperCase()}`,
+          ? `উপস্থিতি রিপোর্ট ${exportFormat.toUpperCase()} ফরম্যাটে রপ্তানি হয়েছে` 
+          : `Attendance report exported as ${exportFormat.toUpperCase()}`,
       });
     } catch (error) {
       console.error('Export error:', error);
@@ -527,6 +527,7 @@ export default function AttendanceManagementAdmin() {
     selectSection: language === 'bn' ? 'শাখা নির্বাচন' : 'Select Section',
     allSections: language === 'bn' ? 'সকল শাখা' : 'All Sections',
     selectDate: language === 'bn' ? 'তারিখ নির্বাচন' : 'Select Date',
+    selectStatus: language === 'bn' ? 'অবস্থা নির্বাচন করুন' : 'Select Status',
     dailyAttendance: language === 'bn' ? 'দৈনিক উপস্থিতি' : 'Daily Attendance',
     trends: language === 'bn' ? 'ট্রেন্ড' : 'Trends',
     alerts: language === 'bn' ? 'সতর্কতা' : 'Alerts',
