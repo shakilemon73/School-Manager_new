@@ -1,0 +1,1069 @@
+📊 Academic Pages Analysis - Comprehensive Report
+**Generated:** October 24, 2025
+
+## 🎯 Overview
+This document analyzes 5 core academic management pages in the School Management System:
+
+1. **গ্রেডবুক (Gradebook)** - `/academic/gradebook`
+2. **ফলাফল ব্যবস্থাপনা (Results Management)** - `/academic/results-management`
+3. **উপস্থিতি ব্যবস্থাপনা (Attendance Management)** - `/academic/attendance-management-admin`
+4. **অ্যাসাইনমেন্ট (Assignments)** - `/academic/assignments-management`
+5. **সময়সূচী (Timetable)** - `/academic/timetable`
+
+---
+
+## 1️⃣ গ্রেডবুক (Gradebook) - `/academic/gradebook`
+
+### 📋 Current Functionality
+
+#### ✅ Working Features:
+1. **Assessment Management**
+   - Create new assessments (tests, quizzes, exams)
+   - Support for multiple assessment types
+   - Configure total marks, weight percentage
+   - Link to subjects, terms, and academic years
+   - Support for Bengali and English names
+
+2. **Score Recording**
+   - Individual score entry
+   - Bulk score entry mode
+   - Mark students as absent
+   - Save/edit individual scores
+   - Real-time validation
+
+3. **Class/Section Filtering**
+   - Filter by class (1-10)
+   - Filter by section (A, B, C, D)
+   - Filter by subject
+   - Filter by term (1st, 2nd, 3rd)
+
+4. **Gradebook View**
+   - Table showing all students with assessment columns
+   - Roll number, name display
+   - Color-coded scores (green for high, red for low)
+   - Calculated averages per student
+   - Real-time score updates
+
+5. **Analytics**
+   - Grade distribution (A+, A, B, C, F)
+   - Bar charts showing distribution
+   - Average scores
+   - Pass/fail statistics
+
+6. **Export**
+   - Export to CSV
+   - Includes all students, assessments, weighted grades
+
+### 🔌 Data Connections
+
+**Primary Database:**
+- Uses custom `gradesDb` helper (`@/lib/db/grades.ts`)
+- Directly queries Supabase
+
+**Tables Used:**
+- `subjects` - Subject information
+- `assessments` - Assessment definitions
+- `student_scores` - Individual student marks
+- `students` - Student information
+- `academic_terms` - Term information
+- `teachers` - Teacher who created assessment
+
+**Query Keys:**
+```typescript
+['subjects', schoolId]
+['assessments', schoolId, class, section, subjectId, termId]
+['gradebook', schoolId, class, section, subjectId, termId]
+['grade-distribution', schoolId, assessmentId]
+```
+
+### 🔗 Connections to Other Pages
+
+1. **Links TO:**
+   - None directly (standalone page)
+
+2. **Links FROM:**
+   - Results Management has "View Gradebook" button
+   - Sidebar navigation
+
+3. **Shared Data:**
+   - Shares `assessments` table with Assignments page
+   - Shares `student_scores` with Results Management
+   - Uses `subjects` from Subjects Management
+
+### ❌ Missing Features
+
+1. **Teacher Assignment**
+   - No way to assign specific teachers to assessments
+   - Created_by field exists but not used in UI
+
+2. **Assessment Components**
+   - Database has `assessment_components` table
+   - UI doesn't support breaking assessments into parts (e.g., MCQ 40%, Written 60%)
+
+3. **Grade Overrides**
+   - Database has `grade_overrides` table
+   - No UI to manually override grades with approval
+
+4. **Grade Scales**
+   - Database has `grade_scales` table
+   - Currently hardcoded (90+ = A+, etc.)
+   - No custom grading scales per school
+
+5. **Weighted Grade Calculation**
+   - Backend has `calculateWeightedGrade` function
+   - Not shown in main UI
+
+6. **Permissions**
+   - No role-based access control
+   - Any logged-in user can edit any grade
+
+7. **Audit Trail**
+   - No history of who changed scores when
+   - `graded_by_teacher_id` exists but not tracked
+
+8. **Bulk Operations**
+   - Can't bulk delete assessments
+   - Can't copy assessments to another class
+
+9. **Student Details**
+   - Clicking student doesn't show their full gradebook
+   - No link to student profile
+
+10. **Notifications**
+    - No notification when grades are published
+    - Parents/students not alerted
+
+---
+
+## 2️⃣ ফলাফল ব্যবস্থাপনা (Results Management) - `/academic/results-management`
+
+### 📋 Current Functionality
+
+#### ✅ Working Features:
+1. **Results Display**
+   - Shows all student scores across assessments
+   - Displays student ID, name, class/section
+   - Shows assessment name, score, grade letter
+   - Pass/Fail status badges
+   - Absent status tracking
+
+2. **Statistics**
+   - Total students count
+   - Total assessments count
+   - Average score percentage
+   - Pass rate (40% threshold)
+
+3. **Filtering**
+   - Filter by class
+   - Filter by section  
+   - Filter by subject
+   - Filter by term
+   - Search by student name/ID
+
+4. **Analytics Tab**
+   - Grade distribution bar chart
+   - Percentage distribution pie chart
+   - Visual representation of performance
+
+5. **UI Tabs**
+   - Results Table view
+   - Analytics view
+   - Easy switching
+
+### 🔌 Data Connections
+
+**Primary Database:**
+- Direct Supabase queries
+
+**Tables Used:**
+- `student_scores` - Score records
+- `students` (INNER JOIN) - Student details
+- `assessments` (INNER JOIN) - Assessment info
+- `classes` - Class list
+- `subjects` - Subject list
+- `academic_terms` - Term list
+
+**Query Keys:**
+```typescript
+['classes', schoolId]
+['subjects', schoolId]
+['academic-terms', schoolId, academicYearId]
+['student-results', schoolId, class, section, subject, term]
+```
+
+### 🔗 Connections to Other Pages
+
+1. **Links TO:**
+   - **Gradebook** - "View Gradebook" button in header
+   - Shares assessment and score data
+
+2. **Links FROM:**
+   - Sidebar navigation
+   - Dashboard widgets
+
+3. **Shared Data:**
+   - `student_scores` table (read-only here, written in Gradebook)
+   - `assessments` table
+
+### ❌ Missing Features
+
+1. **Export Functionality**
+   - Export button shows toast but doesn't actually export
+   - No PDF export
+   - No Excel export
+
+2. **View Individual Result**
+   - Eye icon button doesn't do anything
+   - Should open detailed result card
+
+3. **Result Publication**
+   - No publish/unpublish toggle
+   - Results always visible
+   - No draft mode
+
+4. **Result Cards**
+   - No individual result card generation
+   - No marksheet/transcript generation
+
+5. **Filtering by Status**
+   - Can't filter by pass/fail
+   - Can't filter by absent students
+   - Can't filter by grade (A+, A, etc.)
+
+6. **Performance Trends**
+   - No comparison between terms
+   - No student progress tracking
+   - No class comparison
+
+7. **Result Approval**
+   - No approval workflow
+   - No marks verification by head teacher
+   - No lock mechanism
+
+8. **Student/Parent Portal Integration**
+   - Results not shown in student portal
+   - Parents can't see child's results
+
+9. **Print/Download**
+   - Can't print result sheets
+   - No bulk download option
+
+10. **Detailed Analytics**
+    - No subject-wise performance
+    - No topper/bottom performer lists
+    - No improvement/decline tracking
+
+---
+
+## 3️⃣ উপস্থিতি ব্যবস্থাপনা (Attendance Management) - `/academic/attendance-management-admin`
+
+### 📋 Current Functionality
+
+#### ✅ Working Features:
+1. **Daily Attendance Tracking**
+   - Mark attendance for specific date
+   - Calendar date picker
+   - Status: Present, Absent, Late
+   - Remarks field for notes
+
+2. **Class/Section Filtering**
+   - Filter by class
+   - Filter by section
+   - View all or specific groups
+
+3. **Statistics Cards**
+   - Total students
+   - Present today count
+   - Absent today count
+   - Late today count
+
+4. **Bulk Marking**
+   - Bulk mode toggle
+   - Mark all present button
+   - Save all at once
+   - Efficient for daily marking
+
+5. **Individual Edit**
+   - Edit individual attendance
+   - Delete attendance records
+   - Update status and remarks dialog
+
+6. **Search**
+   - Search students by name
+   - Search by student ID
+
+7. **Tabs**
+   - Daily Attendance tab
+   - Trends tab (7-day graph)
+   - Alerts tab (low attendance students)
+
+8. **Analytics**
+   - 7-day attendance trend line chart
+   - Present/Absent/Late breakdown
+   - Low attendance alerts (<75%)
+
+### 🔌 Data Connections
+
+**Primary Database:**
+- Direct Supabase queries
+
+**Tables Used:**
+- `attendance` - Attendance records
+- `students` (INNER JOIN) - Student details
+- `classes` - Class list
+
+**Query Keys:**
+```typescript
+['classes', schoolId]
+['attendance-admin', schoolId, class, section, date]
+['students', schoolId, class, section]
+```
+
+**Mutations:**
+- Mark attendance (upsert)
+- Bulk mark (upsert multiple)
+- Delete attendance
+
+### 🔗 Connections to Other Pages
+
+1. **Links TO:**
+   - **Students Management** - "View Students" button
+   - Links to student list page
+
+2. **Links FROM:**
+   - Sidebar navigation
+   - Dashboard widgets
+   - Teacher portal
+
+3. **Shared Data:**
+   - `students` table
+   - `attendance` table (also used by teacher portal)
+
+### ❌ Missing Features
+
+1. **Export Functionality**
+   - Export button shows toast but doesn't actually export
+   - No monthly report export
+   - No attendance sheets PDF
+
+2. **Teacher Assignment**
+   - Not linked to specific teachers
+   - No teacher-specific views
+   - Missing `class_id` foreign key
+
+3. **Attendance Percentage**
+   - No overall percentage shown per student
+   - Low attendance alert works but basic
+
+4. **Period-wise Attendance**
+   - Only daily marking
+   - No period/subject-wise tracking
+   - Can't mark attendance per class period
+
+5. **SMS/Email Alerts**
+   - No parent notification on absence
+   - No automated alerts
+
+6. **Attendance Report Cards**
+   - No individual attendance cards
+   - No monthly summary
+
+7. **Leave Management**
+   - No integration with leave requests
+   - Can't mark excused absence
+   - No leave approval workflow
+
+8. **Biometric Integration**
+   - No import from biometric devices
+   - All manual entry
+
+9. **QR Code Attendance**
+   - No QR-based check-in
+   - No mobile app integration
+
+10. **Holidays/Events**
+    - No marking of holidays
+    - No event-based exceptions
+    - School calendar not integrated
+
+11. **Defaulters Report**
+    - Low attendance shown but no action
+    - No letter generation
+    - No warning system
+
+12. **Historical Analysis**
+    - Only last 30 days fetched
+    - No year-over-year comparison
+    - No pattern analysis
+
+---
+
+## 4️⃣ অ্যাসাইনমেন্ট (Assignments) - `/academic/assignments-management`
+
+### 📋 Current Functionality
+
+#### ✅ Working Features:
+1. **Assignment Creation**
+   - Create homework/projects/quizzes
+   - English and Bengali titles
+   - Description field
+   - Subject selection
+   - Class and section
+   - Due date
+   - Total marks
+
+2. **Assignment Types**
+   - Homework (হোমওয়ার্ক)
+   - Project (প্রজেক্ট)
+   - Quiz (কুইজ)
+   - Color-coded badges
+
+3. **Statistics**
+   - Total assignments count
+   - Homework count
+   - Project count
+
+4. **Filtering**
+   - Search by title
+   - Filter by class
+   - Filter by type
+   - Real-time filtering
+
+5. **CRUD Operations**
+   - Create new assignments
+   - Edit existing assignments
+   - Delete assignments (with confirmation)
+
+6. **Table View**
+   - Shows title, type, subject, class, date, marks
+   - Action buttons (edit, delete)
+   - Truncated descriptions
+
+### 🔌 Data Connections
+
+**Primary Database:**
+- Direct Supabase queries
+
+**Tables Used:**
+- `assessments` - Stores assignments (type: homework/project)
+- `subjects` - Subject information
+- `teachers` - Assignment creator
+
+**Query Keys:**
+```typescript
+['/api/assessments', schoolId]
+['/api/subjects', schoolId]
+```
+
+**Important Note:**
+- **Shares `assessments` table with Gradebook**
+- Filters by `assessment_type` IN ('homework', 'project')
+- Gradebook uses all assessment types
+
+### 🔗 Connections to Other Pages
+
+1. **Links TO:**
+   - None directly
+
+2. **Links FROM:**
+   - Sidebar navigation
+   - Teacher portal
+
+3. **Shared Data:**
+   - **Shares `assessments` table with Gradebook**
+   - Both pages modify same table
+   - Different filtering logic
+
+### ❌ Missing Features
+
+1. **Submission Tracking**
+   - No way to see who submitted
+   - No submission count
+   - No submission deadline tracking
+
+2. **File Attachments**
+   - Can't attach files to assignments
+   - No PDF/doc upload for instructions
+   - No reference materials
+
+3. **Student Submissions**
+   - No way for students to submit work
+   - No file upload by students
+   - No online submission portal
+
+4. **Grading**
+   - Created in `assessments` table
+   - But no scores recorded in `student_scores`
+   - Missing link to Gradebook
+
+5. **Class/Student Assignment**
+   - Assigned to whole class/section
+   - Can't assign to specific students
+   - No differentiated assignments
+
+6. **Notifications**
+   - No notification when assignment posted
+   - Students not alerted
+   - No due date reminders
+
+7. **Status Tracking**
+   - No "draft" vs "published" status
+   - All assignments immediately visible
+   - No scheduled posting
+
+8. **Recurring Assignments**
+   - Can't create weekly homework templates
+   - No recurring task feature
+
+9. **Student Portal Integration**
+   - Assignments not shown in student portal
+   - Students can't see their assignments
+   - No assignment calendar
+
+10. **Teacher View**
+    - Shows all school assignments
+    - No filter by "my assignments"
+    - No teacher-specific view
+
+11. **Comments/Feedback**
+    - No comment section
+    - No peer review
+    - No teacher feedback on submissions
+
+12. **Analytics**
+    - No completion rate
+    - No submission timeline
+    - No performance analysis
+
+---
+
+## 5️⃣ সময়সূচী (Timetable) - `/academic/timetable`
+
+### 📋 Current Functionality
+
+#### ✅ Working Features:
+1. **Interactive Timetable**
+   - Grid layout (periods × days)
+   - 6 days (Sunday-Friday)
+   - 7 periods per day
+   - Bengali and English day names
+
+2. **Period Configuration**
+   - Auto-creates default periods
+   - Shows period number, name, time slots
+   - Configurable start/end times
+
+3. **Class/Section Selection**
+   - Select class (1-10)
+   - Select section (A-D)
+   - Loads specific timetable
+
+4. **Inline Editing**
+   - Click empty slot to add
+   - Click filled slot to edit
+   - Subject and teacher input
+   - Save/Cancel buttons
+
+5. **Slot Details**
+   - Subject name (Bengali preferred)
+   - Teacher name
+   - Room number
+   - Color-coded display
+
+6. **Auto-save**
+   - Creates routine if doesn't exist
+   - Saves period information
+   - Real-time updates
+
+### 🔌 Data Connections
+
+**Primary Database:**
+- Direct Supabase queries
+
+**Tables Used:**
+- `class_routines` - Routine metadata
+- `routine_periods` - Individual period slots
+- `periods` - Period configuration
+- `subjects` - Subject dropdown
+- `teachers` - Teacher dropdown
+
+**Query Keys:**
+```typescript
+['periods-config', schoolId]
+['routine-periods', schoolId, class, section]
+['subjects', schoolId]
+['teachers', schoolId]
+```
+
+**Mutations:**
+- Save period (upsert routine_periods)
+- Auto-create routine if not exists
+- Security: Verifies school_id ownership
+
+### 🔗 Connections to Other Pages
+
+1. **Links TO:**
+   - None directly
+
+2. **Links FROM:**
+   - Sidebar navigation
+   - Dashboard
+   - Documents > Class Routines (print version)
+
+3. **Shared Data:**
+   - `subjects` table
+   - `teachers` table
+   - `class_routines` used by document generator
+
+### ❌ Missing Features
+
+1. **Teacher Conflict Detection**
+   - No warning if teacher scheduled twice
+   - No availability checking
+   - Can double-book teachers
+
+2. **Room Conflict Detection**
+   - No warning if room used twice
+   - No room availability
+   - Can double-book rooms
+
+3. **Subject Allocation**
+   - No check against subject assignments
+   - Teacher might not teach that subject
+   - No validation
+
+4. **Break Periods**
+   - Period 4 named "Break" but not enforced
+   - Can assign classes during break
+   - No special handling
+
+5. **Period Templates**
+   - Can't copy Monday to Tuesday
+   - Can't copy one class schedule to another
+   - Manual entry for each slot
+
+6. **Bulk Operations**
+   - Can't clear entire day
+   - Can't delete whole routine
+   - Can't duplicate routines
+
+7. **PDF Export**
+   - No export from this page
+   - Separate document generator exists
+   - Not integrated
+
+8. **Teacher Timetable View**
+   - Only class/section view
+   - Can't see teacher's full schedule
+   - No teacher-centric view
+
+9. **Period Type**
+   - `period_type` field exists
+   - Not used in UI
+   - Could be: regular, practical, sports, etc.
+
+10. **Academic Year Link**
+    - Not linked to academic year
+    - No year-wise archiving
+    - Can't copy from previous year
+
+11. **Subject Distribution**
+    - No analysis of subject hours
+    - Can't see if English has enough periods
+    - No subject load balancing
+
+12. **Mobile Responsiveness**
+    - Table scrolls horizontally
+    - Hard to use on mobile
+    - No mobile-optimized view
+
+13. **Substitution**
+    - No substitute teacher marking
+    - No temporary changes
+    - No emergency replacements
+
+14. **Student View**
+    - Students can't see their timetable
+    - No student portal integration
+    - No personal schedule
+
+---
+
+## 🔗 Inter-Page Connections Summary
+
+### Data Flow Diagram:
+
+```
+┌─────────────────────┐
+│   Subjects Mgmt     │
+│  (shared/schema)    │
+└──────┬──────────────┘
+       │
+       ├─────────────────────┬─────────────────┬────────────────┐
+       │                     │                 │                │
+       ▼                     ▼                 ▼                ▼
+┌─────────────┐      ┌─────────────┐   ┌──────────────┐  ┌──────────────┐
+│  Gradebook  │      │ Assignments │   │  Timetable   │  │   Results    │
+│             │      │             │   │              │  │  Management  │
+│ Creates:    │      │ Creates:    │   │  Creates:    │  │              │
+│ assessments │◄────►│ assessments │   │  routines    │  │  Reads:      │
+│ scores      │      │ (homework)  │   │  periods     │  │  scores      │
+└──────┬──────┘      └─────────────┘   └──────┬───────┘  │  assessments │
+       │                                       │          └───────────────┘
+       │                                       │
+       ▼                                       ▼
+┌─────────────────────────────────────────────────────┐
+│              Students Table                         │
+│  (Used by all pages for student information)        │
+└─────────────────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  Attendance Mgmt    │
+│  Creates:           │
+│  attendance records │
+└─────────────────────┘
+```
+
+### Shared Tables:
+
+1. **`assessments`** - Shared by:
+   - Gradebook (all types)
+   - Assignments (homework/project types)
+   - Results Management (read-only)
+
+2. **`student_scores`** - Shared by:
+   - Gradebook (write)
+   - Results Management (read)
+
+3. **`students`** - Used by ALL pages
+
+4. **`subjects`** - Used by:
+   - Gradebook
+   - Assignments
+   - Timetable
+   - Results Management
+
+5. **`teachers`** - Used by:
+   - Gradebook (created_by)
+   - Assignments (created_by)
+   - Timetable (assignment)
+   - Attendance (potential link)
+
+### Missing Connections:
+
+1. **Assignments ↔ Gradebook**
+   - Assignments create in `assessments` table
+   - But no UI to grade them in Gradebook
+   - No "Grade Assignment" button
+
+2. **Timetable ↔ Attendance**
+   - Timetable knows period structure
+   - Attendance is only daily
+   - Could link for period-wise attendance
+
+3. **Student Portal Integration**
+   - None of these pages connect to student/parent portals
+   - Students can't see their:
+     - Grades
+     - Assignments
+     - Timetable
+     - Attendance
+
+4. **Notifications**
+   - No page sends notifications
+   - No integration with notification system
+
+---
+
+## 🐛 Common Issues Across All Pages
+
+### 1. **School Isolation**
+✅ **GOOD:** All queries filter by `school_id`
+✅ **GOOD:** RLS policies should prevent cross-school data access
+
+### 2. **Permission System**
+❌ **MISSING:** No role-based access control
+❌ **MISSING:** Any logged-in user can:
+- Create/edit/delete assessments
+- Change grades
+- Mark attendance
+- Edit timetables
+
+**Needed:**
+- Teacher can only edit their assigned subjects
+- Parents can only view their child's data
+- Students can only view, not edit
+
+### 3. **Data Validation**
+⚠️ **PARTIAL:** Client-side validation exists
+❌ **MISSING:** Server-side validation in Supabase RLS
+❌ **MISSING:** Score validation (can enter 150/100)
+❌ **MISSING:** Date validation (can mark attendance in future)
+
+### 4. **Error Handling**
+✅ **GOOD:** Try-catch blocks present
+⚠️ **PARTIAL:** Error toasts shown
+❌ **MISSING:** Detailed error messages
+❌ **MISSING:** Retry mechanisms
+❌ **MISSING:** Offline support
+
+### 5. **Loading States**
+✅ **GOOD:** Skeleton loaders present
+✅ **GOOD:** isPending/isLoading checks
+⚠️ **PARTIAL:** Some mutations don't show loading
+
+### 6. **Mobile Responsiveness**
+⚠️ **PARTIAL:**
+- Gradebook: table scrolls but hard to edit
+- Timetable: very difficult on mobile
+- Attendance: decent but bulk mode cramped
+- Assignments: good
+- Results: good
+
+### 7. **Bengali Language Support**
+✅ **GOOD:** All pages support Bengali
+✅ **GOOD:** Field names translate
+⚠️ **PARTIAL:** Some error messages still English
+❌ **MISSING:** Date formats not localized
+
+### 8. **Search Performance**
+⚠️ **ISSUES:**
+- Client-side filtering only
+- Large class lists slow
+- No pagination
+- No debouncing on search
+
+**Recommendation:** Server-side search with pagination
+
+### 9. **Export Features**
+❌ **BROKEN:**
+- Results Management export doesn't work
+- Attendance export doesn't work
+- Only Gradebook CSV export works
+
+### 10. **Audit Trail**
+❌ **MISSING:**
+- No history of changes
+- Can't see who edited what when
+- No version control
+
+---
+
+## 📊 Data Schema Issues
+
+### 1. **Foreign Key Relationships**
+
+**Issues Found:**
+```sql
+-- attendance table MISSING class_id foreign key
+-- Should link to classes table
+
+-- routine_periods MISSING validation
+-- No check if teacher assigned to multiple periods
+
+-- assessments uses text class/section
+-- Should use foreign keys to classes table
+```
+
+### 2. **Missing Indexes**
+Performance could be improved with indexes on:
+- `student_scores (student_id, assessment_id)`
+- `attendance (student_id, date)`
+- `routine_periods (routine_id, day_of_week, period_number)`
+- `assessments (school_id, class, section, subject_id)`
+
+### 3. **Data Types**
+Some inconsistencies:
+- `assessments.total_marks` is text, should be numeric
+- `assessments.weight_percentage` is text, should be numeric
+- `student_scores.score_obtained` is decimal (good)
+
+### 4. **Missing Tables**
+Needed for full functionality:
+- `assignment_submissions` - Track student submissions
+- `attendance_periods` - Period-wise attendance
+- `timetable_substitutions` - Teacher substitutions
+- `grade_history` - Audit trail for grade changes
+- `notification_queue` - Track sent notifications
+
+---
+
+## 🎯 Priority Recommendations
+
+### 🔴 CRITICAL (Fix Immediately):
+
+1. **Fix Export Functions**
+   - Results export broken
+   - Attendance export broken
+   - Implement actual CSV/PDF generation
+
+2. **Add Permissions**
+   - Implement role-based access
+   - Teachers can only edit their data
+   - Students/parents read-only
+
+3. **Connect Assignments to Gradebook**
+   - Add "Grade" button on assignments
+   - Link to create student_scores
+   - Show submission status
+
+4. **Student Portal Integration**
+   - Show timetable to students
+   - Show assignments to students
+   - Show grades to students (if published)
+   - Show attendance to students
+
+### 🟡 HIGH (Add Soon):
+
+5. **Attendance Features**
+   - Period-wise attendance
+   - SMS alerts to parents
+   - Monthly reports
+   - Export functionality
+
+6. **Gradebook Improvements**
+   - Assessment components
+   - Custom grade scales
+   - Grade publishing toggle
+   - Weighted grade display
+
+7. **Timetable Enhancements**
+   - Conflict detection
+   - Copy/duplicate functions
+   - Teacher view
+   - PDF export
+
+8. **Results Publishing**
+   - Draft vs published mode
+   - Result card generation
+   - Parent notification
+
+### 🟢 MEDIUM (Nice to Have):
+
+9. **Analytics Enhancements**
+   - Progress tracking
+   - Comparative analysis
+   - Performance trends
+
+10. **Mobile Optimization**
+    - Mobile-friendly tables
+    - Touch-friendly editing
+    - Responsive layouts
+
+11. **Audit Trail**
+    - Track all changes
+    - Show edit history
+    - Rollback capability
+
+12. **Bulk Operations**
+    - Mass import/export
+    - Batch updates
+    - Template copying
+
+---
+
+## 📝 Technical Debt
+
+### Code Quality Issues:
+
+1. **Duplicate Code**
+   - Filter dropdowns repeated across pages
+   - Create a `<ClassSectionFilter>` component
+   - Create a `<StudentSearch>` component
+
+2. **Hardcoded Values**
+   - Classes: ['1', '2', ..., '10']
+   - Sections: ['A', 'B', 'C', 'D']
+   - Should come from database
+
+3. **Type Safety**
+   - Some `any` types used
+   - Should use proper TypeScript types
+   - Leverage shared schema types
+
+4. **Query Organization**
+   - Mixed use of query keys
+   - Some use `/api/...`, some don't
+   - Standardize query key format
+
+### Database Issues:
+
+1. **Schema Inconsistency**
+   - Some use `name`/`name_bn`, some use `assessment_name`/`assessment_name_bn`
+   - Standardize naming convention
+
+2. **Missing Constraints**
+   - No CHECK constraints
+   - No UNIQUE constraints where needed
+   - No DEFAULT values
+
+3. **RLS Policies**
+   - Need comprehensive RLS policies
+   - Current security relies on client filtering
+   - Implement server-side security
+
+---
+
+## ✅ Summary Checklist
+
+### What's Working:
+- ✅ All 5 pages render correctly
+- ✅ Bengali language support
+- ✅ Basic CRUD operations
+- ✅ School isolation (by query filtering)
+- ✅ React Query caching
+- ✅ Loading states
+- ✅ Error handling (basic)
+- ✅ Responsive design (mostly)
+
+### What's Broken:
+- ❌ Export functions (2/3 broken)
+- ❌ No permissions system
+- ❌ Student portal integration missing
+- ❌ Assignments not gradeable
+- ❌ No parent notifications
+
+### What's Missing:
+- ❌ Period-wise attendance
+- ❌ Assignment submissions
+- ❌ Result publication workflow
+- ❌ Conflict detection in timetable
+- ❌ Audit trails
+- ❌ Mobile optimization
+- ❌ Advanced analytics
+- ❌ Bulk operations
+
+---
+
+## 🎓 Conclusion
+
+All 5 academic pages are **functional** but **incomplete**. They provide core functionality for:
+- Recording grades
+- Viewing results
+- Marking attendance
+- Creating assignments  
+- Building timetables
+
+However, they lack:
+- Student/parent access
+- Submission tracking
+- Notification systems
+- Permission controls
+- Advanced analytics
+- Mobile optimization
+
+The pages are **80% complete** from a basic admin perspective, but only **40% complete** for a full school management system that includes students, parents, and teachers.
+
+**Next Steps:**
+1. Fix broken export functions
+2. Add role-based permissions
+3. Connect to student/parent portals
+4. Implement notification system
+5. Add assignment submission tracking
+6. Enhance mobile experience
+
+---
+
+**Document End**
+*Generated by Replit Agent Analysis System*
