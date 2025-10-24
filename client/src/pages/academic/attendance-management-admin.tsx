@@ -20,6 +20,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,6 +46,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { exportUtils } from '@/lib/export-utils';
 import { Link } from 'wouter';
 import { format, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -58,6 +67,9 @@ import {
   Trash2,
   Save,
   Plus,
+  FileText,
+  FileSpreadsheet,
+  Loader2,
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { InsertAttendance } from '@shared/schema';
@@ -78,6 +90,7 @@ export default function AttendanceManagementAdmin() {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [editStatus, setEditStatus] = useState<string>('');
   const [editRemarks, setEditRemarks] = useState<string>('');
+  const [isExporting, setIsExporting] = useState(false);
 
   // Fetch classes
   const { data: classes = [] } = useQuery({
@@ -323,11 +336,123 @@ export default function AttendanceManagementAdmin() {
     return { student, rate, totalCount };
   }).filter(s => s.rate < 75 && s.totalCount > 0);
 
-  const handleExportAttendance = () => {
-    toast({
-      title: language === 'bn' ? 'রপ্তানি শুরু হয়েছে' : 'Export Started',
-      description: language === 'bn' ? 'উপস্থিতি তথ্য রপ্তানির জন্য প্রস্তুত করা হচ্ছে...' : 'Preparing attendance data for export...',
-    });
+  const handleExportAttendance = async (format: 'csv' | 'pdf' | 'excel') => {
+    if (students.length === 0) {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'রপ্তানির জন্য কোন ডেটা নেই' : 'No data to export',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      const exportData = filteredStudents.map((student: any) => {
+        const attendance = studentAttendanceMap[student.id];
+        const studentRecords = attendanceRecords.filter(r => r.student_id === student.id);
+        const presentCount = studentRecords.filter(r => r.status === 'present').length;
+        const absentCount = studentRecords.filter(r => r.status === 'absent').length;
+        const lateCount = studentRecords.filter(r => r.status === 'late').length;
+        const totalDays = studentRecords.length;
+        const attendanceRate = totalDays > 0 ? ((presentCount / totalDays) * 100).toFixed(1) : '0';
+
+        return {
+          'Student ID': student.student_id || '',
+          'Student Name': student.name || '',
+          'Class': student.class || '',
+          'Section': student.section || '',
+          'Date': format(selectedDate, 'yyyy-MM-dd'),
+          'Status': attendance?.status || 'Not Marked',
+          'Remarks': attendance?.remarks || '',
+          'Total Days': totalDays,
+          'Present': presentCount,
+          'Absent': absentCount,
+          'Late': lateCount,
+          'Attendance Rate': `${attendanceRate}%`,
+        };
+      });
+
+      const columns = [
+        { header: 'Student ID', key: 'Student ID' },
+        { header: 'Student Name', key: 'Student Name', width: 20 },
+        { header: 'Class', key: 'Class' },
+        { header: 'Section', key: 'Section' },
+        { header: 'Date', key: 'Date' },
+        { header: 'Status', key: 'Status' },
+        { header: 'Remarks', key: 'Remarks', width: 25 },
+        { header: 'Total Days', key: 'Total Days' },
+        { header: 'Present', key: 'Present' },
+        { header: 'Absent', key: 'Absent' },
+        { header: 'Late', key: 'Late' },
+        { header: 'Attendance Rate', key: 'Attendance Rate' },
+      ];
+
+      const filterDescription = [
+        selectedClass && selectedClass !== 'all' ? `Class: ${selectedClass}` : '',
+        selectedSection && selectedSection !== 'all' ? `Section: ${selectedSection}` : '',
+        `Date: ${format(selectedDate, 'PPP')}`,
+      ].filter(Boolean).join(' | ');
+
+      const title = language === 'bn' ? 'উপস্থিতি রিপোর্ট' : 'Attendance Report';
+      const description = filterDescription;
+
+      const statsData = [
+        { label: language === 'bn' ? 'মোট শিক্ষার্থী' : 'Total Students', value: stats.totalStudents },
+        { label: language === 'bn' ? 'আজ উপস্থিত' : 'Present Today', value: stats.presentToday },
+        { label: language === 'bn' ? 'আজ অনুপস্থিত' : 'Absent Today', value: stats.absentToday },
+        { label: language === 'bn' ? 'আজ বিলম্বিত' : 'Late Today', value: stats.lateToday },
+        { 
+          label: language === 'bn' ? 'উপস্থিতির হার' : 'Present Percentage', 
+          value: stats.totalStudents > 0 
+            ? `${((stats.presentToday / stats.totalStudents) * 100).toFixed(1)}%` 
+            : '0%' 
+        },
+      ];
+
+      if (format === 'csv' || format === 'excel') {
+        if (format === 'csv') {
+          exportUtils.exportWithStats({
+            filename: 'attendance-report',
+            columns,
+            data: exportData,
+          }, statsData, 'csv');
+        } else {
+          exportUtils.exportWithStats({
+            filename: 'attendance-report',
+            title,
+            columns,
+            data: exportData,
+          }, statsData, 'excel');
+        }
+      } else if (format === 'pdf') {
+        exportUtils.exportWithStats({
+          filename: 'attendance-report',
+          title,
+          description,
+          columns,
+          data: exportData,
+          orientation: 'landscape',
+        }, statsData, 'pdf');
+      }
+
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' 
+          ? `উপস্থিতি রিপোর্ট ${format.toUpperCase()} ফরম্যাটে রপ্তানি হয়েছে` 
+          : `Attendance report exported as ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'রপ্তানিতে ব্যর্থ' : 'Failed to export attendance',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleEditAttendance = (student: any) => {
@@ -470,10 +595,36 @@ export default function AttendanceManagementAdmin() {
                   <Plus className="w-4 h-4 mr-2" />
                   {t.bulkMode}
                 </Button>
-                <Button onClick={handleExportAttendance} variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
-                  {t.export}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" disabled={isExporting} data-testid="button-export-attendance">
+                      {isExporting ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 mr-2" />
+                      )}
+                      {t.export}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>
+                      {language === 'bn' ? 'ফরম্যাট নির্বাচন করুন' : 'Choose Format'}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleExportAttendance('csv')} data-testid="export-csv">
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      {language === 'bn' ? 'CSV ফাইল' : 'CSV File'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportAttendance('pdf')} data-testid="export-pdf">
+                      <FileText className="w-4 h-4 mr-2" />
+                      {language === 'bn' ? 'PDF ডকুমেন্ট' : 'PDF Document'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportAttendance('excel')} data-testid="export-excel">
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      {language === 'bn' ? 'এক্সেল ফাইল' : 'Excel File'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
           </div>

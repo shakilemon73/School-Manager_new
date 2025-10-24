@@ -6,6 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -35,6 +43,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gradesDb } from '@/lib/db/grades';
+import { exportUtils } from '@/lib/export-utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { cn } from '@/lib/utils';
@@ -55,6 +64,8 @@ import {
   X,
   AlertCircle,
   Save,
+  FileSpreadsheet,
+  Loader2,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { InsertAssessment, InsertStudentScore } from '@shared/schema';
@@ -73,6 +84,7 @@ export default function Gradebook() {
   const [bulkEntryMode, setBulkEntryMode] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingScores, setEditingScores] = useState<Record<string, string>>({});
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data: subjects, isLoading: subjectsLoading } = useQuery({
     queryKey: ['subjects', schoolId],
@@ -266,6 +278,139 @@ export default function Gradebook() {
     }
   };
 
+  const handleExport = async (format: 'csv' | 'pdf' | 'excel') => {
+    if (!selectedClass || !selectedSection || !gradeBook) {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'ক্লাস এবং সেকশন নির্বাচন করুন' : 'Please select class and section',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (gradeBook.students.length === 0) {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'রপ্তানির জন্য কোন ডেটা নেই' : 'No data to export',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      const exportData = gradeBook.students.map((student: any) => {
+        const studentScores = gradeBook.scores.filter((s: any) => s.student_id === student.id);
+        const rowData: any = {
+          'Roll': student.roll_number || '',
+          'Name': student.name || '',
+          'Student ID': student.student_id || '',
+        };
+
+        gradeBook.assessments.forEach((assessment: any) => {
+          const score = studentScores.find((s: any) => s.assessment_id === assessment.id);
+          const assessmentName = language === 'bn' 
+            ? (assessment.assessment_name_bn || assessment.assessment_name)
+            : assessment.assessment_name;
+          
+          if (score) {
+            if (score.is_absent) {
+              rowData[assessmentName] = 'Absent';
+            } else {
+              rowData[assessmentName] = `${score.score_obtained || 0}/${assessment.total_marks}`;
+            }
+          } else {
+            rowData[assessmentName] = '-';
+          }
+        });
+
+        const validScores = studentScores.filter((s: any) => !s.is_absent && s.score_obtained !== null);
+        const average = validScores.length > 0
+          ? (validScores.reduce((sum: number, s: any) => sum + Number(s.score_obtained), 0) / validScores.length).toFixed(2)
+          : '0';
+        
+        rowData['Average'] = average;
+
+        return rowData;
+      });
+
+      const baseColumns = [
+        { header: 'Roll', key: 'Roll' },
+        { header: 'Name', key: 'Name', width: 20 },
+        { header: 'Student ID', key: 'Student ID' },
+      ];
+
+      const assessmentColumns = gradeBook.assessments.map((assessment: any) => ({
+        header: language === 'bn' 
+          ? (assessment.assessment_name_bn || assessment.assessment_name)
+          : assessment.assessment_name,
+        key: language === 'bn' 
+          ? (assessment.assessment_name_bn || assessment.assessment_name)
+          : assessment.assessment_name,
+        width: 15,
+      }));
+
+      const columns = [
+        ...baseColumns,
+        ...assessmentColumns,
+        { header: 'Average', key: 'Average' },
+      ];
+
+      const filterDescription = [
+        `Class: ${selectedClass}`,
+        `Section: ${selectedSection}`,
+        selectedSubject && subjects?.find((s: any) => s.id === selectedSubject)
+          ? `Subject: ${subjects.find((s: any) => s.id === selectedSubject)?.name}`
+          : '',
+        selectedTerm ? `Term: ${selectedTerm}` : '',
+      ].filter(Boolean).join(' | ');
+
+      const title = language === 'bn' ? 'গ্রেডবুক রিপোর্ট' : 'Gradebook Report';
+      const description = filterDescription;
+
+      if (format === 'csv') {
+        exportUtils.exportToCSV({
+          filename: `gradebook_${selectedClass}_${selectedSection}`,
+          columns,
+          data: exportData,
+        });
+      } else if (format === 'pdf') {
+        exportUtils.exportToPDF({
+          filename: `gradebook_${selectedClass}_${selectedSection}`,
+          title,
+          description,
+          columns,
+          data: exportData,
+          orientation: 'landscape',
+        });
+      } else if (format === 'excel') {
+        exportUtils.exportToExcel({
+          filename: `gradebook_${selectedClass}_${selectedSection}`,
+          title,
+          columns,
+          data: exportData,
+        });
+      }
+
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' 
+          ? `গ্রেডবুক ${format.toUpperCase()} ফরম্যাটে রপ্তানি হয়েছে` 
+          : `Gradebook exported as ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'রপ্তানিতে ব্যর্থ' : 'Failed to export gradebook',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const distributionChartData = useMemo(() => {
     if (!distribution) return [];
 
@@ -293,15 +438,40 @@ export default function Gradebook() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={exportToCSV}
-              disabled={!selectedClass || !selectedSection}
-              data-testid="button-export-csv"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              {language === 'bn' ? 'এক্সপোর্ট' : 'Export CSV'}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={!selectedClass || !selectedSection || isExporting}
+                  data-testid="button-export-gradebook"
+                >
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  {language === 'bn' ? 'এক্সপোর্ট' : 'Export'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  {language === 'bn' ? 'ফরম্যাট নির্বাচন করুন' : 'Choose Format'}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleExport('csv')} data-testid="export-csv">
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? 'CSV ফাইল' : 'CSV File'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('pdf')} data-testid="export-pdf">
+                  <FileText className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? 'PDF ডকুমেন্ট' : 'PDF Document'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('excel')} data-testid="export-excel">
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? 'এক্সেল ফাইল' : 'Excel File'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button data-testid="button-create-assessment">

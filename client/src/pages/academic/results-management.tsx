@@ -7,6 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -26,6 +34,7 @@ import { supabase } from '@/lib/supabase';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useCurrentAcademicYear } from '@/hooks/use-school-context';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { exportUtils } from '@/lib/export-utils';
 import { Link } from 'wouter';
 import {
   Award,
@@ -38,7 +47,10 @@ import {
   Filter,
   Users,
   BookOpen,
-  Calendar
+  Calendar,
+  FileText,
+  FileSpreadsheet,
+  Loader2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -53,6 +65,7 @@ export default function ResultsManagement() {
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('table');
+  const [isExporting, setIsExporting] = useState(false);
 
   // Fetch classes
   const { data: classes = [] } = useQuery({
@@ -195,11 +208,106 @@ export default function ResultsManagement() {
     );
   });
 
-  const handleExportResults = () => {
-    toast({
-      title: language === 'bn' ? 'রপ্তানি শুরু হয়েছে' : 'Export Started',
-      description: language === 'bn' ? 'ফলাফল রপ্তানির জন্য প্রস্তুত করা হচ্ছে...' : 'Preparing results for export...',
-    });
+  const handleExportResults = async (format: 'csv' | 'pdf' | 'excel') => {
+    if (filteredResults.length === 0) {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'রপ্তানির জন্য কোন ডেটা নেই' : 'No data to export',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      const exportData = filteredResults.map((result: any) => {
+        const score = parseFloat(result.score_obtained || '0');
+        const maxScore = parseFloat(result.assessments?.total_marks || '100');
+        const percentage = (score / maxScore) * 100;
+        const isPassing = percentage >= 40;
+
+        return {
+          'Student ID': result.students?.student_id || '',
+          'Student Name': result.students?.name || '',
+          'Class': result.students?.class || '',
+          'Section': result.students?.section || '',
+          'Assessment': result.assessments?.assessment_name || '',
+          'Score Obtained': result.is_absent ? 'Absent' : score.toString(),
+          'Total Marks': maxScore.toString(),
+          'Percentage': result.is_absent ? 'N/A' : `${percentage.toFixed(2)}%`,
+          'Grade': result.grade_letter || 'N/A',
+          'Status': result.is_absent ? 'Absent' : (isPassing ? 'Passed' : 'Failed'),
+        };
+      });
+
+      const columns = [
+        { header: 'Student ID', key: 'Student ID' },
+        { header: 'Student Name', key: 'Student Name', width: 20 },
+        { header: 'Class', key: 'Class' },
+        { header: 'Section', key: 'Section' },
+        { header: 'Assessment', key: 'Assessment', width: 25 },
+        { header: 'Score Obtained', key: 'Score Obtained' },
+        { header: 'Total Marks', key: 'Total Marks' },
+        { header: 'Percentage', key: 'Percentage' },
+        { header: 'Grade', key: 'Grade' },
+        { header: 'Status', key: 'Status' },
+      ];
+
+      const filterDescription = [
+        selectedClass && selectedClass !== 'all' ? `Class: ${selectedClass}` : '',
+        selectedSection && selectedSection !== 'all' ? `Section: ${selectedSection}` : '',
+        selectedSubject && selectedSubject !== 'all' 
+          ? `Subject: ${subjects.find((s: any) => s.id.toString() === selectedSubject)?.name || ''}` 
+          : '',
+        selectedTerm && selectedTerm !== 'all' 
+          ? `Term: ${terms.find((t: any) => t.id.toString() === selectedTerm)?.name || ''}` 
+          : '',
+      ].filter(Boolean).join(' | ');
+
+      const title = language === 'bn' ? 'ফলাফল রিপোর্ট' : 'Student Results Report';
+      const description = filterDescription || (language === 'bn' ? 'সকল ফলাফল' : 'All Results');
+
+      if (format === 'csv') {
+        exportUtils.exportToCSV({
+          filename: 'student-results',
+          columns,
+          data: exportData,
+        });
+      } else if (format === 'pdf') {
+        exportUtils.exportToPDF({
+          filename: 'student-results',
+          title,
+          description,
+          columns,
+          data: exportData,
+          orientation: 'landscape',
+        });
+      } else if (format === 'excel') {
+        exportUtils.exportToExcel({
+          filename: 'student-results',
+          title,
+          columns,
+          data: exportData,
+        });
+      }
+
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' 
+          ? `ফলাফল ${format.toUpperCase()} ফরম্যাটে রপ্তানি হয়েছে` 
+          : `Results exported as ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'রপ্তানিতে ব্যর্থ' : 'Failed to export results',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const t = {
@@ -261,10 +369,36 @@ export default function ResultsManagement() {
                 {t.viewGradebook}
               </Button>
             </Link>
-            <Button onClick={handleExportResults} variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              {t.export}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={isExporting} data-testid="button-export-results">
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  {t.export}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  {language === 'bn' ? 'ফরম্যাট নির্বাচন করুন' : 'Choose Format'}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleExportResults('csv')} data-testid="export-csv">
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? 'CSV ফাইল' : 'CSV File'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportResults('pdf')} data-testid="export-pdf">
+                  <FileText className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? 'PDF ডকুমেন্ট' : 'PDF Document'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportResults('excel')} data-testid="export-excel">
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? 'এক্সেল ফাইল' : 'Excel File'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
