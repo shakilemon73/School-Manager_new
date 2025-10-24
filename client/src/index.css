@@ -150,7 +150,8 @@ aside, main {
   }
 }
 
-/* Language-specific font families */
+/* Language-specific font families - Hybrid approach */
+/* Default Bengali: Modern Noto Sans for UI elements */
 :lang(bn) {
   font-family: 'Noto Sans Bengali', sans-serif;
 }
@@ -163,6 +164,15 @@ aside, main {
   font-family: 'Roboto', sans-serif;
 }
 
+/* Bengali font utilities */
+.font-bengali-modern {
+  font-family: 'Noto Sans Bengali', sans-serif;
+}
+
+.font-bengali-traditional {
+  font-family: 'Kalpurush', serif;
+}
+
 .font-hind {
   font-family: 'Noto Sans Bengali', sans-serif;
 }
@@ -173,6 +183,41 @@ aside, main {
 
 .font-roboto {
   font-family: 'Roboto', sans-serif;
+}
+
+/* Hybrid Bengali Typography System */
+/* Use Kalpurush (traditional serif) for content readability */
+/* Use Noto Sans Bengali (modern sans) for UI elements */
+
+/* Content areas - Traditional Kalpurush for better readability */
+p, 
+li, 
+td, 
+th,
+.prose,
+.content,
+article,
+[role="article"] {
+  font-family: 'Kalpurush', 'Noto Sans Bengali', serif;
+}
+
+/* UI Elements - Modern Noto Sans Bengali */
+h1, h2, h3, h4, h5, h6,
+button,
+nav,
+.nav,
+.menu,
+.button,
+.btn,
+label,
+.label,
+.badge,
+.alert,
+.toast,
+.dialog,
+.modal {
+  font-family: 'Noto Sans Bengali', sans-serif;
+  font-weight: 600;
 }
 
 /* RTL support */

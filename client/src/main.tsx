@@ -14,6 +14,12 @@ fontLink.href = "https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght
 fontLink.rel = "stylesheet";
 document.head.appendChild(fontLink);
 
+// Import Kalpurush font (Bengali traditional serif)
+const kalpurushLink = document.createElement('link');
+kalpurushLink.href = "https://fonts.maateen.me/kalpurush/font.css";
+kalpurushLink.rel = "stylesheet";
+document.head.appendChild(kalpurushLink);
+
 // Set the title
 document.title = "School Management System";
 
