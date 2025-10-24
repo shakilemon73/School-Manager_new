@@ -2805,13 +2805,16 @@ export const assessmentComponents = pgTable("assessment_components", {
   assessmentId: integer("assessment_id").references(() => assessments.id).notNull(),
   componentName: text("component_name").notNull(),
   componentNameBn: text("component_name_bn"),
+  componentType: text("component_type"), // mcq, written, practical, oral, project
   maxScore: decimal("max_score", { precision: 6, scale: 2 }).notNull(),
   weightPercentage: decimal("weight_percentage", { precision: 5, scale: 2 }),
+  passingMarks: decimal("passing_marks", { precision: 6, scale: 2 }),
   rubricCriteria: json("rubric_criteria").$type<Array<{
     criterion: string;
     points: number;
     description?: string;
   }>>(),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -3115,3 +3118,127 @@ export const roleAuditLogsInsertSchema = createInsertSchema(roleAuditLogs).omit(
 });
 export type InsertRoleAuditLog = z.infer<typeof roleAuditLogsInsertSchema>;
 export type RoleAuditLog = typeof roleAuditLogs.$inferSelect;
+
+// ============================================================================
+// NEW TABLES FOR ENHANCED ACADEMIC MANAGEMENT
+// ============================================================================
+
+// Leave Requests table - Student attendance leave management
+export const leaveRequests = pgTable("leave_requests", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").references(() => students.id).notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  reason: text("reason").notNull(),
+  reasonBn: text("reason_bn"),
+  leaveType: text("leave_type").notNull(), // sick, casual, emergency, other
+  status: text("status").default("pending").notNull(), // pending, approved, rejected
+  approvedBy: varchar("approved_by"), // teacher/admin user ID
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  attachmentUrl: text("attachment_url"), // medical certificate, etc.
+  requestedBy: varchar("requested_by").notNull(), // parent/student user ID
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const leaveRequestsInsertSchema = createInsertSchema(leaveRequests).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertLeaveRequest = z.infer<typeof leaveRequestsInsertSchema>;
+export type LeaveRequest = typeof leaveRequests.$inferSelect;
+
+// School Holidays table - Holiday calendar and event tracking
+export const schoolHolidays = pgTable("school_holidays", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  date: date("date").notNull(),
+  endDate: date("end_date"), // for multi-day holidays
+  type: text("type").notNull(), // government, religious, school_event, exam, vacation
+  description: text("description"),
+  descriptionBn: text("description_bn"),
+  isRecurring: boolean("is_recurring").default(false),
+  affectsAttendance: boolean("affects_attendance").default(true),
+  academicYearId: integer("academic_year_id").references(() => academicYears.id),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const schoolHolidaysInsertSchema = createInsertSchema(schoolHolidays).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSchoolHoliday = z.infer<typeof schoolHolidaysInsertSchema>;
+export type SchoolHoliday = typeof schoolHolidays.$inferSelect;
+
+// Assignment Comments table - Feedback and discussion on submissions
+export const assignmentComments = pgTable("assignment_comments", {
+  id: serial("id").primaryKey(),
+  submissionId: integer("submission_id").references(() => assignmentSubmissions.id, { onDelete: 'cascade' }).notNull(),
+  commentText: text("comment_text").notNull(),
+  commentTextBn: text("comment_text_bn"),
+  commentedBy: varchar("commented_by").notNull(), // user ID (teacher/student)
+  commenterRole: text("commenter_role").notNull(), // teacher, student
+  isPrivate: boolean("is_private").default(false), // visible only to teacher and student
+  parentCommentId: integer("parent_comment_id"), // for threaded discussions
+  attachmentUrl: text("attachment_url"),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const assignmentCommentsInsertSchema = createInsertSchema(assignmentComments).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAssignmentComment = z.infer<typeof assignmentCommentsInsertSchema>;
+export type AssignmentComment = typeof assignmentComments.$inferSelect;
+
+// Assignment Students table - Target specific students for assignments
+export const assignmentStudents = pgTable("assignment_students", {
+  id: serial("id").primaryKey(),
+  assessmentId: integer("assessment_id").references(() => assessments.id, { onDelete: 'cascade' }).notNull(),
+  studentId: integer("student_id").references(() => students.id).notNull(),
+  isDifferentiated: boolean("is_differentiated").default(false), // special accommodations
+  customInstructions: text("custom_instructions"),
+  customInstructionsBn: text("custom_instructions_bn"),
+  customDueDate: date("custom_due_date"), // override default due date
+  customTotalMarks: decimal("custom_total_marks", { precision: 10, scale: 2 }), // modified marks
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueAssessmentStudent: unique().on(table.assessmentId, table.studentId),
+}));
+
+export const assignmentStudentsInsertSchema = createInsertSchema(assignmentStudents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAssignmentStudent = z.infer<typeof assignmentStudentsInsertSchema>;
+export type AssignmentStudent = typeof assignmentStudents.$inferSelect;
+
+// Timetable Templates table - Reusable period schedule templates
+export const timetableTemplates = pgTable("timetable_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameBn: text("name_bn"),
+  description: text("description"),
+  templateType: text("template_type").notNull(), // daily, weekly, class_specific
+  targetClass: text("target_class"), // if class_specific
+  targetSection: text("target_section"),
+  templateData: json("template_data").notNull(), // stores period configuration
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
+  academicYearId: integer("academic_year_id").references(() => academicYears.id),
+  createdBy: varchar("created_by").notNull(),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const timetableTemplatesInsertSchema = createInsertSchema(timetableTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTimetableTemplate = z.infer<typeof timetableTemplatesInsertSchema>;
+export type TimetableTemplate = typeof timetableTemplates.$inferSelect;
