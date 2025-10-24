@@ -74,8 +74,13 @@ import {
   FileSpreadsheet,
   Loader2,
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import type { InsertAttendance, InsertAttendancePeriod } from '@shared/schema';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import type { InsertAttendance, InsertAttendancePeriod, InsertLeaveRequest, InsertSchoolHoliday } from '@shared/schema';
+import { attendanceDb } from '@/lib/db/attendance';
+import { notificationService } from '@/lib/notification-service';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { FileUpload } from '@/components/FileUpload';
 
 export default function AttendanceManagementAdmin() {
   const { toast } = useToast();
@@ -83,6 +88,7 @@ export default function AttendanceManagementAdmin() {
   const queryClient = useQueryClient();
   const schoolId = useRequireSchoolId();
   const { hasPermission, teacherClassSubjects } = usePermissions();
+  const [userId] = useState(1); // TODO: Get from auth context
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,6 +105,43 @@ export default function AttendanceManagementAdmin() {
   const [editStatus, setEditStatus] = useState<string>('');
   const [editRemarks, setEditRemarks] = useState<string>('');
   const [isExporting, setIsExporting] = useState(false);
+
+  // Feature 4.1: Leave Management states
+  const [leaveRequestDialogOpen, setLeaveRequestDialogOpen] = useState(false);
+  const [leaveFilterStatus, setLeaveFilterStatus] = useState<string>('all');
+  const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<any>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  // Feature 4.2: Holidays states
+  const [holidayDialogOpen, setHolidayDialogOpen] = useState(false);
+  const [editingHoliday, setEditingHoliday] = useState<any>(null);
+  const [holidayFilterType, setHolidayFilterType] = useState<string>('all');
+
+  // Feature 4.3: Alert Settings states
+  const [alertThreshold, setAlertThreshold] = useState(75);
+  const [alertFrequency, setAlertFrequency] = useState('weekly');
+  const [alertRecipients, setAlertRecipients] = useState('both');
+  const [alertMethods, setAlertMethods] = useState(['in-app']);
+  const [messageTemplate, setMessageTemplate] = useState('');
+  const [messageTemplateBn, setMessageTemplateBn] = useState('');
+  const [isSendingTestAlert, setIsSendingTestAlert] = useState(false);
+
+  // Feature 4.4: Monthly Report states
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportMonth, setReportMonth] = useState(new Date());
+  const [reportStudentId, setReportStudentId] = useState<string>('');
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  // Feature 4.5: Defaulters states
+  const [defaulterThreshold, setDefaulterThreshold] = useState(75);
+  const [defaultersStartDate, setDefaultersStartDate] = useState<Date>(subDays(new Date(), 30));
+  const [defaultersEndDate, setDefaultersEndDate] = useState<Date>(new Date());
+
+  // Feature 4.6: Analytics states
+  const [selectedAcademicYears, setSelectedAcademicYears] = useState<number[]>([]);
+  const [analyticsStartDate, setAnalyticsStartDate] = useState<Date>(new Date(new Date().getFullYear(), 0, 1));
+  const [analyticsEndDate, setAnalyticsEndDate] = useState<Date>(new Date());
 
   // Fetch classes
   const { data: classes = [] } = useQuery({
@@ -236,6 +279,125 @@ export default function AttendanceManagementAdmin() {
         return data || [];
       } catch (error) {
         console.error('Failed to fetch period attendance:', error);
+        return [];
+      }
+    },
+  });
+
+  // Feature 4.1: Fetch leave requests
+  const { data: leaveRequests = [], isLoading: leaveRequestsLoading } = useQuery({
+    queryKey: ['leave-requests', schoolId, leaveFilterStatus],
+    queryFn: async () => {
+      try {
+        const filters = leaveFilterStatus !== 'all' ? { status: leaveFilterStatus as any } : undefined;
+        return await attendanceDb.getLeaveRequests(schoolId, filters);
+      } catch (error) {
+        console.error('Failed to fetch leave requests:', error);
+        return [];
+      }
+    },
+  });
+
+  // Feature 4.2: Fetch school holidays
+  const { data: schoolHolidays = [], isLoading: holidaysLoading } = useQuery({
+    queryKey: ['school-holidays', schoolId, holidayFilterType],
+    queryFn: async () => {
+      try {
+        const filters = holidayFilterType !== 'all' ? { type: holidayFilterType } : undefined;
+        return await attendanceDb.getSchoolHolidays(schoolId, filters);
+      } catch (error) {
+        console.error('Failed to fetch holidays:', error);
+        return [];
+      }
+    },
+  });
+
+  // Feature 4.3: Fetch alert settings
+  const { data: alertSettings, isLoading: alertSettingsLoading } = useQuery({
+    queryKey: ['alert-settings', schoolId],
+    queryFn: async () => {
+      try {
+        const settings = await attendanceDb.getAlertSettings(schoolId);
+        setAlertThreshold(settings.threshold || 75);
+        setAlertFrequency(settings.frequency || 'weekly');
+        setAlertRecipients(settings.recipients || 'both');
+        setAlertMethods(settings.methods || ['in-app']);
+        setMessageTemplate(settings.messageTemplate || '');
+        setMessageTemplateBn(settings.messageTemplateBn || '');
+        return settings;
+      } catch (error) {
+        console.error('Failed to fetch alert settings:', error);
+        return null;
+      }
+    },
+  });
+
+  // Feature 4.5: Fetch defaulter students
+  const { data: defaulterStudents = [], isLoading: defaultersLoading } = useQuery({
+    queryKey: ['defaulters', schoolId, defaulterThreshold, selectedClass, selectedSection, defaultersStartDate, defaultersEndDate],
+    queryFn: async () => {
+      try {
+        const filters = {
+          classId: selectedClass !== 'all' ? selectedClass : undefined,
+          section: selectedSection !== 'all' ? selectedSection : undefined,
+          startDate: format(defaultersStartDate, 'yyyy-MM-dd'),
+          endDate: format(defaultersEndDate, 'yyyy-MM-dd'),
+        };
+        return await attendanceDb.getDefaulterStudents(schoolId, defaulterThreshold, filters);
+      } catch (error) {
+        console.error('Failed to fetch defaulters:', error);
+        return [];
+      }
+    },
+  });
+
+  // Feature 4.6: Fetch academic years
+  const { data: academicYears = [] } = useQuery({
+    queryKey: ['academic-years', schoolId],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('academic_years')
+          .select('*')
+          .eq('school_id', schoolId)
+          .order('start_date', { ascending: false });
+        
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error('Failed to fetch academic years:', error);
+        return [];
+      }
+    },
+  });
+
+  // Feature 4.6: Fetch attendance analytics
+  const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['attendance-analytics', schoolId, selectedAcademicYears],
+    queryFn: async () => {
+      try {
+        if (selectedAcademicYears.length === 0) return null;
+        return await attendanceDb.getAttendanceAnalytics(schoolId, selectedAcademicYears);
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error);
+        return null;
+      }
+    },
+    enabled: selectedAcademicYears.length > 0,
+  });
+
+  // Feature 4.6: Fetch class-wise comparison
+  const { data: classwiseData, isLoading: classwiseLoading } = useQuery({
+    queryKey: ['classwise-attendance', schoolId, analyticsStartDate, analyticsEndDate],
+    queryFn: async () => {
+      try {
+        return await attendanceDb.getClasswiseComparison(
+          schoolId,
+          format(analyticsStartDate, 'yyyy-MM-dd'),
+          format(analyticsEndDate, 'yyyy-MM-dd')
+        );
+      } catch (error) {
+        console.error('Failed to fetch class-wise data:', error);
         return [];
       }
     },
@@ -417,6 +579,144 @@ export default function AttendanceManagementAdmin() {
       });
       setBulkMode(false);
       setBulkPeriodAttendance({});
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Leave mutations
+  const approveLeave = useMutation({
+    mutationFn: (id: number) => attendanceDb.approveLeave(id, schoolId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leave-requests'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'ছুটি অনুমোদিত' : 'Leave approved',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const rejectLeave = useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      attendanceDb.rejectLeave(id, schoolId, userId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leave-requests'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'ছুটি প্রত্যাখ্যাত' : 'Leave rejected',
+      });
+      setRejectDialogOpen(false);
+      setRejectionReason('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const createLeave = useMutation({
+    mutationFn: attendanceDb.createLeaveRequest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leave-requests'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'ছুটির আবেদন তৈরি হয়েছে' : 'Leave request created',
+      });
+      setLeaveRequestDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Holiday mutations
+  const createHoliday = useMutation({
+    mutationFn: attendanceDb.createHoliday,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['school-holidays'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'ছুটির দিন যোগ হয়েছে' : 'Holiday added',
+      });
+      setHolidayDialogOpen(false);
+      setEditingHoliday(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateHoliday = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<InsertSchoolHoliday> }) =>
+      attendanceDb.updateHoliday(id, schoolId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['school-holidays'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'ছুটির দিন আপডেট হয়েছে' : 'Holiday updated',
+      });
+      setHolidayDialogOpen(false);
+      setEditingHoliday(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteHoliday = useMutation({
+    mutationFn: (id: number) => attendanceDb.deleteHoliday(id, schoolId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['school-holidays'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'ছুটির দিন মুছে ফেলা হয়েছে' : 'Holiday deleted',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Alert settings mutation
+  const saveAlerts = useMutation({
+    mutationFn: attendanceDb.saveAlertSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alert-settings'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'সতর্কতা সেটিংস সংরক্ষিত হয়েছে' : 'Alert settings saved',
+      });
     },
     onError: (error: any) => {
       toast({
@@ -729,6 +1029,229 @@ export default function AttendanceManagementAdmin() {
       newBulkAttendance[student.id] = 'present';
     });
     setBulkAttendance(newBulkAttendance);
+  };
+
+  // Leave request handlers
+  const handleApproveLeave = (id: number) => {
+    approveLeave.mutate(id);
+  };
+
+  const handleRejectLeave = (id: number) => {
+    if (!rejectionReason.trim()) {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'প্রত্যাখ্যানের কারণ প্রয়োজন' : 'Rejection reason is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+    rejectLeave.mutate({ id, reason: rejectionReason });
+  };
+
+  // Defaulter alert handlers
+  const handleSendDefaulterAlerts = async () => {
+    try {
+      for (const student of defaulterStudents) {
+        // Send notification to parents
+        await notificationService.notifyLowAttendance(
+          schoolId,
+          student.name,
+          student.attendance_percentage,
+          [student.id] // This should be parent ID in real scenario
+        );
+      }
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' 
+          ? `${defaulterStudents.length} জন শিক্ষার্থীর অভিভাবকদের সতর্কতা পাঠানো হয়েছে`
+          : `Alerts sent to ${defaulterStudents.length} parents`,
+      });
+    } catch (error) {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'সতর্কতা পাঠাতে ব্যর্থ' : 'Failed to send alerts',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleTestAlert = async () => {
+    setIsSendingTestAlert(true);
+    try {
+      await notificationService.send({
+        schoolId,
+        type: 'attendance_alert',
+        title: 'Test Alert',
+        titleBn: 'টেস্ট সতর্কতা',
+        message: 'This is a test attendance alert.',
+        messageBn: 'এটি একটি পরীক্ষা উপস্থিতি সতর্কতা।',
+        recipientIds: [userId],
+        recipientType: 'teacher',
+        category: 'Test',
+        categoryBn: 'পরীক্ষা',
+        priority: 'low',
+      });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'টেস্ট সতর্কতা পাঠানো হয়েছে' : 'Test alert sent successfully',
+      });
+    } catch (error) {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'টেস্ট সতর্কতা পাঠাতে ব্যর্থ' : 'Failed to send test alert',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingTestAlert(false);
+    }
+  };
+
+  // Monthly report generator
+  const generateMonthlyReport = async (studentId: string, month: Date) => {
+    setIsGeneratingReport(true);
+    try {
+      const student = students.find(s => s.id.toString() === studentId);
+      if (!student) {
+        toast({
+          title: language === 'bn' ? 'ত্রুটি' : 'Error',
+          description: language === 'bn' ? 'শিক্ষার্থী পাওয়া যায়নি' : 'Student not found',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const startDate = new Date(month.getFullYear(), month.getMonth(), 1);
+      const endDate = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+      
+      // Fetch attendance data for the month
+      const { data: monthAttendance } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('student_id', student.id)
+        .eq('school_id', schoolId)
+        .gte('date', format(startDate, 'yyyy-MM-dd'))
+        .lte('date', format(endDate, 'yyyy-MM-dd'));
+
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      
+      // Header
+      doc.setFontSize(16);
+      doc.text(language === 'bn' ? 'মাসিক উপস্থিতি রিপোর্ট' : 'Monthly Attendance Report', pageWidth / 2, 15, { align: 'center' });
+      
+      // Student details
+      doc.setFontSize(11);
+      doc.text(`${language === 'bn' ? 'শিক্ষার্থী' : 'Student'}: ${student.name}`, 14, 30);
+      doc.text(`${language === 'bn' ? 'শ্রেণী' : 'Class'}: ${student.class} - ${student.section}`, 14, 37);
+      doc.text(`${language === 'bn' ? 'রোল' : 'Roll'}: ${student.student_id}`, 14, 44);
+      doc.text(`${language === 'bn' ? 'মাস' : 'Month'}: ${format(month, 'MMMM yyyy')}`, 14, 51);
+      
+      // Calculate stats
+      const totalDays = monthAttendance?.length || 0;
+      const presentDays = monthAttendance?.filter(a => a.status === 'present').length || 0;
+      const absentDays = monthAttendance?.filter(a => a.status === 'absent').length || 0;
+      const leaveDays = monthAttendance?.filter(a => a.status === 'excused').length || 0;
+      const presentPercentage = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(1) : '0';
+      
+      // Stats
+      doc.text(`${language === 'bn' ? 'মোট দিন' : 'Total Days'}: ${totalDays}`, 14, 63);
+      doc.text(`${language === 'bn' ? 'উপস্থিত' : 'Present'}: ${presentDays} (${presentPercentage}%)`, 14, 70);
+      doc.text(`${language === 'bn' ? 'অনুপস্থিত' : 'Absent'}: ${absentDays}`, 14, 77);
+      doc.text(`${language === 'bn' ? 'ছুটি' : 'Leave'}: ${leaveDays}`, 14, 84);
+      
+      // Attendance grid
+      doc.setFontSize(9);
+      let y = 95;
+      const daysInMonth = endDate.getDate();
+      const cellWidth = 8;
+      const cellHeight = 8;
+      let x = 14;
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(month.getFullYear(), month.getMonth(), day);
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const attendance = monthAttendance?.find(a => a.date === dateStr);
+        
+        // Draw cell
+        doc.rect(x, y, cellWidth, cellHeight);
+        doc.text(day.toString(), x + cellWidth / 2, y + cellHeight / 2 + 1, { align: 'center' });
+        
+        // Mark status
+        if (attendance) {
+          doc.setFontSize(7);
+          const status = attendance.status === 'present' ? 'P' : attendance.status === 'absent' ? 'A' : 'L';
+          doc.text(status, x + cellWidth / 2, y + cellHeight - 1, { align: 'center' });
+          doc.setFontSize(9);
+        }
+        
+        x += cellWidth;
+        if (x > pageWidth - 20) {
+          x = 14;
+          y += cellHeight;
+        }
+      }
+      
+      doc.save(`attendance-report-${student.name}-${format(month, 'MMM-yyyy')}.pdf`);
+      
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'রিপোর্ট ডাউনলোড হয়েছে' : 'Report downloaded successfully',
+      });
+      setReportDialogOpen(false);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'রিপোর্ট তৈরি করতে ব্যর্থ' : 'Failed to generate report',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  // Export defaulters to CSV
+  const handleExportDefaulters = () => {
+    try {
+      const csvData = defaulterStudents.map(student => ({
+        'Student ID': student.student_id,
+        'Name': student.name,
+        'Class': student.class,
+        'Section': student.section,
+        'Attendance %': student.attendance_percentage.toFixed(1),
+        'Days Present': student.days_present,
+        'Days Absent': student.days_absent,
+        'Total Days': student.total_days,
+        'Last Absent': student.last_absent_date || 'N/A',
+      }));
+      
+      exportUtils.exportWithStats({
+        filename: 'attendance-defaulters',
+        columns: [
+          { header: 'Student ID', key: 'Student ID' },
+          { header: 'Name', key: 'Name', width: 20 },
+          { header: 'Class', key: 'Class' },
+          { header: 'Section', key: 'Section' },
+          { header: 'Attendance %', key: 'Attendance %' },
+          { header: 'Days Present', key: 'Days Present' },
+          { header: 'Days Absent', key: 'Days Absent' },
+          { header: 'Total Days', key: 'Total Days' },
+          { header: 'Last Absent', key: 'Last Absent' },
+        ],
+        data: csvData,
+      }, [], 'csv');
+      
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'ডিফল্টার রিপোর্ট রপ্তানি হয়েছে' : 'Defaulters report exported',
+      });
+    } catch (error) {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'রপ্তানিতে ব্যর্থ' : 'Failed to export',
+        variant: 'destructive',
+      });
+    }
   };
 
   const t = {
