@@ -525,7 +525,7 @@ export const gradesDb = {
     schoolId: number,
     changeReason?: string
   ) {
-    const { data, error } = await supabase
+    const { data, error} = await supabase
       .from('grade_history')
       .insert({
         student_score_id: studentScoreId,
@@ -544,5 +544,120 @@ export const gradesDb = {
 
     if (error) throw error;
     return data;
+  },
+
+  // Assessment Components methods
+  async getAssessmentComponents(assessmentId: number, schoolId: number) {
+    const { data, error } = await supabase
+      .from('assessment_components')
+      .select('*')
+      .eq('assessment_id', assessmentId)
+      .eq('school_id', schoolId)
+      .order('component_type');
+
+    if (error) throw error;
+    return data as AssessmentComponent[];
+  },
+
+  async createAssessmentComponent(component: InsertAssessmentComponent) {
+    const { data, error } = await supabase
+      .from('assessment_components')
+      .insert(component)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as AssessmentComponent;
+  },
+
+  async deleteAssessmentComponent(id: number, schoolId: number) {
+    const { error } = await supabase
+      .from('assessment_components')
+      .delete()
+      .eq('id', id)
+      .eq('school_id', schoolId);
+
+    if (error) throw error;
+  },
+
+  async updateGradeScale(id: number, schoolId: number, gradeScale: Partial<InsertGradeScale>) {
+    const { data, error } = await supabase
+      .from('grade_scales')
+      .update(gradeScale)
+      .eq('id', id)
+      .eq('school_id', schoolId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as GradeScale;
+  },
+
+  async deleteGradeScale(id: number, schoolId: number) {
+    const { error } = await supabase
+      .from('grade_scales')
+      .delete()
+      .eq('id', id)
+      .eq('school_id', schoolId);
+
+    if (error) throw error;
+  },
+
+  async duplicateAssessment(assessmentId: number, schoolId: number) {
+    const { data: original, error: fetchError } = await supabase
+      .from('assessments')
+      .select('*')
+      .eq('id', assessmentId)
+      .eq('school_id', schoolId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const { id, created_at, ...assessmentData } = original;
+    const duplicated = {
+      ...assessmentData,
+      assessment_name: `${assessmentData.assessment_name} (Copy)`,
+      assessment_name_bn: assessmentData.assessment_name_bn 
+        ? `${assessmentData.assessment_name_bn} (অনুলিপি)` 
+        : null,
+    };
+
+    const { data, error } = await supabase
+      .from('assessments')
+      .insert(duplicated)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Duplicate components if they exist
+    const { data: components } = await supabase
+      .from('assessment_components')
+      .select('*')
+      .eq('assessment_id', assessmentId)
+      .eq('school_id', schoolId);
+
+    if (components && components.length > 0) {
+      const duplicatedComponents = components.map(({ id, created_at, assessment_id, ...comp }) => ({
+        ...comp,
+        assessment_id: data.id,
+      }));
+
+      await supabase
+        .from('assessment_components')
+        .insert(duplicatedComponents);
+    }
+
+    return data;
+  },
+
+  async bulkDeleteAssessments(assessmentIds: number[], schoolId: number) {
+    const { error } = await supabase
+      .from('assessments')
+      .delete()
+      .in('id', assessmentIds)
+      .eq('school_id', schoolId);
+
+    if (error) throw error;
   },
 };

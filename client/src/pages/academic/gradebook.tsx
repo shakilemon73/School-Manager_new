@@ -1,10 +1,23 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'wouter';
 import { AppShell } from '@/components/layout/app-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,9 +83,14 @@ import {
   FileSpreadsheet,
   Loader2,
   History,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  Copy,
+  Settings,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import type { InsertAssessment, InsertStudentScore } from '@shared/schema';
+import type { InsertAssessment, InsertStudentScore, InsertAssessmentComponent, InsertGradeScale } from '@shared/schema';
 
 export default function Gradebook() {
   const { toast } = useToast();
@@ -93,6 +111,19 @@ export default function Gradebook() {
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   const [historyStudentId, setHistoryStudentId] = useState<number | null>(null);
   const [historyAssessmentId, setHistoryAssessmentId] = useState<number | null>(null);
+  
+  // Feature 2.1: Assessment Components state
+  const [expandedAssessments, setExpandedAssessments] = useState<Set<number>>(new Set());
+  const [isComponentDialogOpen, setIsComponentDialogOpen] = useState(false);
+  const [editingComponentAssessmentId, setEditingComponentAssessmentId] = useState<number | null>(null);
+  
+  // Feature 2.2: Grade Scales state
+  const [isGradeScaleDialogOpen, setIsGradeScaleDialogOpen] = useState(false);
+  const [selectedGradeScaleId, setSelectedGradeScaleId] = useState<number | undefined>();
+  
+  // Feature 2.3: Bulk Operations state
+  const [selectedAssessmentIds, setSelectedAssessmentIds] = useState<Set<number>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const { data: subjects, isLoading: subjectsLoading } = useQuery({
     queryKey: ['subjects', schoolId],
@@ -147,6 +178,22 @@ export default function Gradebook() {
     enabled: !!historyStudentId && !!historyAssessmentId && isHistoryDialogOpen,
   });
 
+  // Feature 2.1: Assessment Components queries
+  const { data: assessmentComponents, isLoading: componentsLoading } = useQuery({
+    queryKey: ['assessment-components', editingComponentAssessmentId, schoolId],
+    queryFn: () => {
+      if (!editingComponentAssessmentId) return [];
+      return gradesDb.getAssessmentComponents(editingComponentAssessmentId, schoolId);
+    },
+    enabled: !!editingComponentAssessmentId,
+  });
+
+  // Feature 2.2: Grade Scales queries
+  const { data: gradeScales, isLoading: gradeScalesLoading } = useQuery({
+    queryKey: ['grade-scales', schoolId],
+    queryFn: () => gradesDb.getGradeScales(schoolId),
+  });
+
   const filteredSubjects = useMemo(() => {
     if (!subjects) return [];
     
@@ -196,6 +243,90 @@ export default function Gradebook() {
       });
       setBulkEntryMode(false);
       setEditingScores({});
+    },
+  });
+
+  // Feature 2.1: Assessment Component mutations
+  const createComponentMutation = useMutation({
+    mutationFn: (data: InsertAssessmentComponent) => gradesDb.createAssessmentComponent(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assessment-components'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'কম্পোনেন্ট তৈরি হয়েছে' : 'Component created successfully',
+      });
+    },
+  });
+
+  const deleteComponentMutation = useMutation({
+    mutationFn: ({ id }: { id: number }) => gradesDb.deleteAssessmentComponent(id, schoolId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assessment-components'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'কম্পোনেন্ট মুছে ফেলা হয়েছে' : 'Component deleted successfully',
+      });
+    },
+  });
+
+  // Feature 2.2: Grade Scale mutations
+  const createGradeScaleMutation = useMutation({
+    mutationFn: (data: InsertGradeScale) => gradesDb.createGradeScale(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['grade-scales'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'গ্রেড স্কেল তৈরি হয়েছে' : 'Grade scale created successfully',
+      });
+      setIsGradeScaleDialogOpen(false);
+    },
+  });
+
+  const updateGradeScaleMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<InsertGradeScale> }) =>
+      gradesDb.updateGradeScale(id, schoolId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['grade-scales'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'গ্রেড স্কেল আপডেট হয়েছে' : 'Grade scale updated successfully',
+      });
+    },
+  });
+
+  const deleteGradeScaleMutation = useMutation({
+    mutationFn: (id: number) => gradesDb.deleteGradeScale(id, schoolId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['grade-scales'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'গ্রেড স্কেল মুছে ফেলা হয়েছে' : 'Grade scale deleted successfully',
+      });
+    },
+  });
+
+  // Feature 2.3: Bulk operation mutations
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: number[]) => gradesDb.bulkDeleteAssessments(ids, schoolId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assessments'] });
+      queryClient.invalidateQueries({ queryKey: ['gradebook'] });
+      setSelectedAssessmentIds(new Set());
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'মূল্যায়ন মুছে ফেলা হয়েছে' : 'Assessments deleted successfully',
+      });
+    },
+  });
+
+  const duplicateAssessmentMutation = useMutation({
+    mutationFn: (assessmentId: number) => gradesDb.duplicateAssessment(assessmentId, schoolId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assessments'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'মূল্যায়ন অনুলিপি করা হয়েছে' : 'Assessment duplicated successfully',
+      });
     },
   });
 
@@ -292,6 +423,67 @@ export default function Gradebook() {
     setHistoryStudentId(studentId);
     setHistoryAssessmentId(assessmentId);
     setIsHistoryDialogOpen(true);
+  };
+
+  // Feature 2.1: Assessment Components handlers
+  const toggleAssessmentExpansion = (assessmentId: number) => {
+    setExpandedAssessments(prev => {
+      const next = new Set(prev);
+      if (next.has(assessmentId)) {
+        next.delete(assessmentId);
+        setEditingComponentAssessmentId(null);
+      } else {
+        next.add(assessmentId);
+        setEditingComponentAssessmentId(assessmentId);
+      }
+      return next;
+    });
+  };
+
+  const handleAddComponent = (assessmentId: number) => {
+    setEditingComponentAssessmentId(assessmentId);
+    setIsComponentDialogOpen(true);
+  };
+
+  // Feature 2.3: Bulk operations handlers
+  const toggleSelectAll = () => {
+    if (selectedAssessmentIds.size === assessments?.length) {
+      setSelectedAssessmentIds(new Set());
+    } else {
+      setSelectedAssessmentIds(new Set(assessments?.map((a: any) => a.id) || []));
+    }
+  };
+
+  const toggleSelectAssessment = (assessmentId: number) => {
+    setSelectedAssessmentIds(prev => {
+      const next = new Set(prev);
+      if (next.has(assessmentId)) {
+        next.delete(assessmentId);
+      } else {
+        next.add(assessmentId);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedAssessmentIds.size === 0) return;
+    setShowBulkDeleteConfirm(true);
+  };
+
+  const confirmBulkDelete = () => {
+    bulkDeleteMutation.mutate(Array.from(selectedAssessmentIds));
+    setShowBulkDeleteConfirm(false);
+  };
+
+  const handleBulkDuplicate = async () => {
+    if (selectedAssessmentIds.size === 0) return;
+    
+    for (const id of selectedAssessmentIds) {
+      await duplicateAssessmentMutation.mutateAsync(id);
+    }
+    
+    setSelectedAssessmentIds(new Set());
   };
 
   useMemo(() => {
@@ -499,7 +691,41 @@ export default function Gradebook() {
                 : 'Manage student marks and grades'}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {/* Feature 2.2: Grade Scale Editor Button */}
+            <Button
+              variant="outline"
+              onClick={() => setIsGradeScaleDialogOpen(true)}
+              data-testid="grade-scale-editor"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              {language === 'bn' ? 'গ্রেড স্কেল' : 'Grade Scales'}
+            </Button>
+
+            {/* Feature 2.3: Bulk Operations Toolbar */}
+            {selectedAssessmentIds.size > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleBulkDelete}
+                  data-testid="bulk-delete-btn"
+                  className="bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? `মুছুন (${selectedAssessmentIds.size})` : `Delete (${selectedAssessmentIds.size})`}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleBulkDuplicate}
+                  data-testid="bulk-duplicate-btn"
+                  disabled={duplicateAssessmentMutation.isPending}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? `অনুলিপি (${selectedAssessmentIds.size})` : `Duplicate (${selectedAssessmentIds.size})`}
+                </Button>
+              </>
+            )}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -764,7 +990,16 @@ export default function Gradebook() {
                             return (
                               <TableRow key={student.id} data-testid={`row-student-${student.id}`}>
                                 <TableCell className="font-medium">{student.roll_number}</TableCell>
-                                <TableCell>{student.name}</TableCell>
+                                <TableCell>
+                                  {/* Feature 2.4: Student Details Link */}
+                                  <Link
+                                    href={`/academic/student-profile?id=${student.id}`}
+                                    className="hover:underline text-blue-600 dark:text-blue-400 font-medium transition-colors"
+                                    data-testid={`student-link-${student.id}`}
+                                  >
+                                    {student.name}
+                                  </Link>
+                                </TableCell>
                                 {gradeBook.assessments.map((assessment: any) => {
                                   const score = studentScores.find(
                                     (s: any) => s.assessment_id === assessment.id
@@ -891,6 +1126,21 @@ export default function Gradebook() {
           </TabsContent>
 
           <TabsContent value="assessments" className="space-y-4">
+            {/* Feature 2.3: Select All Checkbox */}
+            {assessments && assessments.length > 0 && (
+              <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <Checkbox
+                  checked={selectedAssessmentIds.size === assessments.length && assessments.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                  data-testid="bulk-select-all-checkbox"
+                />
+                <label className="text-sm font-medium cursor-pointer" onClick={toggleSelectAll}>
+                  {language === 'bn' ? 'সব নির্বাচন করুন' : 'Select All'}
+                  {selectedAssessmentIds.size > 0 && ` (${selectedAssessmentIds.size} selected)`}
+                </label>
+              </div>
+            )}
+
             {assessmentsLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Skeleton className="h-32" />
@@ -898,12 +1148,20 @@ export default function Gradebook() {
                 <Skeleton className="h-32" />
               </div>
             ) : assessments && assessments.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-4">
                 {assessments.map((assessment: any) => (
                   <Card key={assessment.id} data-testid={`card-assessment-${assessment.id}`}>
                     <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
+                      <div className="flex justify-between items-start gap-3">
+                        {/* Feature 2.3: Bulk Selection Checkbox */}
+                        <Checkbox
+                          checked={selectedAssessmentIds.has(assessment.id)}
+                          onCheckedChange={() => toggleSelectAssessment(assessment.id)}
+                          data-testid={`bulk-select-checkbox-${assessment.id}`}
+                          className="mt-1"
+                        />
+                        
+                        <div className="flex-1">
                           <CardTitle className="text-lg">
                             {language === 'bn'
                               ? assessment.assessment_name_bn || assessment.assessment_name
@@ -913,10 +1171,11 @@ export default function Gradebook() {
                             {language === 'bn' ? assessment.subject?.name_bn : assessment.subject?.name}
                           </CardDescription>
                         </div>
+                        
                         <Badge>{assessment.assessment_type}</Badge>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">
@@ -942,6 +1201,88 @@ export default function Gradebook() {
                               : '-'}
                           </span>
                         </div>
+                      </div>
+
+                      {/* Feature 2.1: Assessment Components Expandable Section */}
+                      <div className="border-t pt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleAssessmentExpansion(assessment.id)}
+                          className="w-full"
+                          data-testid={`assessment-components-toggle-${assessment.id}`}
+                        >
+                          {expandedAssessments.has(assessment.id) ? (
+                            <ChevronUp className="w-4 h-4 mr-2" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 mr-2" />
+                          )}
+                          {language === 'bn' ? 'উপাদান দেখুন' : 'View Components'}
+                        </Button>
+
+                        {expandedAssessments.has(assessment.id) && (
+                          <div className="mt-3 space-y-2" data-testid={`assessment-components-${assessment.id}`}>
+                            {componentsLoading ? (
+                              <Skeleton className="h-20 w-full" />
+                            ) : assessmentComponents && assessmentComponents.length > 0 ? (
+                              <div className="space-y-2">
+                                {assessmentComponents.map((component: any) => (
+                                  <div
+                                    key={component.id}
+                                    className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex justify-between items-start"
+                                  >
+                                    <div className="flex-1">
+                                      <p className="font-medium">
+                                        {language === 'bn'
+                                          ? component.component_name_bn || component.component_name
+                                          : component.component_name}
+                                      </p>
+                                      <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 space-y-1">
+                                        <div>
+                                          {language === 'bn' ? 'প্রকার' : 'Type'}: {component.component_type}
+                                        </div>
+                                        <div>
+                                          {language === 'bn' ? 'সর্বোচ্চ নম্বর' : 'Max Score'}: {component.max_score}
+                                        </div>
+                                        <div>
+                                          {language === 'bn' ? 'ওজন' : 'Weight'}: {component.weight_percentage}%
+                                        </div>
+                                        {component.passing_marks && (
+                                          <div>
+                                            {language === 'bn' ? 'পাস মার্ক' : 'Pass Marks'}: {component.passing_marks}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteComponentMutation.mutate({ id: component.id })}
+                                      data-testid={`delete-component-${component.id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4 text-red-600" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-6 text-gray-500 text-sm">
+                                {language === 'bn' ? 'কোন উপাদান পাওয়া যায়নি' : 'No components found'}
+                              </div>
+                            )}
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAddComponent(assessment.id)}
+                              className="w-full mt-2"
+                              data-testid={`add-component-${assessment.id}`}
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              {language === 'bn' ? 'উপাদান যোগ করুন' : 'Add Component'}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1140,6 +1481,67 @@ export default function Gradebook() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Feature 2.1: Component Editor Dialog */}
+      <ComponentEditorDialog
+        open={isComponentDialogOpen}
+        onOpenChange={setIsComponentDialogOpen}
+        assessmentId={editingComponentAssessmentId}
+        onSubmit={(data) => createComponentMutation.mutate(data)}
+        isLoading={createComponentMutation.isPending}
+        language={language}
+        schoolId={schoolId}
+      />
+
+      {/* Feature 2.2: Grade Scale Editor Dialog */}
+      <GradeScaleEditorDialog
+        open={isGradeScaleDialogOpen}
+        onOpenChange={setIsGradeScaleDialogOpen}
+        gradeScales={gradeScales || []}
+        onCreateScale={(data) => createGradeScaleMutation.mutate(data)}
+        onUpdateScale={(id, data) => updateGradeScaleMutation.mutate({ id, data })}
+        onDeleteScale={(id) => deleteGradeScaleMutation.mutate(id)}
+        language={language}
+        schoolId={schoolId}
+      />
+
+      {/* Feature 2.3: Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <DialogContent data-testid="dialog-bulk-delete-confirm">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'bn' ? 'নিশ্চিত করুন' : 'Confirm Delete'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'bn'
+                ? `আপনি কি নিশ্চিত যে আপনি ${selectedAssessmentIds.size}টি মূল্যায়ন মুছে ফেলতে চান?`
+                : `Are you sure you want to delete ${selectedAssessmentIds.size} assessment(s)?`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkDeleteConfirm(false)}
+              data-testid="button-cancel-bulk-delete"
+            >
+              {language === 'bn' ? 'বাতিল' : 'Cancel'}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              data-testid="button-confirm-bulk-delete"
+            >
+              {bulkDeleteMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              {language === 'bn' ? 'মুছে ফেলুন' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
@@ -1323,5 +1725,398 @@ function CreateAssessmentDialog({
         </Button>
       </DialogFooter>
     </form>
+  );
+}
+
+// Feature 2.1: Component Editor Dialog Component
+function ComponentEditorDialog({
+  open,
+  onOpenChange,
+  assessmentId,
+  onSubmit,
+  isLoading,
+  language,
+  schoolId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  assessmentId: number | null;
+  onSubmit: (data: InsertAssessmentComponent) => void;
+  isLoading: boolean;
+  language: string;
+  schoolId: number;
+}) {
+  const [formData, setFormData] = useState<Partial<InsertAssessmentComponent>>({
+    schoolId,
+    assessmentId: assessmentId || undefined,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.componentName && formData.componentType && formData.maxScore && formData.weightPercentage) {
+      onSubmit(formData as InsertAssessmentComponent);
+      setFormData({ schoolId, assessmentId: assessmentId || undefined });
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent data-testid="dialog-component-editor">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'bn' ? 'উপাদান যোগ করুন' : 'Add Component'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'bn' ? 'মূল্যায়ন উপাদানের বিস্তারিত' : 'Assessment component details'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="component-name">
+                  {language === 'bn' ? 'উপাদানের নাম (EN)' : 'Component Name (EN)'}
+                </Label>
+                <Input
+                  id="component-name"
+                  value={formData.componentName || ''}
+                  onChange={(e) => setFormData({ ...formData, componentName: e.target.value })}
+                  required
+                  data-testid="input-component-name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="component-name-bn">
+                  {language === 'bn' ? 'উপাদানের নাম (BN)' : 'Component Name (BN)'}
+                </Label>
+                <Input
+                  id="component-name-bn"
+                  value={formData.componentNameBn || ''}
+                  onChange={(e) => setFormData({ ...formData, componentNameBn: e.target.value })}
+                  data-testid="input-component-name-bn"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="component-type">
+                {language === 'bn' ? 'উপাদানের ধরন' : 'Component Type'}
+              </Label>
+              <Select
+                value={formData.componentType}
+                onValueChange={(value) => setFormData({ ...formData, componentType: value })}
+              >
+                <SelectTrigger id="component-type" data-testid="select-component-type">
+                  <SelectValue placeholder={language === 'bn' ? 'নির্বাচন করুন' : 'Select'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MCQ">{language === 'bn' ? 'এমসিকিউ' : 'MCQ'}</SelectItem>
+                  <SelectItem value="Written">{language === 'bn' ? 'লিখিত' : 'Written'}</SelectItem>
+                  <SelectItem value="Practical">{language === 'bn' ? 'ব্যবহারিক' : 'Practical'}</SelectItem>
+                  <SelectItem value="Oral">{language === 'bn' ? 'মৌখিক' : 'Oral'}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="max-score">
+                  {language === 'bn' ? 'সর্বোচ্চ নম্বর' : 'Max Score'}
+                </Label>
+                <Input
+                  id="max-score"
+                  type="number"
+                  value={formData.maxScore || ''}
+                  onChange={(e) => setFormData({ ...formData, maxScore: e.target.value })}
+                  required
+                  data-testid="input-max-score"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="weight-percentage">
+                  {language === 'bn' ? 'ওজন %' : 'Weight %'}
+                </Label>
+                <Input
+                  id="weight-percentage"
+                  type="number"
+                  value={formData.weightPercentage || ''}
+                  onChange={(e) => setFormData({ ...formData, weightPercentage: e.target.value })}
+                  required
+                  data-testid="input-weight-percentage"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="passing-marks">
+                  {language === 'bn' ? 'পাস মার্ক' : 'Passing Marks'}
+                </Label>
+                <Input
+                  id="passing-marks"
+                  type="number"
+                  value={formData.passingMarks || ''}
+                  onChange={(e) => setFormData({ ...formData, passingMarks: e.target.value })}
+                  data-testid="input-passing-marks"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              data-testid="button-cancel-component"
+            >
+              {language === 'bn' ? 'বাতিল' : 'Cancel'}
+            </Button>
+            <Button type="submit" disabled={isLoading} data-testid="button-submit-component">
+              {isLoading
+                ? language === 'bn'
+                  ? 'যোগ হচ্ছে...'
+                  : 'Adding...'
+                : language === 'bn'
+                ? 'যোগ করুন'
+                : 'Add'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Feature 2.2: Grade Scale Editor Dialog Component
+function GradeScaleEditorDialog({
+  open,
+  onOpenChange,
+  gradeScales,
+  onCreateScale,
+  onUpdateScale,
+  onDeleteScale,
+  language,
+  schoolId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  gradeScales: any[];
+  onCreateScale: (data: InsertGradeScale) => void;
+  onUpdateScale: (id: number, data: Partial<InsertGradeScale>) => void;
+  onDeleteScale: (id: number) => void;
+  language: string;
+  schoolId: number;
+}) {
+  const [isCreating, setIsCreating] = useState(false);
+  const [formData, setFormData] = useState<Partial<InsertGradeScale>>({
+    schoolId,
+    scaleType: 'letter',
+    isDefault: false,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.scaleName && formData.gradeRanges) {
+      onCreateScale(formData as InsertGradeScale);
+      setFormData({ schoolId, scaleType: 'letter', isDefault: false });
+      setIsCreating(false);
+    }
+  };
+
+  const handleSetDefault = (id: number) => {
+    onUpdateScale(id, { isDefault: true });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" data-testid="dialog-grade-scale-editor">
+        <DialogHeader>
+          <DialogTitle>
+            {language === 'bn' ? 'গ্রেড স্কেল পরিচালনা' : 'Manage Grade Scales'}
+          </DialogTitle>
+          <DialogDescription>
+            {language === 'bn'
+              ? 'আপনার স্কুলের জন্য গ্রেড স্কেল তৈরি ও সম্পাদনা করুন'
+              : 'Create and edit grade scales for your school'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Existing Grade Scales */}
+          <div className="space-y-3">
+            <h3 className="font-semibold">{language === 'bn' ? 'বিদ্যমান স্কেল' : 'Existing Scales'}</h3>
+            {gradeScales.length > 0 ? (
+              gradeScales.map((scale: any) => (
+                <Card key={scale.id} className={scale.is_default ? 'border-blue-500 border-2' : ''}>
+                  <CardContent className="pt-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold">{scale.scale_name}</h4>
+                          {scale.is_default && (
+                            <Badge variant="default">{language === 'bn' ? 'ডিফল্ট' : 'Default'}</Badge>
+                          )}
+                        </div>
+                        {scale.scale_name_bn && (
+                          <p className="text-sm text-gray-600">{scale.scale_name_bn}</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          {language === 'bn' ? 'ধরন' : 'Type'}: {scale.scale_type}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        {!scale.is_default && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSetDefault(scale.id)}
+                            data-testid={`button-set-default-${scale.id}`}
+                          >
+                            {language === 'bn' ? 'ডিফল্ট করুন' : 'Set Default'}
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteScale(scale.id)}
+                          data-testid={`button-delete-scale-${scale.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="text-center py-6 text-gray-500">
+                {language === 'bn' ? 'কোন গ্রেড স্কেল পাওয়া যায়নি' : 'No grade scales found'}
+              </div>
+            )}
+          </div>
+
+          {/* Create New Scale */}
+          {!isCreating ? (
+            <Button
+              variant="outline"
+              onClick={() => setIsCreating(true)}
+              className="w-full"
+              data-testid="button-create-new-scale"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {language === 'bn' ? 'নতুন স্কেল তৈরি করুন' : 'Create New Scale'}
+            </Button>
+          ) : (
+            <Card>
+              <CardContent className="pt-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="scale-name">
+                        {language === 'bn' ? 'স্কেলের নাম (EN)' : 'Scale Name (EN)'}
+                      </Label>
+                      <Input
+                        id="scale-name"
+                        value={formData.scaleName || ''}
+                        onChange={(e) => setFormData({ ...formData, scaleName: e.target.value })}
+                        required
+                        data-testid="input-scale-name"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="scale-name-bn">
+                        {language === 'bn' ? 'স্কেলের নাম (BN)' : 'Scale Name (BN)'}
+                      </Label>
+                      <Input
+                        id="scale-name-bn"
+                        value={formData.scaleNameBn || ''}
+                        onChange={(e) => setFormData({ ...formData, scaleNameBn: e.target.value })}
+                        data-testid="input-scale-name-bn"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="scale-type">
+                      {language === 'bn' ? 'স্কেলের ধরন' : 'Scale Type'}
+                    </Label>
+                    <Select
+                      value={formData.scaleType}
+                      onValueChange={(value) => setFormData({ ...formData, scaleType: value as any })}
+                    >
+                      <SelectTrigger id="scale-type" data-testid="select-scale-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="letter">{language === 'bn' ? 'লেটার গ্রেড' : 'Letter Grade'}</SelectItem>
+                        <SelectItem value="gpa">{language === 'bn' ? 'জিপিএ' : 'GPA'}</SelectItem>
+                        <SelectItem value="percentage">{language === 'bn' ? 'শতকরা' : 'Percentage'}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{language === 'bn' ? 'গ্রেড রেঞ্জ (JSON)' : 'Grade Ranges (JSON)'}</Label>
+                    <Textarea
+                      placeholder='[{"min": 80, "max": 100, "grade": "A+", "gpa": 5.0}]'
+                      value={formData.gradeRanges ? JSON.stringify(formData.gradeRanges) : ''}
+                      onChange={(e) => {
+                        try {
+                          const parsed = JSON.parse(e.target.value);
+                          setFormData({ ...formData, gradeRanges: parsed });
+                        } catch (err) {
+                          // Invalid JSON, ignore
+                        }
+                      }}
+                      rows={4}
+                      data-testid="textarea-grade-ranges"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is-default"
+                      checked={formData.isDefault}
+                      onCheckedChange={(checked) => setFormData({ ...formData, isDefault: checked as boolean })}
+                      data-testid="checkbox-is-default"
+                    />
+                    <Label htmlFor="is-default" className="cursor-pointer">
+                      {language === 'bn' ? 'ডিফল্ট হিসাবে সেট করুন' : 'Set as default'}
+                    </Label>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsCreating(false);
+                        setFormData({ schoolId, scaleType: 'letter', isDefault: false });
+                      }}
+                      data-testid="button-cancel-scale"
+                    >
+                      {language === 'bn' ? 'বাতিল' : 'Cancel'}
+                    </Button>
+                    <Button type="submit" data-testid="button-submit-scale">
+                      {language === 'bn' ? 'তৈরি করুন' : 'Create'}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} data-testid="button-close-grade-scale">
+            {language === 'bn' ? 'বন্ধ করুন' : 'Close'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
