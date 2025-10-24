@@ -266,7 +266,8 @@ export function useMarkNotificationAsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (notificationId: number) => db.markNotificationAsRead(notificationId),
+    mutationFn: ({ notificationId, studentId }: { notificationId: number; studentId: number }) => 
+      db.markNotificationAsRead(notificationId, studentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
     },
