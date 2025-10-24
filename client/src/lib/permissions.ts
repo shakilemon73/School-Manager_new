@@ -1,6 +1,9 @@
 /**
  * Permission System for School Management System
- * Based on role-based access control (RBAC)
+ * Based on role-based access control (RBAC) with contextual checks
+ * 
+ * SECURITY NOTE: This is client-side permission checking for UI rendering only.
+ * ALL mutations MUST be validated server-side with Supabase RLS policies.
  */
 
 export type UserRole = 'super_admin' | 'school_admin' | 'teacher' | 'student' | 'parent';
@@ -49,8 +52,24 @@ export const PERMISSIONS = {
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
 
 /**
+ * Context for permission checking
+ * Used to verify teacher assignments to specific classes/subjects
+ */
+export interface PermissionContext {
+  classId?: number;
+  subjectId?: number;
+  studentId?: number;
+  teacherId?: string;
+  teacherClassSubjects?: Array<{
+    teacherId: string;
+    classId: number;
+    subjectId: number;
+  }>;
+}
+
+/**
  * Role-based permission mapping
- * Defines what permissions each role has
+ * Defines base permissions for each role (without context)
  */
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   super_admin: Object.values(PERMISSIONS), // All permissions
@@ -81,16 +100,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   
   teacher: [
     PERMISSIONS.VIEW_GRADEBOOK,
-    PERMISSIONS.EDIT_GRADES, // Only for assigned classes
+    PERMISSIONS.EDIT_GRADES, // Requires context: only assigned classes
     PERMISSIONS.VIEW_RESULTS,
     PERMISSIONS.VIEW_ATTENDANCE,
-    PERMISSIONS.MARK_ATTENDANCE, // Only for assigned classes
-    PERMISSIONS.EDIT_ATTENDANCE, // Only for assigned classes
+    PERMISSIONS.MARK_ATTENDANCE, // Requires context: only assigned classes
+    PERMISSIONS.EDIT_ATTENDANCE, // Requires context: only assigned classes
     PERMISSIONS.VIEW_ASSIGNMENTS,
-    PERMISSIONS.CREATE_ASSIGNMENTS, // Only for assigned classes
-    PERMISSIONS.EDIT_ASSIGNMENTS, // Only for own assignments
-    PERMISSIONS.DELETE_ASSIGNMENTS, // Only for own assignments
-    PERMISSIONS.GRADE_ASSIGNMENTS, // Only for assigned classes
+    PERMISSIONS.CREATE_ASSIGNMENTS, // Requires context: only assigned classes
+    PERMISSIONS.EDIT_ASSIGNMENTS, // Requires context: only own assignments
+    PERMISSIONS.DELETE_ASSIGNMENTS, // Requires context: only own assignments
+    PERMISSIONS.GRADE_ASSIGNMENTS, // Requires context: only assigned classes
     PERMISSIONS.VIEW_TIMETABLE,
   ],
   
@@ -113,48 +132,91 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 };
 
 /**
- * Check if a role has a specific permission
+ * Check if a role has a specific base permission
+ * NOTE: This does NOT check contextual permissions (e.g., teacher→class assignment)
  */
-export function hasPermission(role: UserRole, permission: Permission): boolean {
+export function hasBasePermission(role: UserRole, permission: Permission): boolean {
   const rolePermissions = ROLE_PERMISSIONS[role];
   return rolePermissions.includes(permission);
 }
 
 /**
+ * Check contextual permission for teachers
+ * Verifies that a teacher is assigned to the specific class/subject
+ */
+export function hasTeacherContextPermission(
+  permission: Permission,
+  context: PermissionContext
+): boolean {
+  if (!context.teacherClassSubjects || !context.classId) {
+    return false;
+  }
+
+  // Check if teacher is assigned to this class
+  const isAssigned = context.teacherClassSubjects.some(
+    assignment =>
+      assignment.teacherId === context.teacherId &&
+      assignment.classId === context.classId &&
+      (context.subjectId ? assignment.subjectId === context.subjectId : true)
+  );
+
+  return isAssigned;
+}
+
+/**
+ * Main permission check with context support
+ * 
+ * WARNING: This is CLIENT-SIDE ONLY. Server-side validation is required!
+ * All mutations must be protected with Supabase RLS policies.
+ */
+export function hasPermission(
+  role: UserRole,
+  permission: Permission,
+  context?: PermissionContext
+): boolean {
+  // Check base permission first
+  if (!hasBasePermission(role, permission)) {
+    return false;
+  }
+
+  // If teacher role and context provided, check contextual permissions
+  if (role === 'teacher' && context) {
+    const contextualPermissions: Permission[] = [
+      PERMISSIONS.EDIT_GRADES,
+      PERMISSIONS.MARK_ATTENDANCE,
+      PERMISSIONS.EDIT_ATTENDANCE,
+      PERMISSIONS.CREATE_ASSIGNMENTS,
+      PERMISSIONS.EDIT_ASSIGNMENTS,
+      PERMISSIONS.DELETE_ASSIGNMENTS,
+      PERMISSIONS.GRADE_ASSIGNMENTS,
+    ];
+
+    if (contextualPermissions.includes(permission)) {
+      return hasTeacherContextPermission(permission, context);
+    }
+  }
+
+  return true;
+}
+
+/**
  * Check if a role has any of the specified permissions
  */
-export function hasAnyPermission(role: UserRole, permissions: Permission[]): boolean {
-  return permissions.some(permission => hasPermission(role, permission));
+export function hasAnyPermission(
+  role: UserRole,
+  permissions: Permission[],
+  context?: PermissionContext
+): boolean {
+  return permissions.some(permission => hasPermission(role, permission, context));
 }
 
 /**
  * Check if a role has all of the specified permissions
  */
-export function hasAllPermissions(role: UserRole, permissions: Permission[]): boolean {
-  return permissions.every(permission => hasPermission(role, permission));
-}
-
-/**
- * Get user's role from local storage or context
- * This is a helper function to be used with the actual auth system
- */
-export function getCurrentUserRole(): UserRole | null {
-  try {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) return null;
-    
-    const user = JSON.parse(userStr);
-    return user.role as UserRole || null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Permission check for UI components
- */
-export function canAccess(permission: Permission): boolean {
-  const role = getCurrentUserRole();
-  if (!role) return false;
-  return hasPermission(role, permission);
+export function hasAllPermissions(
+  role: UserRole,
+  permissions: Permission[],
+  context?: PermissionContext
+): boolean {
+  return permissions.every(permission => hasPermission(role, permission, context));
 }

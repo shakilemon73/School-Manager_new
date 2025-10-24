@@ -47,6 +47,9 @@ import { exportUtils } from '@/lib/export-utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { cn } from '@/lib/utils';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/lib/permissions';
+import { PermissionGate } from '@/components/PermissionGate';
 import {
   Plus,
   Edit,
