@@ -1919,7 +1919,7 @@ function GradeScaleEditorDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.scaleName && formData.gradeRanges) {
+    if (formData.scaleName && formData.gradeLabels) {
       onCreateScale(formData as InsertGradeScale);
       setFormData({ schoolId, scaleType: 'letter', isDefault: false });
       setIsCreating(false);
@@ -2063,11 +2063,11 @@ function GradeScaleEditorDialog({
                     <Label>{language === 'bn' ? 'গ্রেড রেঞ্জ (JSON)' : 'Grade Ranges (JSON)'}</Label>
                     <Textarea
                       placeholder='[{"min": 80, "max": 100, "grade": "A+", "gpa": 5.0}]'
-                      value={formData.gradeRanges ? JSON.stringify(formData.gradeRanges) : ''}
+                      value={formData.gradeLabels ? JSON.stringify(formData.gradeLabels) : ''}
                       onChange={(e) => {
                         try {
                           const parsed = JSON.parse(e.target.value);
-                          setFormData({ ...formData, gradeRanges: parsed });
+                          setFormData({ ...formData, gradeLabels: parsed });
                         } catch (err) {
                           // Invalid JSON, ignore
                         }

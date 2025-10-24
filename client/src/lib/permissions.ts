@@ -14,6 +14,7 @@ export const PERMISSIONS = {
   EDIT_GRADES: 'edit_grades',
   DELETE_GRADES: 'delete_grades',
   VIEW_AUDIT_TRAIL: 'view_audit_trail',
+  MANAGE_ALL_GRADES: 'manage_all_grades',
   
   // Results permissions
   VIEW_RESULTS: 'view_results',
@@ -72,11 +73,12 @@ export interface PermissionContext {
  * Defines base permissions for each role (without context)
  */
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  super_admin: Object.values(PERMISSIONS), // All permissions
+  super_admin: Object.values(PERMISSIONS) as Permission[], // All permissions
   
   school_admin: [
     PERMISSIONS.VIEW_GRADEBOOK,
     PERMISSIONS.EDIT_GRADES,
+    PERMISSIONS.MANAGE_ALL_GRADES,
     PERMISSIONS.VIEW_AUDIT_TRAIL,
     PERMISSIONS.VIEW_RESULTS,
     PERMISSIONS.EDIT_RESULTS,
