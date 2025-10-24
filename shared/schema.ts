@@ -2887,3 +2887,135 @@ export const userSchoolMembershipsInsertSchema = createInsertSchema(userSchoolMe
 });
 export type InsertUserSchoolMembership = z.infer<typeof userSchoolMembershipsInsertSchema>;
 export type UserSchoolMembership = typeof userSchoolMemberships.$inferSelect;
+
+// Assignment Submissions table - Track student homework/project submissions
+export const assignmentSubmissions = pgTable("assignment_submissions", {
+  id: serial("id").primaryKey(),
+  assessmentId: integer("assessment_id").references(() => assessments.id).notNull(),
+  studentId: integer("student_id").references(() => students.id).notNull(),
+  submissionText: text("submission_text"),
+  submissionFiles: json("submission_files").$type<Array<{
+    name: string;
+    url: string;
+    size: number;
+    type: string;
+  }>>(),
+  status: text("status").default("submitted").notNull(), // draft, submitted, graded, returned
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  gradedAt: timestamp("graded_at"),
+  score: decimal("score", { precision: 6, scale: 2 }),
+  feedback: text("feedback"),
+  feedbackBn: text("feedback_bn"),
+  isLate: boolean("is_late").default(false),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const assignmentSubmissionsInsertSchema = createInsertSchema(assignmentSubmissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAssignmentSubmission = z.infer<typeof assignmentSubmissionsInsertSchema>;
+export type AssignmentSubmission = typeof assignmentSubmissions.$inferSelect;
+
+// Attendance Periods table - Period-wise attendance tracking
+export const attendancePeriods = pgTable("attendance_periods", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").references(() => students.id).notNull(),
+  routinePeriodId: integer("routine_period_id").references(() => routinePeriods.id),
+  date: date("date").notNull(),
+  periodNumber: integer("period_number").notNull(),
+  subjectId: integer("subject_id").references(() => subjects.id),
+  teacherId: integer("teacher_id").references(() => teachers.id),
+  status: text("status").default("present").notNull(), // present, absent, late, excused
+  remarks: text("remarks"),
+  remarksBn: text("remarks_bn"),
+  markedByTeacherId: integer("marked_by_teacher_id").references(() => teachers.id),
+  markedAt: timestamp("marked_at").defaultNow(),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const attendancePeriodsInsertSchema = createInsertSchema(attendancePeriods).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAttendancePeriod = z.infer<typeof attendancePeriodsInsertSchema>;
+export type AttendancePeriod = typeof attendancePeriods.$inferSelect;
+
+// Grade History table - Audit trail for grade changes
+export const gradeHistory = pgTable("grade_history", {
+  id: serial("id").primaryKey(),
+  studentScoreId: integer("student_score_id").references(() => studentScores.id).notNull(),
+  studentId: integer("student_id").references(() => students.id).notNull(),
+  assessmentId: integer("assessment_id").references(() => assessments.id).notNull(),
+  oldScore: decimal("old_score", { precision: 6, scale: 2 }),
+  newScore: decimal("new_score", { precision: 6, scale: 2 }),
+  oldGrade: text("old_grade"),
+  newGrade: text("new_grade"),
+  changeReason: text("change_reason"),
+  changeReasonBn: text("change_reason_bn"),
+  changedByTeacherId: integer("changed_by_teacher_id").references(() => teachers.id).notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const gradeHistoryInsertSchema = createInsertSchema(gradeHistory).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertGradeHistory = z.infer<typeof gradeHistoryInsertSchema>;
+export type GradeHistory = typeof gradeHistory.$inferSelect;
+
+// Timetable Substitutions table - Temporary teacher replacements
+export const timetableSubstitutions = pgTable("timetable_substitutions", {
+  id: serial("id").primaryKey(),
+  routinePeriodId: integer("routine_period_id").references(() => routinePeriods.id).notNull(),
+  date: date("date").notNull(),
+  originalTeacherId: integer("original_teacher_id").references(() => teachers.id).notNull(),
+  substituteTeacherId: integer("substitute_teacher_id").references(() => teachers.id).notNull(),
+  reason: text("reason").notNull(),
+  reasonBn: text("reason_bn"),
+  status: text("status").default("pending").notNull(), // pending, approved, completed, cancelled
+  approvedBy: integer("approved_by").references(() => teachers.id),
+  approvedAt: timestamp("approved_at"),
+  notes: text("notes"),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const timetableSubstitutionsInsertSchema = createInsertSchema(timetableSubstitutions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTimetableSubstitution = z.infer<typeof timetableSubstitutionsInsertSchema>;
+export type TimetableSubstitution = typeof timetableSubstitutions.$inferSelect;
+
+// Notification Queue table - Enhanced notification tracking with delivery status
+export const notificationQueue = pgTable("notification_queue", {
+  id: serial("id").primaryKey(),
+  notificationId: integer("notification_id").references(() => notifications.id),
+  recipientUserId: text("recipient_user_id").notNull(), // Supabase auth user ID
+  recipientEmail: text("recipient_email"),
+  recipientPhone: text("recipient_phone"),
+  channel: text("channel").notNull(), // in-app, email, sms, push
+  status: text("status").default("pending").notNull(), // pending, sent, delivered, failed, bounced
+  attempts: integer("attempts").default(0),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  deliveredAt: timestamp("delivered_at"),
+  errorMessage: text("error_message"),
+  metadata: json("metadata"),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const notificationQueueInsertSchema = createInsertSchema(notificationQueue).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertNotificationQueue = z.infer<typeof notificationQueueInsertSchema>;
+export type NotificationQueue = typeof notificationQueue.$inferSelect;
