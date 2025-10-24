@@ -482,4 +482,67 @@ export const gradesDb = {
 
     return csvContent;
   },
+
+  async getGradeHistory(studentId: number, assessmentId: number, schoolId: number) {
+    const { data, error } = await supabase
+      .from('grade_history')
+      .select(`
+        *,
+        changed_by:teachers!grade_history_changed_by_teacher_id_fkey(
+          id,
+          name,
+          teacher_id
+        ),
+        student:students!inner(
+          id,
+          name,
+          student_id
+        ),
+        assessment:assessments!inner(
+          id,
+          assessment_name,
+          assessment_name_bn
+        )
+      `)
+      .eq('student_id', studentId)
+      .eq('assessment_id', assessmentId)
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+
+  async recordGradeChange(
+    studentScoreId: number,
+    studentId: number,
+    assessmentId: number,
+    oldScore: string | null,
+    newScore: string | null,
+    oldGrade: string | null,
+    newGrade: string | null,
+    changedByTeacherId: number,
+    schoolId: number,
+    changeReason?: string
+  ) {
+    const { data, error } = await supabase
+      .from('grade_history')
+      .insert({
+        student_score_id: studentScoreId,
+        student_id: studentId,
+        assessment_id: assessmentId,
+        old_score: oldScore,
+        new_score: newScore,
+        old_grade: oldGrade,
+        new_grade: newGrade,
+        change_reason: changeReason,
+        changed_by_teacher_id: changedByTeacherId,
+        school_id: schoolId,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
 };

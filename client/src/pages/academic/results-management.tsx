@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +38,11 @@ import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useCurrentAcademicYear } from '@/hooks/use-school-context';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { exportUtils } from '@/lib/export-utils';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/lib/permissions';
+import { PermissionGate } from '@/components/PermissionGate';
 import { Link } from 'wouter';
+import { queryClient, apiRequest } from '@/lib/queryClient';
 import {
   Award,
   Download,
@@ -50,7 +57,11 @@ import {
   Calendar,
   FileText,
   FileSpreadsheet,
-  Loader2
+  Loader2,
+  Globe,
+  EyeOff,
+  Printer,
+  IdCard
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -59,6 +70,7 @@ export default function ResultsManagement() {
   const { language } = useLanguage();
   const schoolId = useRequireSchoolId();
   const { currentAcademicYear } = useCurrentAcademicYear();
+  const { hasPermission, teacherClassSubjects } = usePermissions();
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
   const [selectedTerm, setSelectedTerm] = useState<string>('');
@@ -66,6 +78,9 @@ export default function ResultsManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('table');
   const [isExporting, setIsExporting] = useState(false);
+  const [publicationStatus, setPublicationStatus] = useState<string>('all');
+  const [selectedStudentForCard, setSelectedStudentForCard] = useState<any>(null);
+  const [isResultCardOpen, setIsResultCardOpen] = useState(false);
 
   // Fetch classes
   const { data: classes = [] } = useQuery({
@@ -130,15 +145,15 @@ export default function ResultsManagement() {
 
   // Fetch student scores with filters
   const { data: studentResults = [], isLoading: resultsLoading } = useQuery({
-    queryKey: ['student-results', schoolId, selectedClass, selectedSection, selectedSubject, selectedTerm],
+    queryKey: ['student-results', schoolId, selectedClass, selectedSection, selectedSubject, selectedTerm, publicationStatus],
     queryFn: async () => {
       try {
         let query = supabase
           .from('student_scores')
           .select(`
             *,
-            students!inner(id, name, student_id, class, section, school_id),
-            assessments!inner(id, assessment_name, total_marks, subject_id, term_id)
+            students!inner(id, name, student_id, class, section, school_id, photo, roll_number),
+            assessments!inner(id, assessment_name, total_marks, subject_id, term_id, is_published)
           `)
           .eq('students.school_id', schoolId);
 
@@ -154,6 +169,9 @@ export default function ResultsManagement() {
         if (selectedSubject && selectedSubject !== 'all') {
           query = query.eq('assessments.subject_id', parseInt(selectedSubject));
         }
+        if (publicationStatus && publicationStatus !== 'all') {
+          query = query.eq('assessments.is_published', publicationStatus === 'published');
+        }
 
         const { data, error } = await query
           .order('created_at', { ascending: false })
@@ -165,6 +183,36 @@ export default function ResultsManagement() {
         console.error('Failed to fetch student results:', error);
         return [];
       }
+    },
+  });
+
+  // Mutation to toggle publication status
+  const togglePublishMutation = useMutation({
+    mutationFn: async ({ assessmentId, isPublished }: { assessmentId: number; isPublished: boolean }) => {
+      const { data, error } = await supabase
+        .from('assessments')
+        .update({ is_published: !isPublished })
+        .eq('id', assessmentId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student-results'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'প্রকাশনা অবস্থা আপডেট হয়েছে' : 'Publication status updated',
+      });
+    },
+    onError: (error) => {
+      console.error('Toggle publish error:', error);
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'প্রকাশনা অবস্থা আপডেট করতে ব্যর্থ' : 'Failed to update publication status',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -181,7 +229,9 @@ export default function ResultsManagement() {
           const maxScore = parseFloat(r.assessments?.total_marks || '100');
           return (score / maxScore) * 100 >= 40;
         }).length / studentResults.length) * 100).toFixed(1)
-      : '0'
+      : '0',
+    publishedCount: studentResults.filter(r => r.assessments?.is_published).length,
+    unpublishedCount: studentResults.filter(r => !r.assessments?.is_published).length,
   };
 
   // Grade distribution for chart
@@ -207,6 +257,61 @@ export default function ResultsManagement() {
       student?.student_id?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
+
+  // Fetch all results for selected student (for result card)
+  const { data: studentCardResults = [] } = useQuery({
+    queryKey: ['student-card-results', selectedStudentForCard?.id],
+    queryFn: async () => {
+      if (!selectedStudentForCard) return [];
+      
+      try {
+        const { data, error } = await supabase
+          .from('student_scores')
+          .select(`
+            *,
+            assessments!inner(
+              id, 
+              assessment_name, 
+              total_marks, 
+              subject_id,
+              subjects(name)
+            )
+          `)
+          .eq('student_id', selectedStudentForCard.id);
+        
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error('Failed to fetch student card results:', error);
+        return [];
+      }
+    },
+    enabled: !!selectedStudentForCard,
+  });
+
+  // Calculate card statistics
+  const cardStats = selectedStudentForCard ? {
+    totalMarks: studentCardResults.reduce((acc, r) => acc + parseFloat(r.score_obtained || '0'), 0),
+    maxMarks: studentCardResults.reduce((acc, r) => acc + parseFloat(r.assessments?.total_marks || '0'), 0),
+    percentage: studentCardResults.length > 0 
+      ? ((studentCardResults.reduce((acc, r) => acc + parseFloat(r.score_obtained || '0'), 0) / 
+          studentCardResults.reduce((acc, r) => acc + parseFloat(r.assessments?.total_marks || '0'), 1)) * 100).toFixed(2)
+      : '0',
+    overallGrade: studentCardResults.length > 0 ? (studentCardResults[0]?.grade_letter || 'N/A') : 'N/A',
+  } : null;
+
+  const handleViewCard = (result: any) => {
+    setSelectedStudentForCard(result.students);
+    setIsResultCardOpen(true);
+  };
+
+  const handlePrintCard = () => {
+    window.print();
+  };
+
+  const handleTogglePublish = (assessmentId: number, isPublished: boolean) => {
+    togglePublishMutation.mutate({ assessmentId, isPublished });
+  };
 
   const handleExportResults = async (format: 'csv' | 'pdf' | 'excel') => {
     if (filteredResults.length === 0) {
@@ -349,6 +454,26 @@ export default function ResultsManagement() {
     viewGradebook: language === 'bn' ? 'গ্রেডবুক দেখুন' : 'View Gradebook',
     viewStudents: language === 'bn' ? 'শিক্ষার্থী দেখুন' : 'View Students',
     viewSubjects: language === 'bn' ? 'বিষয় দেখুন' : 'View Subjects',
+    publicationStatus: language === 'bn' ? 'প্রকাশনা অবস্থা' : 'Publication Status',
+    allResults: language === 'bn' ? 'সকল ফলাফল' : 'All Results',
+    published: language === 'bn' ? 'প্রকাশিত' : 'Published',
+    unpublished: language === 'bn' ? 'অপ্রকাশিত' : 'Unpublished',
+    draft: language === 'bn' ? 'খসড়া' : 'Draft',
+    publish: language === 'bn' ? 'প্রকাশ করুন' : 'Publish',
+    unpublish: language === 'bn' ? 'অপ্রকাশ করুন' : 'Unpublish',
+    viewCard: language === 'bn' ? 'কার্ড দেখুন' : 'View Card',
+    resultCard: language === 'bn' ? 'ফলাফল কার্ড' : 'Result Card',
+    printCard: language === 'bn' ? 'প্রিন্ট করুন' : 'Print Card',
+    rollNumber: language === 'bn' ? 'রোল নম্বর' : 'Roll Number',
+    subject: language === 'bn' ? 'বিষয়' : 'Subject',
+    marksObtained: language === 'bn' ? 'প্রাপ্ত নম্বর' : 'Marks Obtained',
+    totalMarks: language === 'bn' ? 'মোট নম্বর' : 'Total Marks',
+    percentage: language === 'bn' ? 'শতাংশ' : 'Percentage',
+    overallGrade: language === 'bn' ? 'সামগ্রিক গ্রেড' : 'Overall Grade',
+    remarks: language === 'bn' ? 'মন্তব্য' : 'Remarks',
+    attendance: language === 'bn' ? 'উপস্থিতি' : 'Attendance',
+    schoolLogo: language === 'bn' ? 'স্কুল লোগো' : 'School Logo',
+    signature: language === 'bn' ? 'স্বাক্ষর' : 'Signature',
   };
 
   return (
@@ -364,22 +489,29 @@ export default function ResultsManagement() {
           </div>
           <div className="flex items-center gap-2">
             <Link href="/academic/gradebook">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" data-testid="button-view-gradebook">
                 <BookOpen className="w-4 h-4 mr-2" />
                 {t.viewGradebook}
               </Button>
             </Link>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={isExporting} data-testid="button-export-results">
-                  {isExporting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  {t.export}
-                </Button>
-              </DropdownMenuTrigger>
+            <PermissionGate 
+              anyPermissions={[PERMISSIONS.EDIT_RESULTS, PERMISSIONS.PUBLISH_RESULTS]}
+              context={{ 
+                classId: selectedClass && selectedClass !== 'all' ? parseInt(selectedClass) : undefined,
+                teacherClassSubjects 
+              }}
+            >
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={isExporting} data-testid="button-export-results">
+                    {isExporting ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4 mr-2" />
+                    )}
+                    {t.export}
+                  </Button>
+                </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>
                   {language === 'bn' ? 'ফরম্যাট নির্বাচন করুন' : 'Choose Format'}
@@ -398,7 +530,8 @@ export default function ResultsManagement() {
                   {language === 'bn' ? 'এক্সেল ফাইল' : 'Excel File'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+              </DropdownMenu>
+            </PermissionGate>
           </div>
         </div>
 
@@ -461,7 +594,7 @@ export default function ResultsManagement() {
             </div>
             
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
               <Select value={selectedClass} onValueChange={setSelectedClass}>
                 <SelectTrigger data-testid="select-class">
                   <SelectValue placeholder={t.selectClass} />
@@ -513,6 +646,27 @@ export default function ResultsManagement() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select value={publicationStatus} onValueChange={setPublicationStatus}>
+                <SelectTrigger data-testid="select-publication-status">
+                  <SelectValue placeholder={t.publicationStatus} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allResults}</SelectItem>
+                  <SelectItem value="published">
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4" />
+                      {t.published} ({stats.publishedCount})
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="unpublished">
+                    <div className="flex items-center gap-2">
+                      <EyeOff className="w-4 h-4" />
+                      {t.unpublished} ({stats.unpublishedCount})
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardHeader>
           
@@ -539,19 +693,20 @@ export default function ResultsManagement() {
                         <TableHead className="text-center">{t.score}</TableHead>
                         <TableHead className="text-center">{t.grade}</TableHead>
                         <TableHead className="text-center">{t.status}</TableHead>
+                        <TableHead className="text-center">{t.publicationStatus}</TableHead>
                         <TableHead className="text-center">{t.actions}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {resultsLoading ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
+                          <TableCell colSpan={9} className="text-center py-8">
                             {t.loading}
                           </TableCell>
                         </TableRow>
                       ) : filteredResults.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                             {t.noResults}
                           </TableCell>
                         </TableRow>
@@ -561,6 +716,7 @@ export default function ResultsManagement() {
                           const maxScore = parseFloat(result.assessments?.total_marks || '100');
                           const percentage = (score / maxScore) * 100;
                           const isPassing = percentage >= 40;
+                          const isPublished = result.assessments?.is_published;
 
                           return (
                             <TableRow key={result.id} data-testid={`row-result-${result.id}`}>
@@ -600,9 +756,50 @@ export default function ResultsManagement() {
                                 )}
                               </TableCell>
                               <TableCell className="text-center">
-                                <Button variant="ghost" size="sm" data-testid={`button-view-${result.id}`}>
-                                  <Eye className="w-4 h-4" />
-                                </Button>
+                                {isPublished ? (
+                                  <Badge className="bg-blue-100 text-blue-700 border-blue-200" data-testid={`badge-published-${result.id}`}>
+                                    <Globe className="w-3 h-3 mr-1" />
+                                    {t.published}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" data-testid={`badge-draft-${result.id}`}>
+                                    <EyeOff className="w-3 h-3 mr-1" />
+                                    {t.draft}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => handleViewCard(result)}
+                                    data-testid={`button-view-card-${result.id}`}
+                                  >
+                                    <IdCard className="w-4 h-4" />
+                                  </Button>
+                                  <PermissionGate 
+                                    anyPermissions={[PERMISSIONS.PUBLISH_RESULTS]}
+                                    context={{ 
+                                      classId: selectedClass && selectedClass !== 'all' ? parseInt(selectedClass) : undefined,
+                                      teacherClassSubjects 
+                                    }}
+                                  >
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleTogglePublish(result.assessment_id, isPublished)}
+                                      disabled={togglePublishMutation.isPending}
+                                      data-testid={`button-toggle-publish-${result.id}`}
+                                    >
+                                      {isPublished ? (
+                                        <EyeOff className="w-4 h-4 text-orange-600" />
+                                      ) : (
+                                        <Globe className="w-4 h-4 text-blue-600" />
+                                      )}
+                                    </Button>
+                                  </PermissionGate>
+                                </div>
                               </TableCell>
                             </TableRow>
                           );
@@ -664,7 +861,223 @@ export default function ResultsManagement() {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Result Card Dialog */}
+        <Dialog open={isResultCardOpen} onOpenChange={setIsResultCardOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-result-card">
+            <DialogHeader className="print:hidden">
+              <div className="flex items-center justify-between">
+                <DialogTitle>{t.resultCard}</DialogTitle>
+                <Button variant="outline" size="sm" onClick={handlePrintCard} data-testid="button-print-card">
+                  <Printer className="w-4 h-4 mr-2" />
+                  {t.printCard}
+                </Button>
+              </div>
+            </DialogHeader>
+
+            {selectedStudentForCard && (
+              <div className="result-card-content p-6 bg-white">
+                {/* Header with School Logo */}
+                <div className="text-center mb-6 print:mb-8">
+                  <div className="flex items-center justify-center gap-4 mb-2">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                      <BookOpen className="w-8 h-8 text-gray-400" />
+                    </div>
+                  </div>
+                  <h2 className="text-2xl font-bold print:text-3xl">{t.resultCard}</h2>
+                  <p className="text-sm text-muted-foreground">Academic Session {currentAcademicYear?.name || ''}</p>
+                </div>
+
+                <Separator className="mb-6" />
+
+                {/* Student Information */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div className="md:col-span-2">
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <Avatar className="w-20 h-20">
+                          <AvatarImage src={selectedStudentForCard.photo} alt={selectedStudentForCard.name} />
+                          <AvatarFallback>
+                            {selectedStudentForCard.name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold" data-testid="text-student-name">{selectedStudentForCard.name}</h3>
+                          <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                            <div>
+                              <span className="font-medium">{t.studentId}:</span>{' '}
+                              <span data-testid="text-student-id">{selectedStudentForCard.student_id}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium">{t.rollNumber}:</span>{' '}
+                              <span data-testid="text-roll-number">{selectedStudentForCard.roll_number || 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium">{t.class}:</span>{' '}
+                              <span data-testid="text-class">{selectedStudentForCard.class}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Section:</span>{' '}
+                              <span data-testid="text-section">{selectedStudentForCard.section}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Overall Performance Card */}
+                  <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-4 rounded-lg border">
+                    <h4 className="font-semibold mb-3 text-center">{t.overallGrade}</h4>
+                    <div className="text-center">
+                      <div className="text-4xl font-bold text-purple-600 mb-2" data-testid="text-overall-grade">
+                        {cardStats?.overallGrade}
+                      </div>
+                      <div className="text-2xl font-semibold mb-1" data-testid="text-percentage">
+                        {cardStats?.percentage}%
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {cardStats?.totalMarks} / {cardStats?.maxMarks}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator className="mb-6" />
+
+                {/* Subject-wise Results */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-4">{t.subject}-wise Results</h3>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="font-semibold">{t.subject}</TableHead>
+                          <TableHead className="text-center font-semibold">{t.assessment}</TableHead>
+                          <TableHead className="text-center font-semibold">{t.marksObtained}</TableHead>
+                          <TableHead className="text-center font-semibold">{t.totalMarks}</TableHead>
+                          <TableHead className="text-center font-semibold">{t.percentage}</TableHead>
+                          <TableHead className="text-center font-semibold">{t.grade}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {studentCardResults.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              {t.noResults}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          studentCardResults.map((result: any, index: number) => {
+                            const score = parseFloat(result.score_obtained || '0');
+                            const maxScore = parseFloat(result.assessments?.total_marks || '100');
+                            const percentage = ((score / maxScore) * 100).toFixed(1);
+                            
+                            return (
+                              <TableRow key={result.id} data-testid={`row-subject-${index}`}>
+                                <TableCell className="font-medium">
+                                  {result.assessments?.subjects?.name || 'N/A'}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {result.assessments?.assessment_name}
+                                </TableCell>
+                                <TableCell className="text-center font-semibold">
+                                  {result.is_absent ? t.absent : score}
+                                </TableCell>
+                                <TableCell className="text-center">{maxScore}</TableCell>
+                                <TableCell className="text-center">{result.is_absent ? '-' : `${percentage}%`}</TableCell>
+                                <TableCell className="text-center">
+                                  <Badge variant="outline">{result.grade_letter || 'N/A'}</Badge>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                <Separator className="mb-6" />
+
+                {/* Remarks Section */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3">{t.remarks}</h3>
+                  <div className="bg-gray-50 p-4 rounded-lg min-h-[80px]">
+                    <p className="text-sm text-muted-foreground italic">
+                      {language === 'bn' 
+                        ? 'শিক্ষার্থী ভালো পারফর্ম্যান্স করেছে।' 
+                        : 'Student has shown good performance.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Signature Section */}
+                <div className="grid grid-cols-3 gap-8 mt-12 print:mt-16">
+                  <div className="text-center">
+                    <div className="border-t-2 border-gray-300 pt-2">
+                      <p className="text-sm font-medium">{language === 'bn' ? 'শ্রেণী শিক্ষক' : 'Class Teacher'}</p>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="border-t-2 border-gray-300 pt-2">
+                      <p className="text-sm font-medium">{language === 'bn' ? 'প্রধান শিক্ষক' : 'Principal'}</p>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="border-t-2 border-gray-300 pt-2">
+                      <p className="text-sm font-medium">{language === 'bn' ? 'অভিভাবক' : 'Guardian'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Print Footer */}
+                <div className="text-center mt-8 text-xs text-muted-foreground print:mt-12">
+                  <p>{language === 'bn' ? 'তারিখ' : 'Date'}: {new Date().toLocaleDateString()}</p>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
+
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          .print\\:hidden {
+            display: none !important;
+          }
+          
+          .result-card-content {
+            padding: 20mm !important;
+            background: white !important;
+          }
+
+          body * {
+            visibility: hidden;
+          }
+
+          .result-card-content, .result-card-content * {
+            visibility: visible;
+          }
+
+          .result-card-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+
+          button, .print\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
     </AppShell>
   );
 }

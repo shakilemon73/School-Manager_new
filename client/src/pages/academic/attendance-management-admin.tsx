@@ -47,6 +47,9 @@ import { supabase } from '@/lib/supabase';
 import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { exportUtils } from '@/lib/export-utils';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/lib/permissions';
+import { PermissionGate } from '@/components/PermissionGate';
 import { Link } from 'wouter';
 import { format, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -72,22 +75,27 @@ import {
   Loader2,
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import type { InsertAttendance } from '@shared/schema';
+import type { InsertAttendance, InsertAttendancePeriod } from '@shared/schema';
 
 export default function AttendanceManagementAdmin() {
   const { toast } = useToast();
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const schoolId = useRequireSchoolId();
+  const { hasPermission, teacherClassSubjects } = usePermissions();
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState('daily');
+  const [viewMode, setViewMode] = useState<'daily' | 'period'>('daily');
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkAttendance, setBulkAttendance] = useState<Record<number, string>>({});
+  const [bulkPeriodAttendance, setBulkPeriodAttendance] = useState<Record<string, string>>({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [periodEditDialogOpen, setPeriodEditDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<any>(null);
   const [editStatus, setEditStatus] = useState<string>('');
   const [editRemarks, setEditRemarks] = useState<string>('');
   const [isExporting, setIsExporting] = useState(false);
@@ -171,6 +179,63 @@ export default function AttendanceManagementAdmin() {
         if (error) throw error;
         return data || [];
       } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  // Fetch subjects for period-wise attendance
+  const { data: subjects = [] } = useQuery({
+    queryKey: ['subjects', schoolId, selectedClass],
+    queryFn: async () => {
+      try {
+        let query = supabase
+          .from('subjects')
+          .select('*')
+          .eq('school_id', schoolId);
+
+        if (selectedClass && selectedClass !== 'all') {
+          query = query.eq('class_name', selectedClass);
+        }
+
+        const { data, error } = await query.order('name');
+        
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+  });
+
+  // Fetch period-wise attendance records
+  const { data: periodAttendanceRecords = [], isLoading: periodAttendanceLoading } = useQuery({
+    queryKey: ['attendance-periods', schoolId, selectedClass, selectedSection, selectedDate],
+    queryFn: async () => {
+      try {
+        let query = supabase
+          .from('attendance_periods')
+          .select(`
+            *,
+            students!inner(id, name, student_id, class, section, school_id),
+            subjects(id, name)
+          `)
+          .eq('students.school_id', schoolId)
+          .eq('date', format(selectedDate, 'yyyy-MM-dd'));
+
+        if (selectedClass && selectedClass !== 'all') {
+          query = query.eq('students.class', selectedClass);
+        }
+        if (selectedSection && selectedSection !== 'all') {
+          query = query.eq('students.section', selectedSection);
+        }
+
+        const { data, error } = await query.order('period_number');
+        
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error('Failed to fetch period attendance:', error);
         return [];
       }
     },
@@ -281,6 +346,113 @@ export default function AttendanceManagementAdmin() {
       });
     },
   });
+
+  // Mark/Update period-wise attendance mutation
+  const markPeriodAttendanceMutation = useMutation({
+    mutationFn: async (attendanceData: InsertAttendancePeriod) => {
+      const { data, error } = await supabase
+        .from('attendance_periods')
+        .upsert({
+          student_id: attendanceData.studentId,
+          date: attendanceData.date,
+          period_number: attendanceData.periodNumber,
+          subject_id: attendanceData.subjectId,
+          status: attendanceData.status,
+          remarks: attendanceData.remarks,
+          school_id: schoolId,
+        }, {
+          onConflict: 'student_id,date,period_number',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance-periods'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'পিরিয়ড উপস্থিতি সংরক্ষিত হয়েছে' : 'Period attendance marked successfully',
+      });
+      setPeriodEditDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Bulk mark period attendance mutation
+  const bulkMarkPeriodMutation = useMutation({
+    mutationFn: async (attendanceList: InsertAttendancePeriod[]) => {
+      const records = attendanceList.map(a => ({
+        student_id: a.studentId,
+        date: a.date,
+        period_number: a.periodNumber,
+        subject_id: a.subjectId,
+        status: a.status,
+        remarks: a.remarks,
+        school_id: schoolId,
+      }));
+
+      const { data, error } = await supabase
+        .from('attendance_periods')
+        .upsert(records, {
+          onConflict: 'student_id,date,period_number',
+        })
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance-periods'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'সকল পিরিয়ড উপস্থিতি সংরক্ষিত হয়েছে' : 'Bulk period attendance marked successfully',
+      });
+      setBulkMode(false);
+      setBulkPeriodAttendance({});
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Helper function to calculate attendance percentage
+  const calculateAttendancePercentage = (studentId: number) => {
+    const studentRecords = attendanceRecords.filter(r => r.student_id === studentId);
+    const presentCount = studentRecords.filter(r => r.status === 'present').length;
+    const totalCount = studentRecords.length;
+    return totalCount > 0 ? (presentCount / totalCount) * 100 : 0;
+  };
+
+  // Helper function to get attendance percentage color
+  const getAttendancePercentageColor = (percentage: number) => {
+    if (percentage >= 90) return 'text-green-600';
+    if (percentage >= 75) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  // Group period attendance by student and period
+  const periodAttendanceMap = periodAttendanceRecords.reduce((acc, record) => {
+    const key = `${record.student_id}-${record.period_number}`;
+    acc[key] = record;
+    return acc;
+  }, {} as Record<string, any>);
+
+  // Get unique periods from period attendance
+  const uniquePeriods = Array.from(
+    new Set(periodAttendanceRecords.map(r => r.period_number))
+  ).sort((a, b) => a - b);
 
   // Calculate statistics
   const stats = {
@@ -485,23 +657,70 @@ export default function AttendanceManagementAdmin() {
   };
 
   const handleBulkSave = () => {
-    const attendanceList: InsertAttendance[] = Object.entries(bulkAttendance).map(([studentId, status]) => ({
-      studentId: parseInt(studentId),
-      date: format(selectedDate, 'yyyy-MM-dd'),
-      status,
-      schoolId,
-    }));
+    if (viewMode === 'daily') {
+      const attendanceList: InsertAttendance[] = Object.entries(bulkAttendance).map(([studentId, status]) => ({
+        studentId: parseInt(studentId),
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        status,
+        schoolId,
+      }));
 
-    if (attendanceList.length === 0) {
-      toast({
-        title: language === 'bn' ? 'সতর্কতা' : 'Warning',
-        description: language === 'bn' ? 'কোন উপস্থিতি চিহ্নিত হয়নি' : 'No attendance marked',
-        variant: 'destructive',
+      if (attendanceList.length === 0) {
+        toast({
+          title: language === 'bn' ? 'সতর্কতা' : 'Warning',
+          description: language === 'bn' ? 'কোন উপস্থিতি চিহ্নিত হয়নি' : 'No attendance marked',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      bulkMarkMutation.mutate(attendanceList);
+    } else {
+      const periodAttendanceList: InsertAttendancePeriod[] = Object.entries(bulkPeriodAttendance).map(([key, status]) => {
+        const [studentId, periodNumber] = key.split('-').map(Number);
+        return {
+          studentId,
+          date: format(selectedDate, 'yyyy-MM-dd'),
+          periodNumber,
+          status,
+          schoolId,
+        };
       });
-      return;
-    }
 
-    bulkMarkMutation.mutate(attendanceList);
+      if (periodAttendanceList.length === 0) {
+        toast({
+          title: language === 'bn' ? 'সতর্কতা' : 'Warning',
+          description: language === 'bn' ? 'কোন পিরিয়ড উপস্থিতি চিহ্নিত হয়নি' : 'No period attendance marked',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      bulkMarkPeriodMutation.mutate(periodAttendanceList);
+    }
+  };
+
+  const handleEditPeriodAttendance = (student: any, periodNumber: number) => {
+    const key = `${student.id}-${periodNumber}`;
+    const attendance = periodAttendanceMap[key];
+    setSelectedStudent(student);
+    setSelectedPeriod({ periodNumber });
+    setEditStatus(attendance?.status || 'present');
+    setEditRemarks(attendance?.remarks || '');
+    setPeriodEditDialogOpen(true);
+  };
+
+  const handleSavePeriodAttendance = () => {
+    if (!selectedStudent || !selectedPeriod) return;
+
+    markPeriodAttendanceMutation.mutate({
+      studentId: selectedStudent.id,
+      date: format(selectedDate, 'yyyy-MM-dd'),
+      periodNumber: selectedPeriod.periodNumber,
+      status: editStatus,
+      remarks: editRemarks,
+      schoolId,
+    });
   };
 
   const handleMarkAllPresent = () => {
@@ -529,6 +748,7 @@ export default function AttendanceManagementAdmin() {
     selectDate: language === 'bn' ? 'তারিখ নির্বাচন' : 'Select Date',
     selectStatus: language === 'bn' ? 'অবস্থা নির্বাচন করুন' : 'Select Status',
     dailyAttendance: language === 'bn' ? 'দৈনিক উপস্থিতি' : 'Daily Attendance',
+    periodAttendance: language === 'bn' ? 'পিরিয়ড উপস্থিতি' : 'Period Attendance',
     trends: language === 'bn' ? 'ট্রেন্ড' : 'Trends',
     alerts: language === 'bn' ? 'সতর্কতা' : 'Alerts',
     studentId: language === 'bn' ? 'শিক্ষার্থী আইডি' : 'Student ID',
@@ -545,8 +765,10 @@ export default function AttendanceManagementAdmin() {
     notMarked: language === 'bn' ? 'চিহ্নিত নয়' : 'Not Marked',
     attendanceTrend: language === 'bn' ? '৭-দিনের উপস্থিতি ট্রেন্ড' : '7-Day Attendance Trend',
     attendanceRate: language === 'bn' ? 'উপস্থিতির হার' : 'Attendance Rate',
+    attendancePercentage: language === 'bn' ? 'উপস্থিতি %' : 'Attendance %',
     totalDays: language === 'bn' ? 'মোট দিন' : 'Total Days',
     days: language === 'bn' ? 'দিন' : 'days',
+    period: language === 'bn' ? 'পিরিয়ড' : 'Period',
     noLowAttendance: language === 'bn' ? 'কম উপস্থিতির শিক্ষার্থী নেই' : 'No students with low attendance',
     viewStudents: language === 'bn' ? 'শিক্ষার্থী দেখুন' : 'View Students',
     bulkMode: language === 'bn' ? 'বাল্ক মোড' : 'Bulk Mode',
@@ -554,8 +776,11 @@ export default function AttendanceManagementAdmin() {
     cancel: language === 'bn' ? 'বাতিল' : 'Cancel',
     markAllPresent: language === 'bn' ? 'সকলকে উপস্থিত করুন' : 'Mark All Present',
     editAttendance: language === 'bn' ? 'উপস্থিতি সম্পাদনা' : 'Edit Attendance',
+    editPeriodAttendance: language === 'bn' ? 'পিরিয়ড উপস্থিতি সম্পাদনা' : 'Edit Period Attendance',
     delete: language === 'bn' ? 'মুছে ফেলুন' : 'Delete',
     edit: language === 'bn' ? 'সম্পাদনা' : 'Edit',
+    dailyView: language === 'bn' ? 'দৈনিক ভিউ' : 'Daily View',
+    periodView: language === 'bn' ? 'পিরিয়ড ভিউ' : 'Period View',
   };
 
   return (
@@ -571,27 +796,34 @@ export default function AttendanceManagementAdmin() {
           </div>
           <div className="flex items-center gap-2">
             <Link href="/management/students">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" data-testid="button-view-students">
                 <Users className="w-4 h-4 mr-2" />
                 {t.viewStudents}
               </Button>
             </Link>
-            {bulkMode ? (
-              <>
-                <Button onClick={handleMarkAllPresent} variant="outline">
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {t.markAllPresent}
-                </Button>
-                <Button onClick={handleBulkSave} disabled={bulkMarkMutation.isPending}>
-                  <Save className="w-4 h-4 mr-2" />
-                  {t.save}
-                </Button>
-                <Button onClick={() => { setBulkMode(false); setBulkAttendance({}); }} variant="outline">
-                  {t.cancel}
-                </Button>
-              </>
-            ) : (
-              <>
+            <PermissionGate
+              permission={PERMISSIONS.MARK_ATTENDANCE}
+              context={{
+                classId: selectedClass && selectedClass !== 'all' ? parseInt(selectedClass) : undefined,
+                teacherClassSubjects
+              }}
+            >
+              {bulkMode ? (
+                <>
+                  <Button onClick={handleMarkAllPresent} variant="outline" data-testid="button-mark-all-present">
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    {t.markAllPresent}
+                  </Button>
+                  <Button onClick={handleBulkSave} disabled={bulkMarkMutation.isPending} data-testid="button-bulk-save">
+                    <Save className="w-4 h-4 mr-2" />
+                    {t.save}
+                  </Button>
+                  <Button onClick={() => { setBulkMode(false); setBulkAttendance({}); }} variant="outline" data-testid="button-cancel-bulk">
+                    {t.cancel}
+                  </Button>
+                </>
+              ) : (
+                <>
                 <Button onClick={() => setBulkMode(true)} variant="outline">
                   <Plus className="w-4 h-4 mr-2" />
                   {t.bulkMode}
@@ -627,7 +859,8 @@ export default function AttendanceManagementAdmin() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
-            )}
+              )}
+            </PermissionGate>
           </div>
         </div>
 
@@ -689,6 +922,26 @@ export default function AttendanceManagementAdmin() {
               </div>
             </div>
             
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2 mt-4">
+              <Button
+                variant={viewMode === 'daily' ? 'default' : 'outline'}
+                onClick={() => setViewMode('daily')}
+                size="sm"
+                data-testid="button-daily-view"
+              >
+                {t.dailyView}
+              </Button>
+              <Button
+                variant={viewMode === 'period' ? 'default' : 'outline'}
+                onClick={() => setViewMode('period')}
+                size="sm"
+                data-testid="button-period-view"
+              >
+                {t.periodView}
+              </Button>
+            </div>
+
             {/* Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <Select value={selectedClass} onValueChange={setSelectedClass}>
@@ -756,118 +1009,214 @@ export default function AttendanceManagementAdmin() {
               </TabsList>
 
               <TabsContent value="daily" className="mt-4">
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t.studentId}</TableHead>
-                        <TableHead>{t.name}</TableHead>
-                        <TableHead>{t.class}</TableHead>
-                        <TableHead className="text-center">{t.status}</TableHead>
-                        {!bulkMode && <TableHead>{t.remarks}</TableHead>}
-                        <TableHead className="text-center">{t.actions}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {attendanceLoading ? (
+                {viewMode === 'daily' ? (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={bulkMode ? 5 : 6} className="text-center py-8">
-                            {t.loading}
-                          </TableCell>
+                          <TableHead>{t.studentId}</TableHead>
+                          <TableHead>{t.name}</TableHead>
+                          <TableHead>{t.class}</TableHead>
+                          <TableHead className="text-center">{t.status}</TableHead>
+                          {!bulkMode && <TableHead className="text-center">{t.attendancePercentage}</TableHead>}
+                          {!bulkMode && <TableHead>{t.remarks}</TableHead>}
+                          <TableHead className="text-center">{t.actions}</TableHead>
                         </TableRow>
-                      ) : filteredStudents.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={bulkMode ? 5 : 6} className="text-center py-8 text-muted-foreground">
-                            {t.noStudents}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredStudents.map((student: any) => {
-                          const attendance = studentAttendanceMap[student.id];
-                          const status = bulkMode ? (bulkAttendance[student.id] || 'not-marked') : (attendance?.status || 'not-marked');
+                      </TableHeader>
+                      <TableBody>
+                        {attendanceLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={bulkMode ? 5 : 7} className="text-center py-8">
+                              {t.loading}
+                            </TableCell>
+                          </TableRow>
+                        ) : filteredStudents.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={bulkMode ? 5 : 7} className="text-center py-8 text-muted-foreground">
+                              {t.noStudents}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredStudents.map((student: any) => {
+                            const attendance = studentAttendanceMap[student.id];
+                            const status = bulkMode ? (bulkAttendance[student.id] || 'not-marked') : (attendance?.status || 'not-marked');
+                            const attendancePercentage = calculateAttendancePercentage(student.id);
+                            const percentageColor = getAttendancePercentageColor(attendancePercentage);
 
-                          return (
-                            <TableRow key={student.id} data-testid={`row-student-${student.id}`}>
-                              <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
-                              <TableCell className="font-medium">{student.name}</TableCell>
-                              <TableCell>{student.class} - {student.section}</TableCell>
-                              <TableCell className="text-center">
-                                {bulkMode ? (
-                                  <Select
-                                    value={bulkAttendance[student.id] || ''}
-                                    onValueChange={(value) => setBulkAttendance({ ...bulkAttendance, [student.id]: value })}
-                                  >
-                                    <SelectTrigger className="w-32">
-                                      <SelectValue placeholder={t.selectStatus} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="present">{t.present}</SelectItem>
-                                      <SelectItem value="absent">{t.absent}</SelectItem>
-                                      <SelectItem value="late">{t.late}</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                ) : (
-                                  <>
-                                    {status === 'present' && (
-                                      <Badge className="bg-green-100 text-green-700 border-green-200">
-                                        <CheckCircle className="w-3 h-3 mr-1" />
-                                        {t.present}
-                                      </Badge>
-                                    )}
-                                    {status === 'absent' && (
-                                      <Badge variant="destructive">
-                                        <XCircle className="w-3 h-3 mr-1" />
-                                        {t.absent}
-                                      </Badge>
-                                    )}
-                                    {status === 'late' && (
-                                      <Badge className="bg-orange-100 text-orange-700 border-orange-200">
-                                        <Clock className="w-3 h-3 mr-1" />
-                                        {t.late}
-                                      </Badge>
-                                    )}
-                                    {status === 'not-marked' && (
-                                      <Badge variant="outline">{t.notMarked}</Badge>
-                                    )}
-                                  </>
-                                )}
-                              </TableCell>
-                              {!bulkMode && (
-                                <TableCell className="text-sm text-muted-foreground">
-                                  {attendance?.remarks || '-'}
-                                </TableCell>
-                              )}
-                              <TableCell className="text-center">
-                                {!bulkMode && (
-                                  <div className="flex items-center justify-center gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleEditAttendance(student)}
-                                      data-testid={`button-edit-${student.id}`}
+                            return (
+                              <TableRow key={student.id} data-testid={`row-student-${student.id}`}>
+                                <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
+                                <TableCell className="font-medium">{student.name}</TableCell>
+                                <TableCell>{student.class} - {student.section}</TableCell>
+                                <TableCell className="text-center">
+                                  {bulkMode ? (
+                                    <Select
+                                      value={bulkAttendance[student.id] || ''}
+                                      onValueChange={(value) => setBulkAttendance({ ...bulkAttendance, [student.id]: value })}
                                     >
-                                      <Edit className="w-4 h-4" />
-                                    </Button>
-                                    {attendance && (
+                                      <SelectTrigger className="w-32">
+                                        <SelectValue placeholder={t.selectStatus} />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="present">{t.present}</SelectItem>
+                                        <SelectItem value="absent">{t.absent}</SelectItem>
+                                        <SelectItem value="late">{t.late}</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <>
+                                      {status === 'present' && (
+                                        <Badge className="bg-green-100 text-green-700 border-green-200">
+                                          <CheckCircle className="w-3 h-3 mr-1" />
+                                          {t.present}
+                                        </Badge>
+                                      )}
+                                      {status === 'absent' && (
+                                        <Badge variant="destructive">
+                                          <XCircle className="w-3 h-3 mr-1" />
+                                          {t.absent}
+                                        </Badge>
+                                      )}
+                                      {status === 'late' && (
+                                        <Badge className="bg-orange-100 text-orange-700 border-orange-200">
+                                          <Clock className="w-3 h-3 mr-1" />
+                                          {t.late}
+                                        </Badge>
+                                      )}
+                                      {status === 'not-marked' && (
+                                        <Badge variant="outline">{t.notMarked}</Badge>
+                                      )}
+                                    </>
+                                  )}
+                                </TableCell>
+                                {!bulkMode && (
+                                  <TableCell className="text-center">
+                                    <span className={cn("font-semibold", percentageColor)} data-testid={`text-attendance-percentage-${student.id}`}>
+                                      {attendancePercentage.toFixed(1)}%
+                                    </span>
+                                  </TableCell>
+                                )}
+                                {!bulkMode && (
+                                  <TableCell className="text-sm text-muted-foreground">
+                                    {attendance?.remarks || '-'}
+                                  </TableCell>
+                                )}
+                                <TableCell className="text-center">
+                                  {!bulkMode && (
+                                    <div className="flex items-center justify-center gap-1">
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleDeleteAttendance(student)}
-                                        data-testid={`button-delete-${student.id}`}
+                                        onClick={() => handleEditAttendance(student)}
+                                        data-testid={`button-edit-${student.id}`}
                                       >
-                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      {attendance && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDeleteAttendance(student)}
+                                          data-testid={`button-delete-${student.id}`}
+                                        >
+                                          <Trash2 className="w-4 h-4 text-red-500" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="rounded-md border overflow-x-auto" data-testid="period-view-grid">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="sticky left-0 bg-background z-10">{t.studentId}</TableHead>
+                          <TableHead className="sticky left-[120px] bg-background z-10">{t.name}</TableHead>
+                          {uniquePeriods.length > 0 ? (
+                            uniquePeriods.map((periodNum) => (
+                              <TableHead key={periodNum} className="text-center min-w-[100px]" data-testid={`header-period-${periodNum}`}>
+                                {t.period} {periodNum}
+                              </TableHead>
+                            ))
+                          ) : (
+                            Array.from({ length: 8 }, (_, i) => i + 1).map((periodNum) => (
+                              <TableHead key={periodNum} className="text-center min-w-[100px]" data-testid={`header-period-${periodNum}`}>
+                                {t.period} {periodNum}
+                              </TableHead>
+                            ))
+                          )}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {periodAttendanceLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={uniquePeriods.length > 0 ? uniquePeriods.length + 2 : 10} className="text-center py-8">
+                              {t.loading}
+                            </TableCell>
+                          </TableRow>
+                        ) : filteredStudents.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={uniquePeriods.length > 0 ? uniquePeriods.length + 2 : 10} className="text-center py-8 text-muted-foreground">
+                              {t.noStudents}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredStudents.map((student: any) => (
+                            <TableRow key={student.id} data-testid={`row-period-student-${student.id}`}>
+                              <TableCell className="sticky left-0 bg-background font-mono text-sm">{student.student_id}</TableCell>
+                              <TableCell className="sticky left-[120px] bg-background font-medium">{student.name}</TableCell>
+                              {(uniquePeriods.length > 0 ? uniquePeriods : Array.from({ length: 8 }, (_, i) => i + 1)).map((periodNum) => {
+                                const key = `${student.id}-${periodNum}`;
+                                const periodAttendance = periodAttendanceMap[key];
+                                const status = bulkMode ? (bulkPeriodAttendance[key] || 'not-marked') : (periodAttendance?.status || 'not-marked');
+
+                                return (
+                                  <TableCell key={periodNum} className="text-center" data-testid={`cell-period-${student.id}-${periodNum}`}>
+                                    {bulkMode ? (
+                                      <Select
+                                        value={bulkPeriodAttendance[key] || ''}
+                                        onValueChange={(value) => setBulkPeriodAttendance({ ...bulkPeriodAttendance, [key]: value })}
+                                      >
+                                        <SelectTrigger className="w-24 h-8 text-xs">
+                                          <SelectValue placeholder="-" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="present">P</SelectItem>
+                                          <SelectItem value="absent">A</SelectItem>
+                                          <SelectItem value="late">L</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    ) : (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 px-2"
+                                        onClick={() => handleEditPeriodAttendance(student, periodNum)}
+                                        data-testid={`button-edit-period-${student.id}-${periodNum}`}
+                                      >
+                                        {status === 'present' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                                        {status === 'absent' && <XCircle className="w-4 h-4 text-red-600" />}
+                                        {status === 'late' && <Clock className="w-4 h-4 text-orange-600" />}
+                                        {status === 'not-marked' && <span className="text-muted-foreground">-</span>}
                                       </Button>
                                     )}
-                                  </div>
-                                )}
-                              </TableCell>
+                                  </TableCell>
+                                );
+                              })}
                             </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="trends" className="mt-4">
@@ -959,7 +1308,7 @@ export default function AttendanceManagementAdmin() {
             <div className="space-y-2">
               <Label>{t.status}</Label>
               <Select value={editStatus} onValueChange={setEditStatus}>
-                <SelectTrigger>
+                <SelectTrigger data-testid="select-edit-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -977,15 +1326,65 @@ export default function AttendanceManagementAdmin() {
                 onChange={(e) => setEditRemarks(e.target.value)}
                 placeholder={language === 'bn' ? 'মন্তব্য লিখুন...' : 'Enter remarks...'}
                 rows={3}
+                data-testid="textarea-edit-remarks"
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} data-testid="button-cancel-edit">
               {t.cancel}
             </Button>
-            <Button onClick={handleSaveAttendance} disabled={markAttendanceMutation.isPending}>
+            <Button onClick={handleSaveAttendance} disabled={markAttendanceMutation.isPending} data-testid="button-save-attendance">
+              <Save className="w-4 h-4 mr-2" />
+              {t.save}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Period Attendance Dialog */}
+      <Dialog open={periodEditDialogOpen} onOpenChange={setPeriodEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.editPeriodAttendance}</DialogTitle>
+            <DialogDescription>
+              {selectedStudent?.name} - {t.period} {selectedPeriod?.periodNumber} - {format(selectedDate, 'PPP')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>{t.status}</Label>
+              <Select value={editStatus} onValueChange={setEditStatus}>
+                <SelectTrigger data-testid="select-edit-period-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="present">{t.present}</SelectItem>
+                  <SelectItem value="absent">{t.absent}</SelectItem>
+                  <SelectItem value="late">{t.late}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t.remarks}</Label>
+              <Textarea
+                value={editRemarks}
+                onChange={(e) => setEditRemarks(e.target.value)}
+                placeholder={language === 'bn' ? 'মন্তব্য লিখুন...' : 'Enter remarks...'}
+                rows={3}
+                data-testid="textarea-edit-period-remarks"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPeriodEditDialogOpen(false)} data-testid="button-cancel-period-edit">
+              {t.cancel}
+            </Button>
+            <Button onClick={handleSavePeriodAttendance} disabled={markPeriodAttendanceMutation.isPending} data-testid="button-save-period-attendance">
               <Save className="w-4 h-4 mr-2" />
               {t.save}
             </Button>

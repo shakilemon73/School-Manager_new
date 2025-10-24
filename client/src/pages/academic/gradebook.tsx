@@ -69,6 +69,7 @@ import {
   Save,
   FileSpreadsheet,
   Loader2,
+  History,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { InsertAssessment, InsertStudentScore } from '@shared/schema';
@@ -78,6 +79,7 @@ export default function Gradebook() {
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const schoolId = useRequireSchoolId();
+  const { hasPermission, teacherClassSubjects } = usePermissions();
 
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
@@ -88,6 +90,9 @@ export default function Gradebook() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingScores, setEditingScores] = useState<Record<string, string>>({});
   const [isExporting, setIsExporting] = useState(false);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+  const [historyStudentId, setHistoryStudentId] = useState<number | null>(null);
+  const [historyAssessmentId, setHistoryAssessmentId] = useState<number | null>(null);
 
   const { data: subjects, isLoading: subjectsLoading } = useQuery({
     queryKey: ['subjects', schoolId],
@@ -132,6 +137,30 @@ export default function Gradebook() {
     },
     enabled: !!selectedAssessment,
   });
+
+  const { data: gradeHistory, isLoading: gradeHistoryLoading } = useQuery({
+    queryKey: ['grade-history', schoolId, historyStudentId, historyAssessmentId],
+    queryFn: () => {
+      if (!historyStudentId || !historyAssessmentId) return [];
+      return gradesDb.getGradeHistory(historyStudentId, historyAssessmentId, schoolId);
+    },
+    enabled: !!historyStudentId && !!historyAssessmentId && isHistoryDialogOpen,
+  });
+
+  const filteredSubjects = useMemo(() => {
+    if (!subjects) return [];
+    
+    if (hasPermission(PERMISSIONS.MANAGE_ALL_GRADES)) {
+      return subjects;
+    }
+
+    if (teacherClassSubjects && teacherClassSubjects.length > 0) {
+      const teacherSubjectIds = teacherClassSubjects.map((tcs: any) => tcs.subjectId);
+      return subjects.filter((subject: any) => teacherSubjectIds.includes(subject.id));
+    }
+
+    return subjects;
+  }, [subjects, teacherClassSubjects, hasPermission]);
 
   const createAssessmentMutation = useMutation({
     mutationFn: (data: InsertAssessment) => gradesDb.createAssessment(data),
@@ -240,6 +269,36 @@ export default function Gradebook() {
     if (percentage >= 60) return 'C';
     return 'F';
   };
+
+  const calculateWeightedGrade = (studentScores: any[], assessments: any[]) => {
+    let totalWeightedScore = 0;
+    let totalWeight = 0;
+
+    assessments.forEach((assessment: any) => {
+      const score = studentScores.find((s: any) => s.assessment_id === assessment.id);
+      if (score && !score.is_absent && score.score_obtained !== null) {
+        const weight = Number(assessment.weight_percentage || 100);
+        const scorePercentage = (Number(score.score_obtained) / Number(assessment.total_marks)) * 100;
+        totalWeightedScore += (scorePercentage * weight) / 100;
+        totalWeight += weight;
+      }
+    });
+
+    if (totalWeight === 0) return null;
+    return (totalWeightedScore / totalWeight) * 100;
+  };
+
+  const handleViewHistory = (studentId: number, assessmentId: number) => {
+    setHistoryStudentId(studentId);
+    setHistoryAssessmentId(assessmentId);
+    setIsHistoryDialogOpen(true);
+  };
+
+  useMemo(() => {
+    if (filteredSubjects.length === 1 && !selectedSubject && selectedClass) {
+      setSelectedSubject(filteredSubjects[0].id);
+    }
+  }, [filteredSubjects, selectedSubject, selectedClass]);
 
   const exportToCSV = async () => {
     if (!selectedClass || !selectedSection) {
@@ -475,13 +534,21 @@ export default function Gradebook() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-create-assessment">
-                  <Plus className="w-4 h-4 mr-2" />
-                  {language === 'bn' ? 'নতুন মূল্যায়ন' : 'New Assessment'}
-                </Button>
-              </DialogTrigger>
+            <PermissionGate 
+              permission={PERMISSIONS.EDIT_GRADES} 
+              context={{ 
+                classId: selectedClass ? parseInt(selectedClass) : undefined, 
+                subjectId: selectedSubject,
+                teacherClassSubjects 
+              }}
+            >
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-create-assessment">
+                    <Plus className="w-4 h-4 mr-2" />
+                    {language === 'bn' ? 'নতুন মূল্যায়ন' : 'New Assessment'}
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-2xl" data-testid="dialog-create-assessment">
                 <CreateAssessmentDialog
                   onSubmit={(data) => createAssessmentMutation.mutate(data)}
@@ -491,7 +558,8 @@ export default function Gradebook() {
                   schoolId={schoolId}
                 />
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            </PermissionGate>
           </div>
         </div>
 
@@ -549,7 +617,7 @@ export default function Gradebook() {
                     <SelectItem value="all">
                       {language === 'bn' ? 'সকল বিষয়' : 'All Subjects'}
                     </SelectItem>
-                    {subjects?.map((subject) => (
+                    {filteredSubjects?.map((subject) => (
                       <SelectItem key={subject.id} value={subject.id.toString()} data-testid={`select-subject-${subject.id}`}>
                         {language === 'bn' ? subject.nameBn : subject.name}
                       </SelectItem>
@@ -675,6 +743,9 @@ export default function Gradebook() {
                                 </div>
                               </TableHead>
                             ))}
+                            <TableHead className="w-32">
+                              {language === 'bn' ? 'ওজনযুক্ত গ্রেড' : 'Weighted Grade'}
+                            </TableHead>
                             <TableHead className="w-24">
                               {language === 'bn' ? 'গড়' : 'Average'}
                             </TableHead>
@@ -732,13 +803,27 @@ export default function Gradebook() {
                                         score.is_absent ? (
                                           <Badge variant="destructive">A</Badge>
                                         ) : (
-                                          <div className="flex flex-col items-center">
-                                            <span>{score.score_obtained}</span>
-                                            <span className="text-xs text-gray-500">
-                                              {getGradeLetter(
-                                                (Number(score.score_obtained) / Number(assessment.total_marks)) * 100
-                                              )}
-                                            </span>
+                                          <div className="flex items-center justify-center gap-2">
+                                            <div className="flex flex-col items-center">
+                                              <span>{score.score_obtained}</span>
+                                              <span className="text-xs text-gray-500">
+                                                {getGradeLetter(
+                                                  (Number(score.score_obtained) / Number(assessment.total_marks)) * 100
+                                                )}
+                                              </span>
+                                            </div>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleViewHistory(student.id, assessment.id);
+                                              }}
+                                              data-testid={`button-history-${student.id}-${assessment.id}`}
+                                            >
+                                              <History className="h-3 w-3" />
+                                            </Button>
                                           </div>
                                         )
                                       ) : (
@@ -747,6 +832,25 @@ export default function Gradebook() {
                                     </TableCell>
                                   );
                                 })}
+                                <TableCell className="text-center font-semibold" data-testid={`cell-weighted-${student.id}`}>
+                                  {(() => {
+                                    const weightedGrade = calculateWeightedGrade(studentScores, gradeBook.assessments);
+                                    if (weightedGrade !== null) {
+                                      const percentage = weightedGrade;
+                                      return (
+                                        <div className="flex flex-col items-center">
+                                          <Badge variant={percentage >= 60 ? 'default' : 'destructive'}>
+                                            {weightedGrade.toFixed(2)}%
+                                          </Badge>
+                                          <span className="text-xs text-gray-500 mt-1">
+                                            {getGradeLetter(percentage)}
+                                          </span>
+                                        </div>
+                                      );
+                                    }
+                                    return <span className="text-gray-400">-</span>;
+                                  })()}
+                                </TableCell>
                                 <TableCell className="text-center font-semibold">
                                   {average > 0 ? (
                                     <Badge variant="outline">{average.toFixed(1)}</Badge>
@@ -934,6 +1038,108 @@ export default function Gradebook() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto" data-testid="dialog-grade-history">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'bn' ? 'গ্রেড পরিবর্তনের ইতিহাস' : 'Grade Change History'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'bn'
+                ? 'এই শিক্ষার্থীর জন্য সমস্ত গ্রেড পরিবর্তনের রেকর্ড'
+                : 'All grade change records for this student'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {gradeHistoryLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-20" />
+                <Skeleton className="h-20" />
+                <Skeleton className="h-20" />
+              </div>
+            ) : gradeHistory && gradeHistory.length > 0 ? (
+              <div className="space-y-3">
+                {gradeHistory.map((history: any) => (
+                  <Card key={history.id} data-testid={`card-history-${history.id}`}>
+                    <CardContent className="pt-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <Label className="text-xs text-gray-500">
+                            {language === 'bn' ? 'পুরাতন নম্বর' : 'Old Score'}
+                          </Label>
+                          <p className="font-semibold" data-testid={`text-old-score-${history.id}`}>
+                            {history.old_score || '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">
+                            {language === 'bn' ? 'নতুন নম্বর' : 'New Score'}
+                          </Label>
+                          <p className="font-semibold text-green-600" data-testid={`text-new-score-${history.id}`}>
+                            {history.new_score || '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">
+                            {language === 'bn' ? 'পরিবর্তনকারী' : 'Changed By'}
+                          </Label>
+                          <p className="font-semibold" data-testid={`text-changed-by-${history.id}`}>
+                            {history.changed_by?.name || 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-500">
+                            {language === 'bn' ? 'পরিবর্তনের সময়' : 'Changed At'}
+                          </Label>
+                          <p className="text-sm" data-testid={`text-changed-at-${history.id}`}>
+                            {new Date(history.created_at).toLocaleString(
+                              language === 'bn' ? 'bn-BD' : 'en-US',
+                              {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              }
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      {history.change_reason && (
+                        <div className="mt-3 pt-3 border-t">
+                          <Label className="text-xs text-gray-500">
+                            {language === 'bn' ? 'কারণ' : 'Reason'}
+                          </Label>
+                          <p className="text-sm mt-1">{history.change_reason}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <AlertCircle className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">
+                  {language === 'bn' ? 'কোন পরিবর্তনের ইতিহাস নেই' : 'No change history found'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsHistoryDialogOpen(false)}
+              data-testid="button-close-history"
+            >
+              {language === 'bn' ? 'বন্ধ করুন' : 'Close'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
