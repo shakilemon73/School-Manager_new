@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { supabase } from '@/lib/supabase';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -758,8 +759,45 @@ export default function Gradebook() {
     }));
   }, [distribution]);
 
-  const classes = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-  const sections = ['A', 'B', 'C', 'D'];
+  // Fetch unique classes and sections from students table (dynamic data)
+  const { data: classesData } = useQuery({
+    queryKey: ['unique-classes', schoolId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('students')
+        .select('class')
+        .eq('school_id', schoolId)
+        .not('class', 'is', null);
+      
+      if (error) throw error;
+      
+      const uniqueClasses = [...new Set(data?.map(s => s.class) || [])].sort();
+      return uniqueClasses;
+    },
+  });
+
+  const { data: sectionsData } = useQuery({
+    queryKey: ['unique-sections', schoolId, selectedClass],
+    queryFn: async () => {
+      if (!selectedClass) return [];
+      
+      const { data, error } = await supabase
+        .from('students')
+        .select('section')
+        .eq('school_id', schoolId)
+        .eq('class', selectedClass)
+        .not('section', 'is', null);
+      
+      if (error) throw error;
+      
+      const uniqueSections = [...new Set(data?.map(s => s.section) || [])].sort();
+      return uniqueSections;
+    },
+    enabled: !!selectedClass,
+  });
+
+  const classes = classesData || [];
+  const sections = sectionsData || [];
 
   return (
     <AppShell>
