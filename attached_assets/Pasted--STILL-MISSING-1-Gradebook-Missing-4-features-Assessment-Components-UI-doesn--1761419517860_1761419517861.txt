@@ -1,0 +1,34 @@
+❌ STILL MISSING:
+1. গ্রেডবুক (Gradebook) - Missing 4 features:
+❌ Assessment Components - UI doesn't support breaking assessments into parts (MCQ 40%, Written 60%)
+❌ Grade Overrides - No UI to manually override grades with approval
+❌ Grade Scales - Hardcoded (90+ = A+), no custom grading scales per school
+❌ Bulk Operations - Can't bulk delete/copy assessments
+2. ফলাফল ব্যবস্থাপনা (Results) - Missing 5 features:
+❌ Status Filtering - Can't filter by pass/fail/absent/grade
+❌ Performance Trends - No term-to-term comparison
+❌ Result Approval Workflow - No marks verification/lock mechanism
+❌ Individual Result Cards - No marksheet/transcript generation per student
+❌ Detailed Analytics - No subject-wise performance, topper lists
+3. উপস্থিতি (Attendance) - Missing 7 features:
+❌ Period-wise Attendance - Only daily marking (code shows states for it but not fully implemented)
+❌ Leave Management - Code has states (leaveRequestDialogOpen) but needs full integration
+❌ Holidays Management - Code has states (holidayDialogOpen) but UI incomplete
+❌ SMS/Email Alerts - Only in-app notifications, no actual SMS/email sending
+❌ Biometric Integration - No import from devices
+❌ QR Code Attendance - Not implemented
+❌ Attendance Report Cards - No individual monthly summary generation
+4. অ্যাসাইনমেন্ট (Assignments) - Missing 3 features:
+❌ Export Functionality - No CSV/PDF/Excel export
+❌ Gradebook Integration - Assignments in assessments table but no direct "Grade Assignment" button in Gradebook
+❌ Recurring Assignments - No weekly homework templates
+5. সময়সূচী (Timetable) - Missing 9 features:
+✅ Teacher/Room Conflict Detection - CODE EXISTS (lines 96, conflicts state)
+✅ Teacher View - CODE EXISTS (viewMode state with 'class'|'teacher' options)
+❌ Break Period Enforcement - Period 4 named "Break" but not enforced
+❌ Period Templates - Can't copy Monday to Tuesday
+❌ Bulk Operations - Can't clear entire day/routine
+❌ PDF Export - Not integrated
+❌ Substitution Feature - No substitute teacher marking
+❌ Period Type Usage - period_type field exists but not used in UI
+❌ Academic Year Link - No year-wise archiving
