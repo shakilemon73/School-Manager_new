@@ -66,12 +66,12 @@ export function usePermissions(): UsePermissionsReturn {
           .select('role')
           .eq('user_id', user.id)
           .eq('school_id', schoolId)
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error('Error fetching role:', error);
           setRole(null);
-        } else {
+        } else if (roleAssignment) {
           setRole(roleAssignment.role as UserRole);
 
           // If user is a teacher, fetch their class/subject assignments
