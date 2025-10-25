@@ -687,7 +687,7 @@ export default function ResponsiveDashboard() {
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
                     <span className="font-medium" data-testid="school-name">{schoolName}</span>
                     <span className="text-slate-400 dark:text-slate-600">•</span>
-                    <span>{currentAcademicYear?.year_name || 'শিক্ষাবর্ষ'}</span>
+                    <span>{currentAcademicYear?.name || 'শিক্ষাবর্ষ'}</span>
                     <span className="text-slate-400 dark:text-slate-600 hidden sm:inline">•</span>
                     <span className="hidden sm:inline">{currentTime.toLocaleDateString('bn-BD', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
                   </div>
