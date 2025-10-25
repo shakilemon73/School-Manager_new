@@ -71,6 +71,7 @@ export function usePermissions(): UsePermissionsReturn {
         if (error) {
           console.error('Error fetching role:', error);
           setRole(null);
+          setTeacherClassSubjects([]);
         } else if (roleAssignment) {
           setRole(roleAssignment.role as UserRole);
 
@@ -91,10 +92,15 @@ export function usePermissions(): UsePermissionsReturn {
               })));
             }
           }
+        } else {
+          // No role assignment found for this school - clear role and teacher context
+          setRole(null);
+          setTeacherClassSubjects([]);
         }
       } catch (error) {
         console.error('Error in fetchUserRole:', error);
         setRole(null);
+        setTeacherClassSubjects([]);
       } finally {
         setIsLoading(false);
       }
