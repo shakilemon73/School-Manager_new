@@ -41,7 +41,8 @@ import {
   CalendarPlus,
   X,
   ArrowUpRight,
-  Lightbulb
+  Lightbulb,
+  UserCheck
 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 
@@ -215,8 +216,8 @@ export default function ResponsiveDashboard() {
       const [marksToday, attendanceRate, activeExams, pendingCount] = await Promise.all([
         supabase.from('exam_results').select('id', { count: 'estimated', head: true })
           .eq('school_id', schoolId).gte('created_at', today.toISOString()).lt('created_at', tomorrow.toISOString()),
-        supabase.from('attendance_records').select('status', { count: 'estimated' })
-          .eq('school_id', schoolId).gte('date', today.toISOString().split('T')[0]),
+        supabase.from('attendance').select('status', { count: 'estimated' })
+          .eq('school_id', schoolId).eq('date', today.toISOString().split('T')[0]),
         supabase.from('exams').select('id', { count: 'estimated', head: true }).eq('school_id', schoolId),
         supabase.from('exam_results').select('id', { count: 'estimated', head: true })
           .eq('school_id', schoolId).is('verified_by', null)
@@ -231,6 +232,114 @@ export default function ResponsiveDashboard() {
         attendanceRate: attendancePercentage,
         activeExams: activeExams.count || 0,
         pendingApprovals: pendingCount.count || 0
+      };
+    },
+    enabled: authReady && !!schoolId && !academicYearLoading,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: true,
+  });
+
+  // Fetch attendance overview - Today's attendance statistics
+  const { data: attendanceOverview, isLoading: attendanceLoading } = useQuery({
+    queryKey: ['attendance-overview', schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not available');
+      
+      const today = new Date().toISOString().split('T')[0];
+      
+      const [totalStudents, todayAttendance] = await Promise.all([
+        supabase.from('students').select('id', { count: 'estimated', head: true })
+          .eq('school_id', schoolId).eq('status', 'active'),
+        supabase.from('attendance').select('status')
+          .eq('school_id', schoolId).eq('date', today)
+      ]);
+      
+      const total = totalStudents.count || 0;
+      const marked = todayAttendance.data?.length || 0;
+      const present = todayAttendance.data?.filter((a: any) => a.status === 'present').length || 0;
+      const absent = todayAttendance.data?.filter((a: any) => a.status === 'absent').length || 0;
+      const late = todayAttendance.data?.filter((a: any) => a.status === 'late').length || 0;
+      
+      const presentPercent = marked > 0 ? Math.round((present / marked) * 100) : 0;
+      
+      return {
+        totalStudents: total,
+        markedAttendance: marked,
+        unmarkedAttendance: total - marked,
+        presentCount: present,
+        absentCount: absent,
+        lateCount: late,
+        presentPercentage: presentPercent
+      };
+    },
+    enabled: authReady && !!schoolId && !academicYearLoading,
+    staleTime: 2 * 60 * 1000,
+    refetchOnMount: true,
+  });
+
+  // Fetch fee collection summary - Financial overview
+  const { data: feeOverview, isLoading: feeLoading } = useQuery({
+    queryKey: ['fee-overview', schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not available');
+      
+      const today = new Date().toISOString().split('T')[0];
+      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+      
+      const [todayFees, monthFees, pendingFees] = await Promise.all([
+        supabase.from('fee_receipts').select('paid_amount')
+          .eq('school_id', schoolId).eq('payment_date', today),
+        supabase.from('fee_receipts').select('paid_amount, due_amount')
+          .eq('school_id', schoolId).gte('payment_date', firstDayOfMonth),
+        supabase.from('fee_receipts').select('due_amount, student_id')
+          .eq('school_id', schoolId).gt('due_amount', 0)
+      ]);
+      
+      const todayTotal = todayFees.data?.reduce((sum: number, r: any) => 
+        sum + (parseFloat(r.paid_amount) || 0), 0) || 0;
+      
+      const monthTotal = monthFees.data?.reduce((sum: number, r: any) => 
+        sum + (parseFloat(r.paid_amount) || 0), 0) || 0;
+      
+      const pendingTotal = pendingFees.data?.reduce((sum: number, r: any) => 
+        sum + (parseFloat(r.due_amount) || 0), 0) || 0;
+      
+      const uniquePendingStudents = new Set(pendingFees.data?.map((r: any) => r.student_id) || []).size;
+      
+      return {
+        todayCollection: todayTotal,
+        monthCollection: monthTotal,
+        pendingAmount: pendingTotal,
+        pendingStudentsCount: uniquePendingStudents,
+        todayTransactions: todayFees.data?.length || 0
+      };
+    },
+    enabled: authReady && !!schoolId && !academicYearLoading,
+    staleTime: 2 * 60 * 1000,
+    refetchOnMount: true,
+  });
+
+  // Fetch pending actions - Alerts and actionable items
+  const { data: pendingActions, isLoading: actionsLoading } = useQuery({
+    queryKey: ['pending-actions', schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('School ID not available');
+      
+      const today = new Date().toISOString().split('T')[0];
+      
+      const [overdueBooks, pendingResults, lowAttendance] = await Promise.all([
+        supabase.from('library_borrowed_books').select('id', { count: 'estimated', head: true })
+          .eq('school_id', schoolId).eq('status', 'active').lt('due_date', today),
+        supabase.from('exam_results').select('id', { count: 'estimated', head: true })
+          .eq('school_id', schoolId).is('verified_by', null),
+        supabase.from('students').select('id', { count: 'estimated', head: true })
+          .eq('school_id', schoolId).eq('status', 'active')
+      ]);
+      
+      return {
+        overdueBooks: overdueBooks.count || 0,
+        pendingApprovals: pendingResults.count || 0,
+        lowAttendanceStudents: 0
       };
     },
     enabled: authReady && !!schoolId && !academicYearLoading,
@@ -894,7 +1003,242 @@ export default function ResponsiveDashboard() {
             </div>
           </motion.section>
 
-          {/* SECTION 5: Recent Notifications - Progressive Disclosure */}
+          {/* SECTION 5: Critical Dashboard Widgets - UX Priority Features */}
+          <motion.section
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+            data-testid="dashboard-widgets-section"
+            className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6"
+          >
+            {/* Widget 1: Attendance Overview - Most Time-Sensitive */}
+            <motion.div variants={itemVariants}>
+              <Card className="border-0 shadow-sm hover:shadow-md transition-all rounded-xl bg-white dark:bg-slate-900 h-full">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <UserCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      <span>আজকের হাজিরা</span>
+                    </CardTitle>
+                    <Link href="/academic/attendance-management">
+                      <Button variant="ghost" size="sm" className="h-8 text-xs" data-testid="button-goto-attendance">
+                        বিস্তারিত →
+                      </Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {attendanceLoading ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                    </div>
+                  ) : attendanceOverview ? (
+                    <div className="space-y-4">
+                      {/* Main Attendance Percentage */}
+                      <div className="flex items-center justify-between p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-lg">
+                        <div>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">উপস্থিতির হার</p>
+                          <h3 className="text-3xl font-bold text-green-600 dark:text-green-400">
+                            {attendanceOverview.presentPercentage}%
+                          </h3>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">চিহ্নিত</p>
+                          <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                            {formatNumber(attendanceOverview.markedAttendance)}/{formatNumber(attendanceOverview.totalStudents)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Attendance Breakdown - Mobile Optimized */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                          <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mx-auto mb-1" />
+                          <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{formatNumber(attendanceOverview.presentCount)}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">উপস্থিত</p>
+                        </div>
+                        <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                          <X className="w-5 h-5 text-red-600 dark:text-red-400 mx-auto mb-1" />
+                          <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{formatNumber(attendanceOverview.absentCount)}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">অনুপস্থিত</p>
+                        </div>
+                        <div className="text-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                          <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400 mx-auto mb-1" />
+                          <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{formatNumber(attendanceOverview.lateCount)}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">বিলম্বিত</p>
+                        </div>
+                      </div>
+
+                      {/* Action Alert */}
+                      {attendanceOverview.unmarkedAttendance > 0 && (
+                        <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-900">
+                          <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                            {formatNumber(attendanceOverview.unmarkedAttendance)} জন শিক্ষার্থীর হাজিরা এখনও নেওয়া হয়নি
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-center text-slate-500 dark:text-slate-400 py-8">ডেটা লোড হচ্ছে...</p>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Widget 2: Fee Collection Summary - Financial Priority */}
+            <motion.div variants={itemVariants}>
+              <Card className="border-0 shadow-sm hover:shadow-md transition-all rounded-xl bg-white dark:bg-slate-900 h-full">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      <span>ফি সংগ্রহ</span>
+                    </CardTitle>
+                    <Link href="/management/finances">
+                      <Button variant="ghost" size="sm" className="h-8 text-xs" data-testid="button-goto-fees">
+                        বিস্তারিত →
+                      </Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {feeLoading ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                    </div>
+                  ) : feeOverview ? (
+                    <div className="space-y-4">
+                      {/* Today's Collection */}
+                      <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-lg">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">আজকের সংগ্রহ</p>
+                        <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
+                          ৳ {formatNumber(feeOverview.todayCollection)}
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {formatNumber(feeOverview.todayTransactions)} টি লেনদেন
+                        </p>
+                      </div>
+
+                      {/* Month & Pending - Mobile Optimized Grid */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">এই মাস</p>
+                          <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                            ৳ {formatNumber(feeOverview.monthCollection)}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">বকেয়া</p>
+                          <p className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                            ৳ {formatNumber(feeOverview.pendingAmount)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Pending Students Alert */}
+                      {feeOverview.pendingStudentsCount > 0 && (
+                        <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
+                          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-red-800 dark:text-red-200 mb-0.5">
+                              {formatNumber(feeOverview.pendingStudentsCount)} জন শিক্ষার্থীর ফি বকেয়া
+                            </p>
+                            <Link href="/management/finances">
+                              <Button variant="ghost" size="sm" className="h-7 text-xs -ml-2 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30">
+                                তালিকা দেখুন →
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-center text-slate-500 dark:text-slate-400 py-8">ডেটা লোড হচ্ছে...</p>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Widget 3: Pending Actions - Action-Oriented Priority */}
+            <motion.div variants={itemVariants}>
+              <Card className="border-0 shadow-sm hover:shadow-md transition-all rounded-xl bg-white dark:bg-slate-900 h-full">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Target className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    <span>জরুরি কাজ</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {actionsLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+                    </div>
+                  ) : pendingActions ? (
+                    <div className="space-y-3">
+                      {/* Overdue Library Books */}
+                      <Link href="/management/library">
+                        <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors cursor-pointer group" data-testid="action-overdue-books">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/40 rounded-lg flex items-center justify-center">
+                              <BookOpen className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">বই ফেরত দিতে হবে</p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400">মেয়াদোত্তীর্ণ বই</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="destructive" className="text-base px-2.5 py-0.5">
+                              {formatNumber(pendingActions.overdueBooks)}
+                            </Badge>
+                            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* Pending Result Approvals */}
+                      <Link href="/admin/marks-approval">
+                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer group" data-testid="action-pending-results">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
+                              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">ফলাফল যাচাই করুন</p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400">অনুমোদন অপেক্ষমাণ</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-base px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                              {formatNumber(pendingActions.pendingApprovals)}
+                            </Badge>
+                            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* Quick Action Button */}
+                      <div className="pt-2">
+                        <Link href="/reports">
+                          <Button variant="outline" className="w-full justify-between group" data-testid="button-view-all-tasks">
+                            <span>সব কাজ দেখুন</span>
+                            <BarChart3 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center text-slate-500 dark:text-slate-400 py-8">ডেটা লোড হচ্ছে...</p>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.section>
+
+          {/* SECTION 6: Recent Notifications - Progressive Disclosure */}
           <motion.section
             initial="hidden"
             animate="visible"
