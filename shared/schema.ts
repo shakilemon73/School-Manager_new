@@ -1059,7 +1059,9 @@ export const attendance = pgTable("attendance", {
   remarks: text("remarks"),
   schoolId: integer("school_id").references(() => schools.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueStudentDate: unique().on(table.studentId, table.date, table.schoolId),
+}));
 
 export const attendanceInsertSchema = createInsertSchema(attendance);
 export type InsertAttendance = z.infer<typeof attendanceInsertSchema>;
@@ -2945,7 +2947,9 @@ export const attendancePeriods = pgTable("attendance_periods", {
   markedAt: timestamp("marked_at").defaultNow(),
   schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueStudentDatePeriod: unique().on(table.studentId, table.date, table.periodNumber, table.schoolId),
+}));
 
 export const attendancePeriodsInsertSchema = createInsertSchema(attendancePeriods).omit({
   id: true,
