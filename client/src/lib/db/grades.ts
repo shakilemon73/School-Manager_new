@@ -423,6 +423,109 @@ export const gradesDb = {
     return data;
   },
 
+  async getAllGradeOverrides(schoolId: number, termId?: number) {
+    let query = supabase
+      .from('grade_overrides')
+      .select(`
+        *,
+        subject:subjects(*),
+        student:students(*),
+        created_by_user:teachers!grade_overrides_created_by_fkey(*),
+        approved_by_user:teachers!grade_overrides_approved_by_fkey(*)
+      `)
+      .eq('school_id', schoolId);
+
+    if (termId) {
+      query = query.eq('term_id', termId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+
+  async approveGradeOverride(id: number, approvedByTeacherId: number, schoolId: number) {
+    const { data, error } = await supabase
+      .from('grade_overrides')
+      .update({
+        approved_by: approvedByTeacherId,
+        approved_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('school_id', schoolId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteGradeOverride(id: number, schoolId: number) {
+    const { error } = await supabase
+      .from('grade_overrides')
+      .delete()
+      .eq('id', id)
+      .eq('school_id', schoolId);
+
+    if (error) throw error;
+  },
+
+  async copyAssessmentToClass(
+    assessmentId: number,
+    targetClass: string,
+    targetSection: string,
+    schoolId: number
+  ) {
+    const { data: original, error: fetchError } = await supabase
+      .from('assessments')
+      .select('*')
+      .eq('id', assessmentId)
+      .eq('school_id', schoolId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const { id, created_at, ...assessmentData } = original;
+    const copied = {
+      ...assessmentData,
+      class: targetClass,
+      section: targetSection,
+      assessment_name: `${assessmentData.assessment_name} (Copy)`,
+      assessment_name_bn: assessmentData.assessment_name_bn 
+        ? `${assessmentData.assessment_name_bn} (অনুলিপি)` 
+        : null,
+    };
+
+    const { data, error } = await supabase
+      .from('assessments')
+      .insert(copied)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Copy components if they exist
+    const { data: components } = await supabase
+      .from('assessment_components')
+      .select('*')
+      .eq('assessment_id', assessmentId)
+      .eq('school_id', schoolId);
+
+    if (components && components.length > 0) {
+      const copiedComponents = components.map(({ id, created_at, assessment_id, ...comp }) => ({
+        ...comp,
+        assessment_id: data.id,
+      }));
+
+      await supabase
+        .from('assessment_components')
+        .insert(copiedComponents);
+    }
+
+    return data;
+  },
+
   async exportGradesToCSV(
     schoolId: number,
     classValue: string,

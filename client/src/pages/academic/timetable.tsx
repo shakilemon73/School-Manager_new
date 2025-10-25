@@ -1,4 +1,4 @@
-// Migrated to direct Supabase: Timetable using routine_periods and periods tables
+// Migrated to direct Supabase: Enhanced Timetable with ALL 7 features
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -10,13 +10,16 @@ import { useRequireSchoolId } from '@/hooks/use-require-school-id';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PERMISSIONS } from '@/lib/permissions';
 import { PermissionGate } from '@/components/PermissionGate';
-import { Calendar, Clock, Plus, Edit2, Save, X, AlertCircle, User } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Calendar, Clock, Plus, Edit2, Save, X, AlertCircle, User, Copy, Trash2, FileDown, Upload, Download, UserCheck } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { AppShell } from '@/components/layout/app-shell';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const DAYS = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার'];
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -30,6 +33,23 @@ const CLASS_COLORS = [
   'bg-teal-100 dark:bg-teal-900/30 border-teal-300',
   'bg-indigo-100 dark:bg-indigo-900/30 border-indigo-300',
   'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300',
+];
+
+// Feature 5: Period Type Colors
+const PERIOD_TYPE_COLORS: Record<string, string> = {
+  regular: 'bg-blue-50 dark:bg-blue-900/20 border-blue-300',
+  practical: 'bg-purple-50 dark:bg-purple-900/20 border-purple-300',
+  sports: 'bg-green-50 dark:bg-green-900/20 border-green-300',
+  assembly: 'bg-orange-50 dark:bg-orange-900/20 border-orange-300',
+  break: 'bg-gray-100 dark:bg-gray-800/50 border-gray-400',
+};
+
+const PERIOD_TYPES = [
+  { value: 'regular', label: 'নিয়মিত', labelEn: 'Regular' },
+  { value: 'practical', label: 'ব্যবহারিক', labelEn: 'Practical' },
+  { value: 'sports', label: 'খেলাধুলা', labelEn: 'Sports' },
+  { value: 'assembly', label: 'সমাবেশ', labelEn: 'Assembly' },
+  { value: 'break', label: 'বিরতি', labelEn: 'Break' },
 ];
 
 interface Period {
@@ -64,11 +84,35 @@ interface Conflict {
   details: string;
 }
 
+interface TimetableTemplate {
+  id: number;
+  name: string;
+  name_bn: string;
+  description: string;
+  template_type: string;
+  target_class: string;
+  target_section: string;
+  template_data: any;
+  created_at: string;
+}
+
+interface Substitution {
+  id: number;
+  routine_period_id: number;
+  original_teacher_id: number;
+  substitute_teacher_id: number;
+  date: string;
+  reason: string;
+  reason_bn: string;
+  status: string;
+  created_at: string;
+}
+
 export default function TimetablePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const schoolId = useRequireSchoolId();
-  const { hasPermission, teacherClassSubjects, userRole } = usePermissions();
+  const { hasPermission, teacherClassSubjects, role } = usePermissions();
   
   // View mode state
   const [viewMode, setViewMode] = useState<'class' | 'teacher'>('class');
@@ -90,10 +134,56 @@ export default function TimetablePage() {
     room_number: '',
     start_time: '',
     end_time: '',
+    period_type: 'regular' as string,
   });
   
   // Conflict detection state
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
+
+  // Feature 2: Template states
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
+  const [copyTargetClass, setCopyTargetClass] = useState('');
+  const [copyTargetSection, setCopyTargetSection] = useState('');
+
+  // Feature 6: Academic Year states
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<number | null>(null);
+
+  // Feature 7: Substitution states
+  const [isSubstitutionDialogOpen, setIsSubstitutionDialogOpen] = useState(false);
+  const [substitutionForm, setSubstitutionForm] = useState({
+    periodId: 0,
+    substituteTeacherId: 0,
+    date: '',
+    reason: '',
+  });
+
+  // Fetch academic years (Feature 6)
+  const { data: academicYears = [] } = useQuery({
+    queryKey: ['academic-years', schoolId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('academic_years')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('is_current', { ascending: false })
+        .order('start_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Auto-select current year
+      if (data && data.length > 0 && !selectedAcademicYear) {
+        const currentYear = data.find(y => y.is_current);
+        if (currentYear) {
+          setSelectedAcademicYear(currentYear.id);
+        }
+      }
+      
+      return data || [];
+    }
+  });
 
   // Fetch periods configuration
   const { data: periods = [] } = useQuery({
@@ -142,9 +232,17 @@ export default function TimetablePage() {
     }
   });
 
+  // Feature 1: Detect break periods
+  const isBreakPeriod = (periodNum: number) => {
+    const period = periods.find(p => p.period_number === periodNum);
+    if (!period) return false;
+    return period.name.toLowerCase().includes('break') || 
+           period.name.toLowerCase().includes('বিরতি');
+  };
+
   // Fetch routine periods (actual timetable data) for class view
   const { data: routinePeriods = [], isLoading } = useQuery({
-    queryKey: ['routine-periods', schoolId, selectedClass, selectedSection],
+    queryKey: ['routine-periods', schoolId, selectedClass, selectedSection, selectedAcademicYear],
     queryFn: async () => {
       const { data: routine } = await supabase
         .from('class_routines')
@@ -152,6 +250,7 @@ export default function TimetablePage() {
         .eq('school_id', schoolId)
         .eq('class_name', `Class ${selectedClass}`)
         .eq('section', selectedSection)
+        .eq('academic_year_id', selectedAcademicYear || 0)
         .single();
 
       if (!routine) return [];
@@ -166,22 +265,21 @@ export default function TimetablePage() {
       if (error) throw error;
       return data as RoutinePeriod[];
     },
-    enabled: viewMode === 'class',
+    enabled: viewMode === 'class' && selectedAcademicYear !== null,
   });
 
   // Fetch all routine periods for teacher view
   const { data: allRoutinePeriods = [] } = useQuery({
-    queryKey: ['all-routine-periods', schoolId],
+    queryKey: ['all-routine-periods', schoolId, selectedAcademicYear],
     queryFn: async () => {
-      // First get all routines
       const { data: routines } = await supabase
         .from('class_routines')
         .select('id, class_name, section')
-        .eq('school_id', schoolId);
+        .eq('school_id', schoolId)
+        .eq('academic_year_id', selectedAcademicYear || 0);
 
       if (!routines || routines.length === 0) return [];
 
-      // Get all routine periods
       const { data, error } = await supabase
         .from('routine_periods')
         .select('*')
@@ -191,7 +289,6 @@ export default function TimetablePage() {
       
       if (error) throw error;
 
-      // Attach class info to each period
       const periodsWithClass = data?.map(period => {
         const routine = routines.find(r => r.id === period.routine_id);
         return {
@@ -203,7 +300,41 @@ export default function TimetablePage() {
 
       return periodsWithClass as RoutinePeriod[];
     },
-    enabled: viewMode === 'teacher',
+    enabled: viewMode === 'teacher' && selectedAcademicYear !== null,
+  });
+
+  // Feature 2: Fetch templates
+  const { data: templates = [] } = useQuery({
+    queryKey: ['timetable-templates', schoolId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('timetable_templates')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as TimetableTemplate[];
+    }
+  });
+
+  // Feature 7: Fetch substitutions
+  const { data: substitutions = [] } = useQuery({
+    queryKey: ['substitutions', schoolId],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('routine_substitutions')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .gte('date', today)
+        .order('date');
+      
+      if (error) throw error;
+      return data as Substitution[];
+    }
   });
 
   // Fetch subjects for dropdown
@@ -244,13 +375,12 @@ export default function TimetablePage() {
 
   // Auto-select teacher if user is a teacher
   useMemo(() => {
-    if (viewMode === 'teacher' && userRole === 'teacher' && !selectedTeacher) {
-      // Get teacher name from permissions or set first available
+    if (viewMode === 'teacher' && role === 'teacher' && !selectedTeacher) {
       if (availableTeachers.length > 0) {
         setSelectedTeacher(availableTeachers[0]);
       }
     }
-  }, [viewMode, userRole, availableTeachers, selectedTeacher]);
+  }, [viewMode, role, availableTeachers, selectedTeacher]);
 
   // Filter teacher's schedule
   const teacherSchedule = useMemo(() => {
@@ -276,7 +406,6 @@ export default function TimetablePage() {
 
     if (!teacherName) return detectedConflicts;
 
-    // Get all routines
     const { data: allRoutines } = await supabase
       .from('class_routines')
       .select('id, class_name, section')
@@ -330,7 +459,7 @@ export default function TimetablePage() {
       }
     }
 
-    // Check for class conflicts (same class having multiple subjects at the same time)
+    // Check for class conflicts
     const { data: routine } = await supabase
       .from('class_routines')
       .select('id')
@@ -362,6 +491,11 @@ export default function TimetablePage() {
   // Create or update routine period mutation
   const savePeriodMutation = useMutation({
     mutationFn: async ({ day, periodNum, data }: { day: number; periodNum: number; data: any }) => {
+      // Feature 1: Prevent saving if it's a break period
+      if (isBreakPeriod(periodNum) && data.period_type !== 'break') {
+        throw new Error('বিরতির সময় ক্লাস নির্ধারণ করা যাবে না।');
+      }
+
       // Check for conflicts before saving
       const detectedConflicts = await checkConflicts(day, periodNum, data.teacher_name, data.room_number);
       
@@ -370,23 +504,23 @@ export default function TimetablePage() {
         throw new Error('সংঘাত সনাক্ত করা হয়েছে। সংরক্ষণ করা হয়নি।');
       }
 
-      // First ensure routine exists
       let { data: routine } = await supabase
         .from('class_routines')
         .select('id')
         .eq('school_id', schoolId)
         .eq('class_name', `Class ${selectedClass}`)
         .eq('section', selectedSection)
+        .eq('academic_year_id', selectedAcademicYear || 0)
         .single();
 
       if (!routine) {
-        // Create routine
         const { data: newRoutine } = await supabase
           .from('class_routines')
           .insert([{
             class_name: `Class ${selectedClass}`,
             section: selectedSection,
-            academic_year: new Date().getFullYear().toString(),
+            academic_year: academicYears.find(y => y.id === selectedAcademicYear)?.name || new Date().getFullYear().toString(),
+            academic_year_id: selectedAcademicYear,
             institute_name: 'School',
             class_teacher: 'Teacher',
             effective_date: new Date().toISOString().split('T')[0],
@@ -400,10 +534,8 @@ export default function TimetablePage() {
 
       if (!routine) throw new Error('Could not create routine');
 
-      // Check if period exists
       const existing = routinePeriods.find(p => p.day_of_week === day && p.period_number === periodNum);
 
-      // Verify routine belongs to this school before modifying
       const { data: verifiedRoutine } = await supabase
         .from('class_routines')
         .select('id')
@@ -414,7 +546,6 @@ export default function TimetablePage() {
       if (!verifiedRoutine) throw new Error('Unauthorized: routine does not belong to this school');
 
       if (existing) {
-        // Update
         const { error } = await supabase
           .from('routine_periods')
           .update(data)
@@ -423,7 +554,6 @@ export default function TimetablePage() {
         
         if (error) throw error;
       } else {
-        // Insert
         const { error } = await supabase
           .from('routine_periods')
           .insert([{
@@ -431,7 +561,6 @@ export default function TimetablePage() {
             day_of_week: day,
             period_number: periodNum,
             ...data,
-            period_type: 'regular',
           }]);
         
         if (error) throw error;
@@ -442,8 +571,429 @@ export default function TimetablePage() {
       queryClient.invalidateQueries({ queryKey: ['all-routine-periods'] });
       toast({ title: 'সফল', description: 'সময়সূচী আপডেট হয়েছে' });
       setEditingSlot(null);
-      setPeriodForm({ subject: '', subject_bn: '', teacher_name: '', room_number: '', start_time: '', end_time: '' });
+      setPeriodForm({ subject: '', subject_bn: '', teacher_name: '', room_number: '', start_time: '', end_time: '', period_type: 'regular' });
       setConflicts([]);
+    },
+    onError: (error: any) => {
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Feature 2: Save as template
+  const saveTemplateMutation = useMutation({
+    mutationFn: async () => {
+      if (!templateName) {
+        throw new Error('টেমপ্লেটের নাম প্রয়োজন');
+      }
+
+      const templateData = {
+        periods: routinePeriods,
+        class: selectedClass,
+        section: selectedSection,
+      };
+
+      const { error } = await supabase
+        .from('timetable_templates')
+        .insert([{
+          name: templateName,
+          name_bn: templateName,
+          description: templateDescription,
+          template_type: 'class_specific',
+          target_class: `Class ${selectedClass}`,
+          target_section: selectedSection,
+          template_data: templateData,
+          created_by: 'user',
+          school_id: schoolId,
+        }]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timetable-templates'] });
+      toast({ title: 'সফল', description: 'টেমপ্লেট সংরক্ষিত হয়েছে' });
+      setIsTemplateDialogOpen(false);
+      setTemplateName('');
+      setTemplateDescription('');
+    },
+    onError: (error: any) => {
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Feature 2: Load template
+  const loadTemplateMutation = useMutation({
+    mutationFn: async (templateId: number) => {
+      const template = templates.find(t => t.id === templateId);
+      if (!template) throw new Error('টেমপ্লেট পাওয়া যায়নি');
+
+      const { data: routine } = await supabase
+        .from('class_routines')
+        .select('id')
+        .eq('school_id', schoolId)
+        .eq('class_name', `Class ${selectedClass}`)
+        .eq('section', selectedSection)
+        .single();
+
+      if (!routine) throw new Error('রুটিন পাওয়া যায়নি');
+
+      const periods = template.template_data.periods || [];
+      const periodsToInsert = periods.map((p: any) => ({
+        ...p,
+        routine_id: routine.id,
+        id: undefined,
+      }));
+
+      const { error } = await supabase
+        .from('routine_periods')
+        .insert(periodsToInsert);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['routine-periods'] });
+      toast({ title: 'সফল', description: 'টেমপ্লেট লোড হয়েছে' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Feature 2: Copy Monday to other days
+  const copyMondayMutation = useMutation({
+    mutationFn: async () => {
+      const mondayPeriods = routinePeriods.filter(p => p.day_of_week === 1);
+      if (mondayPeriods.length === 0) {
+        throw new Error('সোমবারের কোন পিরিয়ড নেই');
+      }
+
+      const { data: routine } = await supabase
+        .from('class_routines')
+        .select('id')
+        .eq('school_id', schoolId)
+        .eq('class_name', `Class ${selectedClass}`)
+        .eq('section', selectedSection)
+        .single();
+
+      if (!routine) throw new Error('রুটিন পাওয়া যায়নি');
+
+      const periodsToInsert = [];
+      for (let day = 2; day < 6; day++) {
+        for (const period of mondayPeriods) {
+          periodsToInsert.push({
+            routine_id: routine.id,
+            day_of_week: day,
+            period_number: period.period_number,
+            start_time: period.start_time,
+            end_time: period.end_time,
+            subject: period.subject,
+            subject_bn: period.subject_bn,
+            teacher_name: period.teacher_name,
+            room_number: period.room_number,
+            period_type: period.period_type,
+          });
+        }
+      }
+
+      const { error } = await supabase
+        .from('routine_periods')
+        .insert(periodsToInsert);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['routine-periods'] });
+      toast({ title: 'সফল', description: 'সোমবারের সময়সূচী অন্যান্য দিনে কপি হয়েছে' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Feature 2: Copy to another class
+  const copyToClassMutation = useMutation({
+    mutationFn: async () => {
+      if (!copyTargetClass || !copyTargetSection) {
+        throw new Error('লক্ষ্য ক্লাস এবং শাখা নির্বাচন করুন');
+      }
+
+      let { data: targetRoutine } = await supabase
+        .from('class_routines')
+        .select('id')
+        .eq('school_id', schoolId)
+        .eq('class_name', `Class ${copyTargetClass}`)
+        .eq('section', copyTargetSection)
+        .single();
+
+      if (!targetRoutine) {
+        const { data: newRoutine } = await supabase
+          .from('class_routines')
+          .insert([{
+            class_name: `Class ${copyTargetClass}`,
+            section: copyTargetSection,
+            academic_year: new Date().getFullYear().toString(),
+            academic_year_id: selectedAcademicYear,
+            institute_name: 'School',
+            class_teacher: 'Teacher',
+            effective_date: new Date().toISOString().split('T')[0],
+            school_id: schoolId,
+          }])
+          .select()
+          .single();
+        
+        targetRoutine = newRoutine;
+      }
+
+      if (!targetRoutine) throw new Error('Could not create target routine');
+
+      const periodsToInsert = routinePeriods.map(p => ({
+        routine_id: targetRoutine.id,
+        day_of_week: p.day_of_week,
+        period_number: p.period_number,
+        start_time: p.start_time,
+        end_time: p.end_time,
+        subject: p.subject,
+        subject_bn: p.subject_bn,
+        teacher_name: p.teacher_name,
+        room_number: p.room_number,
+        period_type: p.period_type,
+      }));
+
+      const { error } = await supabase
+        .from('routine_periods')
+        .insert(periodsToInsert);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'সফল', description: 'সময়সূচী কপি হয়েছে' });
+      setIsCopyDialogOpen(false);
+      setCopyTargetClass('');
+      setCopyTargetSection('');
+    },
+    onError: (error: any) => {
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Feature 3: Clear day
+  const clearDayMutation = useMutation({
+    mutationFn: async (day: number) => {
+      const { data: routine } = await supabase
+        .from('class_routines')
+        .select('id')
+        .eq('school_id', schoolId)
+        .eq('class_name', `Class ${selectedClass}`)
+        .eq('section', selectedSection)
+        .single();
+
+      if (!routine) throw new Error('রুটিন পাওয়া যায়নি');
+
+      const { error } = await supabase
+        .from('routine_periods')
+        .delete()
+        .eq('routine_id', routine.id)
+        .eq('day_of_week', day);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['routine-periods'] });
+      toast({ title: 'সফল', description: 'দিনের সময়সূচী মুছে ফেলা হয়েছে' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Feature 3: Clear week
+  const clearWeekMutation = useMutation({
+    mutationFn: async () => {
+      const { data: routine } = await supabase
+        .from('class_routines')
+        .select('id')
+        .eq('school_id', schoolId)
+        .eq('class_name', `Class ${selectedClass}`)
+        .eq('section', selectedSection)
+        .single();
+
+      if (!routine) throw new Error('রুটিন পাওয়া যায়নি');
+
+      const { error } = await supabase
+        .from('routine_periods')
+        .delete()
+        .eq('routine_id', routine.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['routine-periods'] });
+      toast({ title: 'সফল', description: 'সম্পূর্ণ সময়সূচী মুছে ফেলা হয়েছে' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Feature 4: PDF Export
+  const exportPDF = async () => {
+    try {
+      const doc = new jsPDF('landscape');
+      
+      // Fetch school info
+      const { data: schoolSettings } = await supabase
+        .from('school_settings')
+        .select('*')
+        .eq('id', schoolId)
+        .single();
+
+      const schoolName = schoolSettings?.name || 'School';
+      
+      // Header
+      doc.setFontSize(18);
+      doc.text(schoolName, doc.internal.pageSize.width / 2, 15, { align: 'center' });
+      doc.setFontSize(14);
+      doc.text(`Class ${selectedClass} - Section ${selectedSection}`, doc.internal.pageSize.width / 2, 25, { align: 'center' });
+      doc.text('Weekly Timetable', doc.internal.pageSize.width / 2, 32, { align: 'center' });
+
+      // Table data
+      const tableData: any[] = [];
+      const uniquePeriods = Array.from(new Set(periods.map(p => p.period_number))).slice(0, 7);
+
+      uniquePeriods.forEach(periodNum => {
+        const period = periods.find(p => p.period_number === periodNum);
+        const row: any[] = [
+          period?.name || `Period ${periodNum}`,
+          `${period?.start_time || ''} - ${period?.end_time || ''}`
+        ];
+
+        DAYS_EN.forEach((_, dayIndex) => {
+          const slot = routinePeriods.find(s => s.day_of_week === dayIndex && s.period_number === periodNum);
+          row.push(slot ? `${slot.subject}\n${slot.teacher_name}` : '-');
+        });
+
+        tableData.push(row);
+      });
+
+      (doc as any).autoTable({
+        head: [['Period', 'Time', ...DAYS_EN]],
+        body: tableData,
+        startY: 40,
+        theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [66, 139, 202], textColor: 255 },
+      });
+
+      doc.save(`timetable-class-${selectedClass}-${selectedSection}.pdf`);
+      toast({ title: 'সফল', description: 'পিডিএফ ডাউনলোড হয়েছে' });
+    } catch (error: any) {
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // Feature 6: Copy from previous year
+  const copyFromPreviousYearMutation = useMutation({
+    mutationFn: async (previousYearId: number) => {
+      const { data: previousRoutines } = await supabase
+        .from('class_routines')
+        .select('id, class_name, section')
+        .eq('school_id', schoolId)
+        .eq('academic_year_id', previousYearId);
+
+      if (!previousRoutines || previousRoutines.length === 0) {
+        throw new Error('পূর্ববর্তী বছরের কোন রুটিন পাওয়া যায়নি');
+      }
+
+      for (const prevRoutine of previousRoutines) {
+        const { data: periods } = await supabase
+          .from('routine_periods')
+          .select('*')
+          .eq('routine_id', prevRoutine.id);
+
+        if (!periods || periods.length === 0) continue;
+
+        let { data: newRoutine } = await supabase
+          .from('class_routines')
+          .select('id')
+          .eq('school_id', schoolId)
+          .eq('class_name', prevRoutine.class_name)
+          .eq('section', prevRoutine.section)
+          .eq('academic_year_id', selectedAcademicYear || 0)
+          .single();
+
+        if (!newRoutine) {
+          const { data: created } = await supabase
+            .from('class_routines')
+            .insert([{
+              class_name: prevRoutine.class_name,
+              section: prevRoutine.section,
+              academic_year: academicYears.find(y => y.id === selectedAcademicYear)?.name || '',
+              academic_year_id: selectedAcademicYear,
+              institute_name: 'School',
+              class_teacher: 'Teacher',
+              effective_date: new Date().toISOString().split('T')[0],
+              school_id: schoolId,
+            }])
+            .select()
+            .single();
+          
+          newRoutine = created;
+        }
+
+        if (newRoutine) {
+          const periodsToInsert = periods.map(p => ({
+            routine_id: newRoutine.id,
+            day_of_week: p.day_of_week,
+            period_number: p.period_number,
+            start_time: p.start_time,
+            end_time: p.end_time,
+            subject: p.subject,
+            subject_bn: p.subject_bn,
+            teacher_name: p.teacher_name,
+            room_number: p.room_number,
+            period_type: p.period_type,
+          }));
+
+          await supabase
+            .from('routine_periods')
+            .insert(periodsToInsert);
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['routine-periods'] });
+      toast({ title: 'সফল', description: 'পূর্ববর্তী বছরের রুটিন কপি হয়েছে' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Feature 7: Add substitution
+  const addSubstitutionMutation = useMutation({
+    mutationFn: async () => {
+      if (!substitutionForm.periodId || !substitutionForm.substituteTeacherId || !substitutionForm.date) {
+        throw new Error('সকল তথ্য পূরণ করুন');
+      }
+
+      const { error } = await supabase
+        .from('routine_substitutions')
+        .insert([{
+          routine_period_id: substitutionForm.periodId,
+          substitute_teacher_id: substitutionForm.substituteTeacherId,
+          date: substitutionForm.date,
+          reason: substitutionForm.reason,
+          reason_bn: substitutionForm.reason,
+          created_by: 'user',
+          school_id: schoolId,
+        }]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['substitutions'] });
+      toast({ title: 'সফল', description: 'বিকল্প শিক্ষক নির্ধারিত হয়েছে' });
+      setIsSubstitutionDialogOpen(false);
+      setSubstitutionForm({ periodId: 0, substituteTeacherId: 0, date: '', reason: '' });
     },
     onError: (error: any) => {
       toast({ title: 'ত্রুটি', description: error.message, variant: 'destructive' });
@@ -474,6 +1024,16 @@ export default function TimetablePage() {
   };
 
   const handleEditSlot = (day: number, periodNum: number) => {
+    // Feature 1: Check if it's a break period
+    if (isBreakPeriod(periodNum)) {
+      toast({ 
+        title: 'সতর্কতা', 
+        description: 'বিরতির সময় ক্লাস নির্ধারণ করা যাবে না।', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
     const slot = getSlotForDayAndPeriod(day, periodNum);
     if (slot) {
       setPeriodForm({
@@ -483,10 +1043,11 @@ export default function TimetablePage() {
         room_number: slot.room_number || '',
         start_time: slot.start_time,
         end_time: slot.end_time,
+        period_type: slot.period_type || 'regular',
       });
     }
     setEditingSlot({ day, periodNum });
-    setConflicts([]); // Clear previous conflicts
+    setConflicts([]);
   };
 
   // Render class view
@@ -526,6 +1087,220 @@ export default function TimetablePage() {
         </CardContent>
       </Card>
 
+      {/* Feature 6: Academic Year Selector */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>শিক্ষাবর্ষ নির্বাচন করুন</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 items-center">
+            <Select 
+              value={selectedAcademicYear?.toString() || ''} 
+              onValueChange={(v) => setSelectedAcademicYear(parseInt(v))}
+            >
+              <SelectTrigger data-testid="select-academic-year">
+                <SelectValue placeholder="শিক্ষাবর্ষ নির্বাচন করুন" />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYears.map((year) => (
+                  <SelectItem key={year.id} value={year.id.toString()}>
+                    {year.name_bn || year.name} {year.is_current && '(চলতি)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {academicYears.length > 1 && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" data-testid="button-copy-previous-year">
+                    <Upload className="w-4 h-4 mr-2" />
+                    পূর্ববর্তী বছর থেকে কপি
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>পূর্ববর্তী বছর থেকে কপি করুন</DialogTitle>
+                    <DialogDescription>
+                      যে বছর থেকে রুটিন কপি করতে চান তা নির্বাচন করুন
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Select onValueChange={(v) => copyFromPreviousYearMutation.mutate(parseInt(v))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="বছর নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {academicYears
+                          .filter(y => y.id !== selectedAcademicYear)
+                          .map((year) => (
+                            <SelectItem key={year.id} value={year.id.toString()}>
+                              {year.name_bn || year.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Feature 2 & 3: Action Buttons */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap gap-2">
+            <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" data-testid="button-save-template">
+                  <Save className="w-4 h-4 mr-2" />
+                  টেমপ্লেট হিসেবে সংরক্ষণ
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>টেমপ্লেট সংরক্ষণ করুন</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>টেমপ্লেটের নাম</Label>
+                    <Input 
+                      value={templateName} 
+                      onChange={(e) => setTemplateName(e.target.value)} 
+                      placeholder="যেমন: ক্লাস ৬ মানসম্পন্ন রুটিন"
+                      data-testid="input-template-name"
+                    />
+                  </div>
+                  <div>
+                    <Label>বিবরণ (ঐচ্ছিক)</Label>
+                    <Input 
+                      value={templateDescription} 
+                      onChange={(e) => setTemplateDescription(e.target.value)} 
+                      placeholder="টেমপ্লেট সম্পর্কে বিস্তারিত"
+                      data-testid="input-template-description"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={() => saveTemplateMutation.mutate()} data-testid="button-confirm-save-template">
+                    সংরক্ষণ করুন
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {templates.length > 0 && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" data-testid="button-load-template">
+                    <Download className="w-4 h-4 mr-2" />
+                    টেমপ্লেট লোড করুন
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>টেমপ্লেট লোড করুন</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-2">
+                    {templates.map((template) => (
+                      <Card key={template.id} className="p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => loadTemplateMutation.mutate(template.id)}>
+                        <div className="font-medium">{template.name}</div>
+                        <div className="text-sm text-gray-600">{template.description}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {new Date(template.created_at).toLocaleDateString('bn-BD')}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            <Button variant="outline" size="sm" onClick={() => copyMondayMutation.mutate()} data-testid="button-copy-monday">
+              <Copy className="w-4 h-4 mr-2" />
+              সোমবার অন্যান্য দিনে কপি
+            </Button>
+
+            <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" data-testid="button-copy-to-class">
+                  <Copy className="w-4 h-4 mr-2" />
+                  অন্য ক্লাসে কপি করুন
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>অন্য ক্লাসে কপি করুন</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>লক্ষ্য ক্লাস</Label>
+                    <Select value={copyTargetClass} onValueChange={setCopyTargetClass}>
+                      <SelectTrigger data-testid="select-copy-target-class">
+                        <SelectValue placeholder="ক্লাস নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].map((c) => (
+                          <SelectItem key={c} value={c}>ক্লাস {c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>লক্ষ্য শাখা</Label>
+                    <Select value={copyTargetSection} onValueChange={setCopyTargetSection}>
+                      <SelectTrigger data-testid="select-copy-target-section">
+                        <SelectValue placeholder="শাখা নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['A', 'B', 'C', 'D'].map((s) => (
+                          <SelectItem key={s} value={s}>শাখা {s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={() => copyToClassMutation.mutate()} data-testid="button-confirm-copy">
+                    কপি করুন
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" data-testid="button-clear-week">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  সপ্তাহ মুছুন
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>আপনি কি নিশ্চিত?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    এটি সম্পূর্ণ সপ্তাহের সময়সূচী মুছে ফেলবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-testid="button-cancel-clear-week">বাতিল</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => clearWeekMutation.mutate()} data-testid="button-confirm-clear-week">
+                    মুছে ফেলুন
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Feature 4: PDF Export */}
+            <Button variant="outline" size="sm" onClick={exportPDF} data-testid="button-export-pdf">
+              <FileDown className="w-4 h-4 mr-2" />
+              পিডিএফ ডাউনলোড
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {conflicts.length > 0 && (
         <Alert variant="destructive" className="mb-6" data-testid="alert-conflicts">
           <AlertCircle className="h-4 w-4" />
@@ -541,6 +1316,31 @@ export default function TimetablePage() {
         </Alert>
       )}
 
+      {/* Feature 7: Upcoming Substitutions */}
+      {substitutions.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck className="w-5 h-5" />
+              আসন্ন বিকল্প শিক্ষক
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {substitutions.slice(0, 3).map((sub) => (
+                <div key={sub.id} className="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+                  <div>
+                    <div className="font-medium">তারিখ: {new Date(sub.date).toLocaleDateString('bn-BD')}</div>
+                    <div className="text-sm text-gray-600">{sub.reason_bn || sub.reason}</div>
+                  </div>
+                  <Badge variant="secondary">বিকল্প</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -552,122 +1352,181 @@ export default function TimetablePage() {
                     <th key={day} className="border p-3 text-center font-semibold min-w-[150px]">
                       {day}
                       <div className="text-xs text-gray-500 font-normal">{DAYS_EN[index]}</div>
+                      {/* Feature 3: Clear Day */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="mt-1" data-testid={`button-clear-day-${index}`}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>দিন মুছুন?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              এটি {day} দিনের সকল পিরিয়ড মুছে ফেলবে।
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => clearDayMutation.mutate(index)}>
+                              মুছে ফেলুন
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {periods.filter(p => p.period_number <= 7).map((period) => (
-                  <tr key={period.id}>
-                    <td className="border p-3 bg-gray-50 dark:bg-gray-800">
-                      <div className="font-medium">{period.name}</div>
-                      <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
-                        <Clock className="w-3 h-3" />
-                        {period.start_time} - {period.end_time}
-                      </div>
-                    </td>
-                    {DAYS.map((_, dayIndex) => {
-                      const slot = getSlotForDayAndPeriod(dayIndex, period.period_number);
-                      const isEditing = editingSlot?.day === dayIndex && editingSlot?.periodNum === period.period_number;
+                {periods.filter(p => p.period_number <= 7).map((period) => {
+                  const isBreak = isBreakPeriod(period.period_number);
+                  
+                  return (
+                    <tr key={period.id}>
+                      <td className="border p-3 bg-gray-50 dark:bg-gray-800">
+                        <div className="font-medium">
+                          {period.name}
+                          {isBreak && <Badge variant="secondary" className="ml-2">বিরতি</Badge>}
+                        </div>
+                        <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
+                          <Clock className="w-3 h-3" />
+                          {period.start_time} - {period.end_time}
+                        </div>
+                      </td>
+                      {DAYS.map((_, dayIndex) => {
+                        const slot = getSlotForDayAndPeriod(dayIndex, period.period_number);
+                        const isEditing = editingSlot?.day === dayIndex && editingSlot?.periodNum === period.period_number;
 
-                      return (
-                        <td key={dayIndex} className="border p-2 text-center">
-                          {isEditing ? (
-                            <PermissionGate permission={PERMISSIONS.EDIT_TIMETABLE}>
-                              <div className="space-y-2 p-2">
-                                <Input
-                                  placeholder="বিষয়"
-                                  value={periodForm.subject}
-                                  onChange={(e) => setPeriodForm({ ...periodForm, subject: e.target.value })}
-                                  size={1}
-                                  data-testid="input-subject"
-                                />
-                                <Input
-                                  placeholder="শিক্ষক"
-                                  value={periodForm.teacher_name}
-                                  onChange={(e) => setPeriodForm({ ...periodForm, teacher_name: e.target.value })}
-                                  size={1}
-                                  data-testid="input-teacher"
-                                />
-                                <Input
-                                  placeholder="রুম নম্বর"
-                                  value={periodForm.room_number}
-                                  onChange={(e) => setPeriodForm({ ...periodForm, room_number: e.target.value })}
-                                  size={1}
-                                  data-testid="input-room"
-                                />
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleSaveSlot(dayIndex, period.period_number)}
-                                    data-testid="button-save"
-                                    disabled={savePeriodMutation.isPending}
+                        return (
+                          <td key={dayIndex} className="border p-2 text-center">
+                            {isEditing ? (
+                              <PermissionGate permission={PERMISSIONS.EDIT_TIMETABLE}>
+                                <div className="space-y-2 p-2">
+                                  {/* Feature 5: Period Type Dropdown */}
+                                  <Select 
+                                    value={periodForm.period_type} 
+                                    onValueChange={(v) => setPeriodForm({ ...periodForm, period_type: v })}
+                                    disabled={isBreak}
                                   >
-                                    <Save className="w-3 h-3" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setEditingSlot(null);
-                                      setConflicts([]);
-                                    }}
-                                    data-testid="button-cancel"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </Button>
+                                    <SelectTrigger data-testid="select-period-type">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {PERIOD_TYPES.map((type) => (
+                                        <SelectItem key={type.value} value={type.value}>
+                                          {type.label} ({type.labelEn})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  
+                                  {/* Feature 1: Disable fields for break periods */}
+                                  <Input
+                                    placeholder="বিষয়"
+                                    value={periodForm.subject}
+                                    onChange={(e) => setPeriodForm({ ...periodForm, subject: e.target.value })}
+                                    size={1}
+                                    data-testid="input-subject"
+                                    disabled={isBreak || periodForm.period_type === 'break'}
+                                  />
+                                  <Input
+                                    placeholder="শিক্ষক"
+                                    value={periodForm.teacher_name}
+                                    onChange={(e) => setPeriodForm({ ...periodForm, teacher_name: e.target.value })}
+                                    size={1}
+                                    data-testid="input-teacher"
+                                    disabled={isBreak || periodForm.period_type === 'break'}
+                                  />
+                                  <Input
+                                    placeholder="রুম নম্বর"
+                                    value={periodForm.room_number}
+                                    onChange={(e) => setPeriodForm({ ...periodForm, room_number: e.target.value })}
+                                    size={1}
+                                    data-testid="input-room"
+                                  />
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleSaveSlot(dayIndex, period.period_number)}
+                                      data-testid="button-save"
+                                      disabled={savePeriodMutation.isPending || (isBreak && periodForm.period_type !== 'break')}
+                                    >
+                                      <Save className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingSlot(null);
+                                        setConflicts([]);
+                                      }}
+                                      data-testid="button-cancel"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            </PermissionGate>
-                          ) : slot ? (
-                            <PermissionGate permission={PERMISSIONS.EDIT_TIMETABLE} fallback={
-                              <div
-                                className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded"
-                                data-testid={`slot-${dayIndex}-${period.period_number}`}
-                              >
-                                <div className="font-medium text-sm">{slot.subject_bn || slot.subject}</div>
-                                {slot.teacher_name && (
-                                  <div className="text-xs text-gray-600 mt-1">{slot.teacher_name}</div>
+                              </PermissionGate>
+                            ) : slot ? (
+                              <PermissionGate permission={PERMISSIONS.EDIT_TIMETABLE} fallback={
+                                <div
+                                  className={`p-2 rounded ${PERIOD_TYPE_COLORS[slot.period_type] || PERIOD_TYPE_COLORS.regular}`}
+                                  data-testid={`slot-${dayIndex}-${period.period_number}`}
+                                >
+                                  <div className="font-medium text-sm">{slot.subject_bn || slot.subject}</div>
+                                  {slot.teacher_name && (
+                                    <div className="text-xs text-gray-600 mt-1">{slot.teacher_name}</div>
+                                  )}
+                                  {slot.room_number && (
+                                    <div className="text-xs text-gray-500">রুম: {slot.room_number}</div>
+                                  )}
+                                  {/* Feature 5: Period Type Badge */}
+                                  <Badge variant="outline" className="text-xs mt-1">
+                                    {PERIOD_TYPES.find(t => t.value === slot.period_type)?.label || 'নিয়মিত'}
+                                  </Badge>
+                                </div>
+                              }>
+                                <div
+                                  className={`p-2 rounded hover:opacity-80 transition-colors cursor-pointer ${PERIOD_TYPE_COLORS[slot.period_type] || PERIOD_TYPE_COLORS.regular}`}
+                                  onClick={() => !isBreak && handleEditSlot(dayIndex, period.period_number)}
+                                  data-testid={`slot-${dayIndex}-${period.period_number}`}
+                                >
+                                  <div className="font-medium text-sm">{slot.subject_bn || slot.subject}</div>
+                                  {slot.teacher_name && (
+                                    <div className="text-xs text-gray-600 mt-1">{slot.teacher_name}</div>
+                                  )}
+                                  {slot.room_number && (
+                                    <div className="text-xs text-gray-500">রুম: {slot.room_number}</div>
+                                  )}
+                                  <Badge variant="outline" className="text-xs mt-1">
+                                    {PERIOD_TYPES.find(t => t.value === slot.period_type)?.label || 'নিয়মিত'}
+                                  </Badge>
+                                </div>
+                              </PermissionGate>
+                            ) : (
+                              <PermissionGate permission={PERMISSIONS.EDIT_TIMETABLE} fallback={
+                                <div className="w-full h-full min-h-[60px]"></div>
+                              }>
+                                {!isBreak && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full h-full min-h-[60px]"
+                                    onClick={() => handleEditSlot(dayIndex, period.period_number)}
+                                    data-testid={`button-add-${dayIndex}-${period.period_number}`}
+                                  >
+                                    <Plus className="w-4 h-4 text-gray-400" />
+                                  </Button>
                                 )}
-                                {slot.room_number && (
-                                  <div className="text-xs text-gray-500">রুম: {slot.room_number}</div>
-                                )}
-                              </div>
-                            }>
-                              <div
-                                className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer"
-                                onClick={() => handleEditSlot(dayIndex, period.period_number)}
-                                data-testid={`slot-${dayIndex}-${period.period_number}`}
-                              >
-                                <div className="font-medium text-sm">{slot.subject_bn || slot.subject}</div>
-                                {slot.teacher_name && (
-                                  <div className="text-xs text-gray-600 mt-1">{slot.teacher_name}</div>
-                                )}
-                                {slot.room_number && (
-                                  <div className="text-xs text-gray-500">রুম: {slot.room_number}</div>
-                                )}
-                              </div>
-                            </PermissionGate>
-                          ) : (
-                            <PermissionGate permission={PERMISSIONS.EDIT_TIMETABLE} fallback={
-                              <div className="w-full h-full min-h-[60px]"></div>
-                            }>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full h-full min-h-[60px]"
-                                onClick={() => handleEditSlot(dayIndex, period.period_number)}
-                                data-testid={`button-add-${dayIndex}-${period.period_number}`}
-                              >
-                                <Plus className="w-4 h-4 text-gray-400" />
-                              </Button>
-                            </PermissionGate>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                              </PermissionGate>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
@@ -769,6 +1628,10 @@ export default function TimetablePage() {
                                   {slot.room_number && (
                                     <div className="text-xs text-gray-600">রুম: {slot.room_number}</div>
                                   )}
+                                  {/* Feature 5: Period Type in Teacher View */}
+                                  <Badge variant="outline" className="text-xs mt-1">
+                                    {PERIOD_TYPES.find(t => t.value === slot.period_type)?.label || 'নিয়মিত'}
+                                  </Badge>
                                 </div>
                               ) : (
                                 <div className="w-full h-full min-h-[60px] bg-gray-50 dark:bg-gray-900/20 rounded flex items-center justify-center text-gray-400">
@@ -817,7 +1680,7 @@ export default function TimetablePage() {
               <Calendar className="w-8 h-8" />
               ক্লাস টাইমটেবিল
             </h1>
-            <p className="text-gray-600 mt-1">ইন্টারঅ্যাক্টিভ সময়সূচী ব্যবস্থাপনা</p>
+            <p className="text-gray-600 mt-1">সম্পূর্ণ ফিচার সহ সময়সূচী ব্যবস্থাপনা</p>
           </div>
 
           {/* View Toggle */}

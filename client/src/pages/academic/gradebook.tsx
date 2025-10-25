@@ -124,6 +124,13 @@ export default function Gradebook() {
   // Feature 2.3: Bulk Operations state
   const [selectedAssessmentIds, setSelectedAssessmentIds] = useState<Set<number>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isCopyAssessmentDialogOpen, setIsCopyAssessmentDialogOpen] = useState(false);
+  const [copyingAssessmentId, setCopyingAssessmentId] = useState<number | null>(null);
+  
+  // Feature 2.2: Grade Overrides state
+  const [isGradeOverrideDialogOpen, setIsGradeOverrideDialogOpen] = useState(false);
+  const [overrideStudentId, setOverrideStudentId] = useState<number | null>(null);
+  const [overrideSubjectId, setOverrideSubjectId] = useState<number | null>(null);
 
   const { data: subjects, isLoading: subjectsLoading } = useQuery({
     queryKey: ['subjects', schoolId],
@@ -192,6 +199,12 @@ export default function Gradebook() {
   const { data: gradeScales, isLoading: gradeScalesLoading } = useQuery({
     queryKey: ['grade-scales', schoolId],
     queryFn: () => gradesDb.getGradeScales(schoolId),
+  });
+
+  // Feature 2.2: Grade Overrides queries
+  const { data: gradeOverrides, isLoading: gradeOverridesLoading } = useQuery({
+    queryKey: ['grade-overrides', schoolId, selectedTerm],
+    queryFn: () => gradesDb.getAllGradeOverrides(schoolId, selectedTerm),
   });
 
   const filteredSubjects = useMemo(() => {
@@ -326,6 +339,57 @@ export default function Gradebook() {
       toast({
         title: language === 'bn' ? 'সফল' : 'Success',
         description: language === 'bn' ? 'মূল্যায়ন অনুলিপি করা হয়েছে' : 'Assessment duplicated successfully',
+      });
+    },
+  });
+
+  const copyAssessmentMutation = useMutation({
+    mutationFn: ({ assessmentId, targetClass, targetSection }: { assessmentId: number; targetClass: string; targetSection: string }) =>
+      gradesDb.copyAssessmentToClass(assessmentId, targetClass, targetSection, schoolId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assessments'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'মূল্যায়ন কপি করা হয়েছে' : 'Assessment copied successfully',
+      });
+      setIsCopyAssessmentDialogOpen(false);
+    },
+  });
+
+  // Feature 2.2: Grade Override mutations
+  const createGradeOverrideMutation = useMutation({
+    mutationFn: (data: any) => gradesDb.createGradeOverride(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['grade-overrides'] });
+      queryClient.invalidateQueries({ queryKey: ['gradebook'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'গ্রেড ওভাররাইড তৈরি হয়েছে' : 'Grade override created successfully',
+      });
+      setIsGradeOverrideDialogOpen(false);
+    },
+  });
+
+  const approveGradeOverrideMutation = useMutation({
+    mutationFn: ({ id, teacherId }: { id: number; teacherId: number }) =>
+      gradesDb.approveGradeOverride(id, teacherId, schoolId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['grade-overrides'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'গ্রেড ওভাররাইড অনুমোদিত হয়েছে' : 'Grade override approved successfully',
+      });
+    },
+  });
+
+  const deleteGradeOverrideMutation = useMutation({
+    mutationFn: (id: number) => gradesDb.deleteGradeOverride(id, schoolId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['grade-overrides'] });
+      queryClient.invalidateQueries({ queryKey: ['gradebook'] });
+      toast({
+        title: language === 'bn' ? 'সফল' : 'Success',
+        description: language === 'bn' ? 'গ্রেড ওভাররাইড মুছে ফেলা হয়েছে' : 'Grade override deleted successfully',
       });
     },
   });
@@ -484,6 +548,26 @@ export default function Gradebook() {
     }
     
     setSelectedAssessmentIds(new Set());
+  };
+
+  const handleCopyAssessment = (assessmentId: number) => {
+    setCopyingAssessmentId(assessmentId);
+    setIsCopyAssessmentDialogOpen(true);
+  };
+
+  const handleCreateOverride = (studentId: number, subjectId: number) => {
+    setOverrideStudentId(studentId);
+    setOverrideSubjectId(subjectId);
+    setIsGradeOverrideDialogOpen(true);
+  };
+
+  const getStudentOverride = (studentId: number, subjectId: number) => {
+    return gradeOverrides?.find(
+      (override: any) => 
+        override.student_id === studentId && 
+        override.subject_id === subjectId &&
+        (selectedTerm ? override.term_id === selectedTerm : true)
+    );
   };
 
   useMemo(() => {
@@ -991,14 +1075,22 @@ export default function Gradebook() {
                               <TableRow key={student.id} data-testid={`row-student-${student.id}`}>
                                 <TableCell className="font-medium">{student.roll_number}</TableCell>
                                 <TableCell>
-                                  {/* Feature 2.4: Student Details Link */}
-                                  <Link
-                                    href={`/academic/student-profile?id=${student.id}`}
-                                    className="hover:underline text-blue-600 dark:text-blue-400 font-medium transition-colors"
-                                    data-testid={`student-link-${student.id}`}
-                                  >
-                                    {student.name}
-                                  </Link>
+                                  <div className="flex items-center gap-2">
+                                    <Link
+                                      href={`/academic/student-profile?id=${student.id}`}
+                                      className="hover:underline text-blue-600 dark:text-blue-400 font-medium transition-colors"
+                                      data-testid={`student-link-${student.id}`}
+                                    >
+                                      {student.name}
+                                    </Link>
+                                    {/* Feature 2.2: Grade Override Badge */}
+                                    {selectedSubject && getStudentOverride(student.id, selectedSubject) && (
+                                      <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20">
+                                        <AlertCircle className="w-3 h-3 mr-1" />
+                                        Override
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </TableCell>
                                 {gradeBook.assessments.map((assessment: any) => {
                                   const score = studentScores.find(
@@ -1284,6 +1376,20 @@ export default function Gradebook() {
                           </div>
                         )}
                       </div>
+
+                      {/* Feature 2.3: Copy Assessment Button */}
+                      <div className="border-t pt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyAssessment(assessment.id)}
+                          className="w-full"
+                          data-testid={`copy-assessment-${assessment.id}`}
+                        >
+                          <Copy className="w-4 h-4 mr-2" />
+                          {language === 'bn' ? 'অন্য ক্লাসে কপি করুন' : 'Copy to Another Class'}
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -1542,6 +1648,44 @@ export default function Gradebook() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Feature 2.3: Copy Assessment Dialog */}
+      <CopyAssessmentDialog
+        open={isCopyAssessmentDialogOpen}
+        onOpenChange={setIsCopyAssessmentDialogOpen}
+        assessmentId={copyingAssessmentId}
+        onCopy={(targetClass: string, targetSection: string) => {
+          if (copyingAssessmentId) {
+            copyAssessmentMutation.mutate({ 
+              assessmentId: copyingAssessmentId, 
+              targetClass, 
+              targetSection 
+            });
+          }
+        }}
+        isLoading={copyAssessmentMutation.isPending}
+        language={language}
+        schoolId={schoolId}
+      />
+
+      {/* Feature 2.2: Grade Override Dialog */}
+      <GradeOverrideDialog
+        open={isGradeOverrideDialogOpen}
+        onOpenChange={setIsGradeOverrideDialogOpen}
+        studentId={overrideStudentId}
+        subjectId={overrideSubjectId}
+        termId={selectedTerm}
+        onSubmit={(data: any) => createGradeOverrideMutation.mutate(data)}
+        isLoading={createGradeOverrideMutation.isPending}
+        language={language}
+        schoolId={schoolId}
+        subjects={subjects || []}
+        students={gradeBook?.students || []}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['grade-overrides'] });
+          queryClient.invalidateQueries({ queryKey: ['gradebook'] });
+        }}
+      />
     </AppShell>
   );
 }
@@ -1806,7 +1950,7 @@ function ComponentEditorDialog({
                 {language === 'bn' ? 'উপাদানের ধরন' : 'Component Type'}
               </Label>
               <Select
-                value={formData.componentType}
+                value={formData.componentType || undefined}
                 onValueChange={(value) => setFormData({ ...formData, componentType: value })}
               >
                 <SelectTrigger id="component-type" data-testid="select-component-type">
@@ -2080,7 +2224,7 @@ function GradeScaleEditorDialog({
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="is-default"
-                      checked={formData.isDefault}
+                      checked={formData.isDefault || false}
                       onCheckedChange={(checked) => setFormData({ ...formData, isDefault: checked as boolean })}
                       data-testid="checkbox-is-default"
                     />
@@ -2116,6 +2260,439 @@ function GradeScaleEditorDialog({
             {language === 'bn' ? 'বন্ধ করুন' : 'Close'}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Feature 2.3: Copy Assessment Dialog Component
+function CopyAssessmentDialog({
+  open,
+  onOpenChange,
+  assessmentId,
+  onCopy,
+  isLoading,
+  language,
+  schoolId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  assessmentId: number | null;
+  onCopy: (targetClass: string, targetSection: string) => void;
+  isLoading: boolean;
+  language: string;
+  schoolId: number;
+}) {
+  const [targetClass, setTargetClass] = useState('');
+  const [targetSection, setTargetSection] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (targetClass && targetSection) {
+      onCopy(targetClass, targetSection);
+      setTargetClass('');
+      setTargetSection('');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent data-testid="dialog-copy-assessment">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'bn' ? 'মূল্যায়ন কপি করুন' : 'Copy Assessment'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'bn'
+                ? 'এই মূল্যায়নটি অন্য ক্লাসে কপি করুন'
+                : 'Copy this assessment to another class'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="target-class">
+                {language === 'bn' ? 'লক্ষ্য ক্লাস' : 'Target Class'}
+              </Label>
+              <Input
+                id="target-class"
+                value={targetClass}
+                onChange={(e) => setTargetClass(e.target.value)}
+                placeholder={language === 'bn' ? 'যেমন: 9' : 'e.g., 9'}
+                required
+                data-testid="input-target-class"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="target-section">
+                {language === 'bn' ? 'লক্ষ্য সেকশন' : 'Target Section'}
+              </Label>
+              <Input
+                id="target-section"
+                value={targetSection}
+                onChange={(e) => setTargetSection(e.target.value)}
+                placeholder={language === 'bn' ? 'যেমন: A' : 'e.g., A'}
+                required
+                data-testid="input-target-section"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              data-testid="button-cancel-copy"
+            >
+              {language === 'bn' ? 'বাতিল' : 'Cancel'}
+            </Button>
+            <Button type="submit" disabled={isLoading} data-testid="button-submit-copy">
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {language === 'bn' ? 'কপি হচ্ছে...' : 'Copying...'}
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? 'কপি করুন' : 'Copy'}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Feature 2.2: Grade Override Dialog Component
+function GradeOverrideDialog({
+  open,
+  onOpenChange,
+  studentId,
+  subjectId,
+  termId,
+  onSubmit,
+  isLoading,
+  language,
+  schoolId,
+  subjects,
+  students,
+  onSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  studentId: number | null;
+  subjectId: number | null;
+  termId: number | undefined;
+  onSubmit: (data: any) => void;
+  isLoading: boolean;
+  language: string;
+  schoolId: number;
+  subjects: any[];
+  students: any[];
+  onSuccess?: () => void;
+}) {
+  const { hasPermission } = usePermissions();
+  const [formData, setFormData] = useState({
+    studentId: studentId || undefined,
+    subjectId: subjectId || undefined,
+    termId: termId || undefined,
+    overrideGrade: '',
+    reason: '',
+    reasonBn: '',
+    schoolId,
+  });
+
+  // Query existing override for this student/subject/term
+  const { data: existingOverride } = useQuery({
+    queryKey: ['grade-override-single', studentId, subjectId, termId, schoolId],
+    queryFn: async () => {
+      if (!studentId || !subjectId) return null;
+      const overrides = await gradesDb.getGradeOverrides(studentId, schoolId, termId);
+      return overrides?.find((o: any) => o.subject_id === subjectId) || null;
+    },
+    enabled: !!studentId && !!subjectId && open,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.studentId && formData.subjectId && formData.overrideGrade && formData.reason) {
+      onSubmit(formData);
+      setFormData({
+        studentId: undefined,
+        subjectId: undefined,
+        termId: undefined,
+        overrideGrade: '',
+        reason: '',
+        reasonBn: '',
+        schoolId,
+      });
+      if (onSuccess) onSuccess();
+    }
+  };
+
+  const handleApprove = async () => {
+    if (existingOverride && !existingOverride.approved_by) {
+      // Get teacher ID from user (would need to be passed as prop or from context)
+      // For now, using a placeholder
+      const teacherId = 1; // This should come from auth context
+      await gradesDb.approveGradeOverride(existingOverride.id, teacherId, schoolId);
+      if (onSuccess) onSuccess();
+    }
+  };
+
+  const handleReject = async () => {
+    if (existingOverride) {
+      await gradesDb.deleteGradeOverride(existingOverride.id, schoolId);
+      if (onSuccess) onSuccess();
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl" data-testid="dialog-grade-override">
+        <DialogHeader>
+          <DialogTitle>
+            {language === 'bn' ? 'গ্রেড ওভাররাইড' : 'Grade Override'}
+          </DialogTitle>
+          <DialogDescription>
+            {language === 'bn'
+              ? 'একজন শিক্ষার্থীর জন্য গ্রেড ওভাররাইড তৈরি বা পরিচালনা করুন'
+              : 'Create or manage grade override for a student'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {existingOverride ? (
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  {language === 'bn' ? 'বিদ্যমান ওভাররাইড' : 'Existing Override'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600">
+                      {language === 'bn' ? 'শিক্ষার্থী' : 'Student'}
+                    </p>
+                    <p>{existingOverride.student?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600">
+                      {language === 'bn' ? 'বিষয়' : 'Subject'}
+                    </p>
+                    <p>{language === 'bn' ? existingOverride.subject?.name_bn : existingOverride.subject?.name}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">
+                    {language === 'bn' ? 'ওভাররাইড গ্রেড' : 'Override Grade'}
+                  </p>
+                  <Badge variant="default" className="text-base">
+                    {existingOverride.override_grade}
+                  </Badge>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">
+                    {language === 'bn' ? 'কারণ' : 'Reason'}
+                  </p>
+                  <p className="text-sm">{language === 'bn' ? existingOverride.reason_bn : existingOverride.reason}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">
+                    {language === 'bn' ? 'অবস্থা' : 'Status'}
+                  </p>
+                  {existingOverride.approved_by ? (
+                    <Badge variant="default" className="bg-green-600">
+                      <Check className="w-3 h-3 mr-1" />
+                      {language === 'bn' ? 'অনুমোদিত' : 'Approved'}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {language === 'bn' ? 'অনুমোদনের অপেক্ষায়' : 'Pending Approval'}
+                    </Badge>
+                  )}
+                </div>
+
+                {existingOverride.approved_by_user && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600">
+                      {language === 'bn' ? 'অনুমোদনকারী' : 'Approved By'}
+                    </p>
+                    <p className="text-sm">{existingOverride.approved_by_user.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(existingOverride.approved_at).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Admin Actions */}
+            {hasPermission(PERMISSIONS.MANAGE_ALL_GRADES) && !existingOverride.approved_by && (
+              <div className="flex gap-2">
+                <Button
+                  variant="default"
+                  onClick={handleApprove}
+                  className="flex-1"
+                  data-testid="button-approve-override"
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? 'অনুমোদন করুন' : 'Approve'}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleReject}
+                  className="flex-1"
+                  data-testid="button-reject-override"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  {language === 'bn' ? 'প্রত্যাখ্যান করুন' : 'Reject'}
+                </Button>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)} data-testid="button-close-override">
+                {language === 'bn' ? 'বন্ধ করুন' : 'Close'}
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="override-student">
+                  {language === 'bn' ? 'শিক্ষার্থী' : 'Student'}
+                </Label>
+                <Select
+                  value={formData.studentId?.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, studentId: Number(value) })}
+                >
+                  <SelectTrigger id="override-student" data-testid="select-override-student">
+                    <SelectValue placeholder={language === 'bn' ? 'নির্বাচন করুন' : 'Select'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {students.map((student: any) => (
+                      <SelectItem key={student.id} value={student.id.toString()}>
+                        {student.name} ({student.roll_number})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="override-subject">
+                  {language === 'bn' ? 'বিষয়' : 'Subject'}
+                </Label>
+                <Select
+                  value={formData.subjectId?.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, subjectId: Number(value) })}
+                >
+                  <SelectTrigger id="override-subject" data-testid="select-override-subject">
+                    <SelectValue placeholder={language === 'bn' ? 'নির্বাচন করুন' : 'Select'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((subject: any) => (
+                      <SelectItem key={subject.id} value={subject.id.toString()}>
+                        {language === 'bn' ? subject.name_bn : subject.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="override-grade">
+                {language === 'bn' ? 'ওভাররাইড গ্রেড' : 'Override Grade'}
+              </Label>
+              <Input
+                id="override-grade"
+                value={formData.overrideGrade}
+                onChange={(e) => setFormData({ ...formData, overrideGrade: e.target.value })}
+                placeholder={language === 'bn' ? 'যেমন: A+, 90, 5.0' : 'e.g., A+, 90, 5.0'}
+                required
+                data-testid="input-override-grade"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="override-reason">
+                {language === 'bn' ? 'কারণ (ইংরেজি)' : 'Reason (English)'}
+              </Label>
+              <Textarea
+                id="override-reason"
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                placeholder={language === 'bn' ? 'ওভাররাইডের কারণ ব্যাখ্যা করুন' : 'Explain the reason for override'}
+                required
+                rows={3}
+                data-testid="textarea-override-reason"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="override-reason-bn">
+                {language === 'bn' ? 'কারণ (বাংলা)' : 'Reason (Bengali)'}
+              </Label>
+              <Textarea
+                id="override-reason-bn"
+                value={formData.reasonBn}
+                onChange={(e) => setFormData({ ...formData, reasonBn: e.target.value })}
+                placeholder={language === 'bn' ? 'ওভাররাইডের কারণ ব্যাখ্যা করুন' : 'Explain the reason for override'}
+                rows={3}
+                data-testid="textarea-override-reason-bn"
+              />
+            </div>
+
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
+              <div className="flex gap-2">
+                <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                  {language === 'bn'
+                    ? 'এই গ্রেড ওভাররাইড প্রয়োগ করার আগে প্রশাসকের অনুমোদন প্রয়োজন হবে।'
+                    : 'This grade override will require admin approval before being applied.'}
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                data-testid="button-cancel-override"
+              >
+                {language === 'bn' ? 'বাতিল' : 'Cancel'}
+              </Button>
+              <Button type="submit" disabled={isLoading} data-testid="button-submit-override">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {language === 'bn' ? 'জমা দিচ্ছে...' : 'Submitting...'}
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    {language === 'bn' ? 'জমা দিন' : 'Submit'}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

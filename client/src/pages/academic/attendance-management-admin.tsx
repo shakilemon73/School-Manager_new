@@ -710,7 +710,7 @@ export default function AttendanceManagementAdmin() {
 
   // Alert settings mutation
   const saveAlerts = useMutation({
-    mutationFn: attendanceDb.saveAlertSettings,
+    mutationFn: (settings: any) => attendanceDb.saveAlertSettings(schoolId, settings),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alert-settings'] });
       toast({
@@ -1139,6 +1139,24 @@ export default function AttendanceManagementAdmin() {
       doc.setFontSize(16);
       doc.text(language === 'bn' ? 'মাসিক উপস্থিতি রিপোর্ট' : 'Monthly Attendance Report', pageWidth / 2, 15, { align: 'center' });
       
+      // Add student photo if available (right side)
+      if (student.photo_url) {
+        try {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = student.photo_url;
+          await new Promise((resolve) => {
+            img.onload = () => {
+              doc.addImage(img, 'JPEG', pageWidth - 40, 25, 30, 30);
+              resolve(true);
+            };
+            img.onerror = () => resolve(false);
+          });
+        } catch (error) {
+          console.error('Failed to load student photo:', error);
+        }
+      }
+      
       // Student details
       doc.setFontSize(11);
       doc.text(`${language === 'bn' ? 'শিক্ষার্থী' : 'Student'}: ${student.name}`, 14, 30);
@@ -1193,9 +1211,36 @@ export default function AttendanceManagementAdmin() {
       
       doc.save(`attendance-report-${student.name}-${format(month, 'MMM-yyyy')}.pdf`);
       
+      // Store report in database
+      const reportData = {
+        student_id: student.id,
+        report_month: format(month, 'yyyy-MM'),
+        total_days: totalDays,
+        present_days: presentDays,
+        absent_days: absentDays,
+        late_days: 0,
+        excused_absences: leaveDays,
+        attendance_percentage: presentPercentage,
+        remarks: `Generated on ${format(new Date(), 'PPP')}`,
+        remarks_bn: `${format(new Date(), 'PPP')} তারিখে তৈরি`,
+        generated_by: userId.toString(),
+        school_id: schoolId,
+      };
+      
+      // Insert or update report
+      const { error: reportError } = await supabase
+        .from('attendance_reports')
+        .upsert(reportData, {
+          onConflict: 'student_id,report_month,school_id',
+        });
+      
+      if (reportError) {
+        console.error('Failed to save report to database:', reportError);
+      }
+      
       toast({
         title: language === 'bn' ? 'সফল' : 'Success',
-        description: language === 'bn' ? 'রিপোর্ট ডাউনলোড হয়েছে' : 'Report downloaded successfully',
+        description: language === 'bn' ? 'রিপোর্ট ডাউনলোড এবং সংরক্ষিত হয়েছে' : 'Report downloaded and saved successfully',
       });
       setReportDialogOpen(false);
     } catch (error) {
@@ -1529,6 +1574,15 @@ export default function AttendanceManagementAdmin() {
                 <TabsTrigger value="alerts" data-testid="tab-alerts">
                   {t.alerts}
                 </TabsTrigger>
+                <TabsTrigger value="leave" data-testid="tab-leave">
+                  {language === 'bn' ? 'ছুটি ব্যবস্থাপনা' : 'Leave Management'}
+                </TabsTrigger>
+                <TabsTrigger value="holidays" data-testid="tab-holidays">
+                  {language === 'bn' ? 'ছুটির দিন' : 'Holidays'}
+                </TabsTrigger>
+                <TabsTrigger value="reports" data-testid="tab-reports">
+                  {language === 'bn' ? 'রিপোর্ট' : 'Reports'}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="daily" className="mt-4">
@@ -1812,6 +1866,375 @@ export default function AttendanceManagementAdmin() {
                   </Table>
                 </div>
               </TabsContent>
+
+              <TabsContent value="leave" className="mt-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">{language === 'bn' ? 'ছুটির আবেদন' : 'Leave Requests'}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {language === 'bn' ? 'শিক্ষার্থীদের ছুটির আবেদন পরিচালনা করুন' : 'Manage student leave requests'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select value={leaveFilterStatus} onValueChange={setLeaveFilterStatus}>
+                        <SelectTrigger className="w-40" data-testid="select-leave-filter">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{language === 'bn' ? 'সব' : 'All'}</SelectItem>
+                          <SelectItem value="pending">{language === 'bn' ? 'অপেক্ষমাণ' : 'Pending'}</SelectItem>
+                          <SelectItem value="approved">{language === 'bn' ? 'অনুমোদিত' : 'Approved'}</SelectItem>
+                          <SelectItem value="rejected">{language === 'bn' ? 'প্রত্যাখ্যাত' : 'Rejected'}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{language === 'bn' ? 'শিক্ষার্থী' : 'Student'}</TableHead>
+                          <TableHead>{language === 'bn' ? 'ছুটির ধরন' : 'Leave Type'}</TableHead>
+                          <TableHead>{language === 'bn' ? 'শুরুর তারিখ' : 'Start Date'}</TableHead>
+                          <TableHead>{language === 'bn' ? 'শেষ তারিখ' : 'End Date'}</TableHead>
+                          <TableHead>{language === 'bn' ? 'কারণ' : 'Reason'}</TableHead>
+                          <TableHead className="text-center">{language === 'bn' ? 'অবস্থা' : 'Status'}</TableHead>
+                          <TableHead className="text-center">{language === 'bn' ? 'কার্যক্রম' : 'Actions'}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {leaveRequestsLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8">
+                              {language === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}
+                            </TableCell>
+                          </TableRow>
+                        ) : leaveRequests.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              {language === 'bn' ? 'কোন ছুটির আবেদন নেই' : 'No leave requests found'}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          leaveRequests.map((leave: any) => (
+                            <TableRow key={leave.id} data-testid={`row-leave-${leave.id}`}>
+                              <TableCell className="font-medium">{leave.students?.name}</TableCell>
+                              <TableCell>{leave.leave_type}</TableCell>
+                              <TableCell>{format(new Date(leave.start_date), 'PPP')}</TableCell>
+                              <TableCell>{format(new Date(leave.end_date), 'PPP')}</TableCell>
+                              <TableCell className="max-w-xs truncate">{leave.reason}</TableCell>
+                              <TableCell className="text-center">
+                                {leave.status === 'pending' && (
+                                  <Badge variant="outline" className="bg-yellow-50">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {language === 'bn' ? 'অপেক্ষমাণ' : 'Pending'}
+                                  </Badge>
+                                )}
+                                {leave.status === 'approved' && (
+                                  <Badge className="bg-green-100 text-green-700 border-green-200">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    {language === 'bn' ? 'অনুমোদিত' : 'Approved'}
+                                  </Badge>
+                                )}
+                                {leave.status === 'rejected' && (
+                                  <Badge variant="destructive">
+                                    <XCircle className="w-3 h-3 mr-1" />
+                                    {language === 'bn' ? 'প্রত্যাখ্যাত' : 'Rejected'}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {leave.status === 'pending' && (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleApproveLeave(leave.id)}
+                                      disabled={approveLeave.isPending}
+                                      data-testid={`button-approve-${leave.id}`}
+                                    >
+                                      <CheckCircle className="w-4 h-4 text-green-600" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedLeaveRequest(leave);
+                                        setRejectDialogOpen(true);
+                                      }}
+                                      disabled={rejectLeave.isPending}
+                                      data-testid={`button-reject-${leave.id}`}
+                                    >
+                                      <XCircle className="w-4 h-4 text-red-600" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="holidays" className="mt-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">{language === 'bn' ? 'স্কুলের ছুটির দিন' : 'School Holidays'}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {language === 'bn' ? 'স্কুলের ছুটির দিন পরিচালনা করুন' : 'Manage school holiday calendar'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select value={holidayFilterType} onValueChange={setHolidayFilterType}>
+                        <SelectTrigger className="w-40" data-testid="select-holiday-filter">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{language === 'bn' ? 'সব' : 'All'}</SelectItem>
+                          <SelectItem value="public">{language === 'bn' ? 'সরকারি' : 'Public'}</SelectItem>
+                          <SelectItem value="school">{language === 'bn' ? 'স্কুল' : 'School'}</SelectItem>
+                          <SelectItem value="religious">{language === 'bn' ? 'ধর্মীয়' : 'Religious'}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button onClick={() => { setEditingHoliday(null); setHolidayDialogOpen(true); }} data-testid="button-add-holiday">
+                        <Plus className="w-4 h-4 mr-2" />
+                        {language === 'bn' ? 'ছুটি যোগ করুন' : 'Add Holiday'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{language === 'bn' ? 'নাম' : 'Name'}</TableHead>
+                          <TableHead>{language === 'bn' ? 'তারিখ' : 'Date'}</TableHead>
+                          <TableHead>{language === 'bn' ? 'শেষ তারিখ' : 'End Date'}</TableHead>
+                          <TableHead>{language === 'bn' ? 'ধরন' : 'Type'}</TableHead>
+                          <TableHead>{language === 'bn' ? 'বর্ণনা' : 'Description'}</TableHead>
+                          <TableHead className="text-center">{language === 'bn' ? 'কার্যক্রম' : 'Actions'}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {holidaysLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8">
+                              {language === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}
+                            </TableCell>
+                          </TableRow>
+                        ) : schoolHolidays.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              {language === 'bn' ? 'কোন ছুটির দিন নেই' : 'No holidays found'}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          schoolHolidays.map((holiday: any) => (
+                            <TableRow key={holiday.id} data-testid={`row-holiday-${holiday.id}`}>
+                              <TableCell className="font-medium">{holiday.name}</TableCell>
+                              <TableCell>{format(new Date(holiday.date), 'PPP')}</TableCell>
+                              <TableCell>{holiday.end_date ? format(new Date(holiday.end_date), 'PPP') : '-'}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{holiday.type}</Badge>
+                              </TableCell>
+                              <TableCell className="max-w-xs truncate">{holiday.description || '-'}</TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingHoliday(holiday);
+                                      setHolidayDialogOpen(true);
+                                    }}
+                                    data-testid={`button-edit-holiday-${holiday.id}`}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (confirm(language === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?')) {
+                                        deleteHoliday.mutate(holiday.id);
+                                      }
+                                    }}
+                                    disabled={deleteHoliday.isPending}
+                                    data-testid={`button-delete-holiday-${holiday.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="reports" className="mt-4">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">{language === 'bn' ? 'উপস্থিতি রিপোর্ট' : 'Attendance Reports'}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'bn' ? 'মাসিক উপস্থিতি রিপোর্ট তৈরি করুন' : 'Generate monthly attendance reports'}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>{language === 'bn' ? 'মাসিক রিপোর্ট' : 'Monthly Report'}</CardTitle>
+                        <CardDescription>
+                          {language === 'bn' ? 'একজন শিক্ষার্থীর মাসিক উপস্থিতি রিপোর্ট তৈরি করুন' : 'Generate monthly attendance report for a student'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>{language === 'bn' ? 'শিক্ষার্থী নির্বাচন করুন' : 'Select Student'}</Label>
+                          <Select value={reportStudentId} onValueChange={setReportStudentId}>
+                            <SelectTrigger data-testid="select-report-student">
+                              <SelectValue placeholder={language === 'bn' ? 'শিক্ষার্থী নির্বাচন করুন' : 'Select student'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {students.map((student: any) => (
+                                <SelectItem key={student.id} value={student.id.toString()}>
+                                  {student.name} ({student.student_id})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{language === 'bn' ? 'মাস নির্বাচন করুন' : 'Select Month'}</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {format(reportMonth, 'MMMM yyyy')}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={reportMonth}
+                                onSelect={(date) => date && setReportMonth(date)}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <Button
+                          onClick={() => reportStudentId && generateMonthlyReport(reportStudentId, reportMonth)}
+                          disabled={!reportStudentId || isGeneratingReport}
+                          className="w-full"
+                          data-testid="button-generate-report"
+                        >
+                          {isGeneratingReport ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <FileText className="w-4 h-4 mr-2" />
+                          )}
+                          {language === 'bn' ? 'রিপোর্ট তৈরি করুন' : 'Generate Report'}
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>{language === 'bn' ? 'ডিফল্টার রিপোর্ট' : 'Defaulters Report'}</CardTitle>
+                        <CardDescription>
+                          {language === 'bn' ? 'কম উপস্থিতির শিক্ষার্থীদের তালিকা' : 'Students with low attendance'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>{language === 'bn' ? 'উপস্থিতির সীমা (%)' : 'Attendance Threshold (%)'}</Label>
+                          <Input
+                            type="number"
+                            value={defaulterThreshold}
+                            onChange={(e) => setDefaulterThreshold(Number(e.target.value))}
+                            min={0}
+                            max={100}
+                            data-testid="input-defaulter-threshold"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{language === 'bn' ? 'তারিখের সীমা' : 'Date Range'}</Label>
+                          <div className="flex gap-2">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className="flex-1 justify-start">
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {format(defaultersStartDate, 'PPP')}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                  mode="single"
+                                  selected={defaultersStartDate}
+                                  onSelect={(date) => date && setDefaultersStartDate(date)}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className="flex-1 justify-start">
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {format(defaultersEndDate, 'PPP')}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                  mode="single"
+                                  selected={defaultersEndDate}
+                                  onSelect={(date) => date && setDefaultersEndDate(date)}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleExportDefaulters}
+                            disabled={defaulterStudents.length === 0}
+                            className="flex-1"
+                            data-testid="button-export-defaulters"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            {language === 'bn' ? 'রপ্তানি করুন' : 'Export'}
+                          </Button>
+                          <Button
+                            onClick={handleSendDefaulterAlerts}
+                            disabled={defaulterStudents.length === 0}
+                            variant="outline"
+                            className="flex-1"
+                            data-testid="button-send-alerts"
+                          >
+                            <AlertTriangle className="w-4 h-4 mr-2" />
+                            {language === 'bn' ? 'সতর্কতা পাঠান' : 'Send Alerts'}
+                          </Button>
+                        </div>
+                        <div className="text-sm text-muted-foreground text-center">
+                          {defaultersLoading ? (
+                            language === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'
+                          ) : (
+                            `${defaulterStudents.length} ${language === 'bn' ? 'জন শিক্ষার্থী পাওয়া গেছে' : 'students found'}`
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
@@ -1910,6 +2333,199 @@ export default function AttendanceManagementAdmin() {
             <Button onClick={handleSavePeriodAttendance} disabled={markPeriodAttendanceMutation.isPending} data-testid="button-save-period-attendance">
               <Save className="w-4 h-4 mr-2" />
               {t.save}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Leave Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{language === 'bn' ? 'ছুটি প্রত্যাখ্যান করুন' : 'Reject Leave Request'}</DialogTitle>
+            <DialogDescription>
+              {selectedLeaveRequest?.students?.name} - {selectedLeaveRequest?.leave_type}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>{language === 'bn' ? 'প্রত্যাখ্যানের কারণ' : 'Rejection Reason'}</Label>
+              <Textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder={language === 'bn' ? 'প্রত্যাখ্যানের কারণ লিখুন...' : 'Enter rejection reason...'}
+                rows={4}
+                data-testid="textarea-rejection-reason"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)} data-testid="button-cancel-reject">
+              {language === 'bn' ? 'বাতিল' : 'Cancel'}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => selectedLeaveRequest && handleRejectLeave(selectedLeaveRequest.id)}
+              disabled={rejectLeave.isPending || !rejectionReason.trim()}
+              data-testid="button-confirm-reject"
+            >
+              {rejectLeave.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <XCircle className="w-4 h-4 mr-2" />
+              )}
+              {language === 'bn' ? 'প্রত্যাখ্যান করুন' : 'Reject'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Holiday Dialog */}
+      <Dialog open={holidayDialogOpen} onOpenChange={setHolidayDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingHoliday
+                ? (language === 'bn' ? 'ছুটির দিন সম্পাদনা করুন' : 'Edit Holiday')
+                : (language === 'bn' ? 'নতুন ছুটির দিন যোগ করুন' : 'Add New Holiday')}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>{language === 'bn' ? 'নাম' : 'Name'}</Label>
+              <Input
+                id="holiday-name"
+                defaultValue={editingHoliday?.name || ''}
+                placeholder={language === 'bn' ? 'ছুটির দিনের নাম লিখুন' : 'Enter holiday name'}
+                data-testid="input-holiday-name"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{language === 'bn' ? 'শুরুর তারিখ' : 'Start Date'}</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start" data-testid="button-holiday-start-date">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editingHoliday ? format(new Date(editingHoliday.date), 'PPP') : format(new Date(), 'PPP')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={editingHoliday ? new Date(editingHoliday.date) : new Date()}
+                      onSelect={(date) => {
+                        if (date) {
+                          const input = document.getElementById('holiday-date') as HTMLInputElement;
+                          if (input) input.value = format(date, 'yyyy-MM-dd');
+                        }
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <input type="hidden" id="holiday-date" defaultValue={editingHoliday?.date || format(new Date(), 'yyyy-MM-dd')} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{language === 'bn' ? 'শেষ তারিখ (ঐচ্ছিক)' : 'End Date (Optional)'}</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start" data-testid="button-holiday-end-date">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editingHoliday?.end_date ? format(new Date(editingHoliday.end_date), 'PPP') : (language === 'bn' ? 'নির্বাচন করুন' : 'Select')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={editingHoliday?.end_date ? new Date(editingHoliday.end_date) : undefined}
+                      onSelect={(date) => {
+                        const input = document.getElementById('holiday-end-date') as HTMLInputElement;
+                        if (input) input.value = date ? format(date, 'yyyy-MM-dd') : '';
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <input type="hidden" id="holiday-end-date" defaultValue={editingHoliday?.end_date || ''} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{language === 'bn' ? 'ধরন' : 'Type'}</Label>
+              <Select defaultValue={editingHoliday?.type || 'school'}>
+                <SelectTrigger id="holiday-type" data-testid="select-holiday-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="public">{language === 'bn' ? 'সরকারি' : 'Public'}</SelectItem>
+                  <SelectItem value="school">{language === 'bn' ? 'স্কুল' : 'School'}</SelectItem>
+                  <SelectItem value="religious">{language === 'bn' ? 'ধর্মীয়' : 'Religious'}</SelectItem>
+                  <SelectItem value="other">{language === 'bn' ? 'অন্যান্য' : 'Other'}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{language === 'bn' ? 'বর্ণনা' : 'Description'}</Label>
+              <Textarea
+                id="holiday-description"
+                defaultValue={editingHoliday?.description || ''}
+                placeholder={language === 'bn' ? 'বর্ণনা লিখুন...' : 'Enter description...'}
+                rows={3}
+                data-testid="textarea-holiday-description"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setHolidayDialogOpen(false); setEditingHoliday(null); }} data-testid="button-cancel-holiday">
+              {language === 'bn' ? 'বাতিল' : 'Cancel'}
+            </Button>
+            <Button
+              onClick={() => {
+                const name = (document.getElementById('holiday-name') as HTMLInputElement)?.value;
+                const date = (document.getElementById('holiday-date') as HTMLInputElement)?.value;
+                const endDate = (document.getElementById('holiday-end-date') as HTMLInputElement)?.value;
+                const type = (document.getElementById('holiday-type') as HTMLSelectElement)?.value;
+                const description = (document.getElementById('holiday-description') as HTMLTextAreaElement)?.value;
+
+                if (!name || !date) {
+                  toast({
+                    title: language === 'bn' ? 'ত্রুটি' : 'Error',
+                    description: language === 'bn' ? 'নাম এবং তারিখ প্রয়োজন' : 'Name and date are required',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+
+                const holidayData: InsertSchoolHoliday = {
+                  name,
+                  date,
+                  endDate: endDate || null,
+                  type,
+                  description,
+                  schoolId,
+                };
+
+                if (editingHoliday) {
+                  updateHoliday.mutate({ id: editingHoliday.id, data: holidayData });
+                } else {
+                  createHoliday.mutate(holidayData);
+                }
+              }}
+              disabled={createHoliday.isPending || updateHoliday.isPending}
+              data-testid="button-save-holiday"
+            >
+              {(createHoliday.isPending || updateHoliday.isPending) ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              {language === 'bn' ? 'সংরক্ষণ করুন' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>

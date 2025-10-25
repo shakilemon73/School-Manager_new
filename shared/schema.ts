@@ -2787,6 +2787,8 @@ export const assessments = pgTable("assessments", {
   description: text("description"),
   descriptionBn: text("description_bn"),
   isPublished: boolean("is_published").default(false),
+  status: text("status").default("draft").notNull(), // draft, pending, approved, rejected
+  rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2863,6 +2865,7 @@ export const gradeOverrides = pgTable("grade_overrides", {
   reasonBn: text("reason_bn"),
   createdBy: integer("created_by").references(() => teachers.id),
   approvedBy: integer("approved_by").references(() => teachers.id),
+  schoolId: integer("school_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   approvedAt: timestamp("approved_at"),
 });
@@ -3242,3 +3245,106 @@ export const timetableTemplatesInsertSchema = createInsertSchema(timetableTempla
 });
 export type InsertTimetableTemplate = z.infer<typeof timetableTemplatesInsertSchema>;
 export type TimetableTemplate = typeof timetableTemplates.$inferSelect;
+
+// Routine Substitutions table - Track substitute teachers
+export const routineSubstitutions = pgTable("routine_substitutions", {
+  id: serial("id").primaryKey(),
+  routinePeriodId: integer("routine_period_id").notNull(),
+  originalTeacherId: integer("original_teacher_id").references(() => teachers.id),
+  substituteTeacherId: integer("substitute_teacher_id").references(() => teachers.id).notNull(),
+  date: date("date").notNull(),
+  reason: text("reason"),
+  reasonBn: text("reason_bn"),
+  status: text("status").default("active").notNull(), // active, cancelled
+  createdBy: varchar("created_by").notNull(),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const routineSubstitutionsInsertSchema = createInsertSchema(routineSubstitutions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertRoutineSubstitution = z.infer<typeof routineSubstitutionsInsertSchema>;
+export type RoutineSubstitution = typeof routineSubstitutions.$inferSelect;
+
+// Result Approvals table - Track result approval workflow
+export const resultApprovals = pgTable("result_approvals", {
+  id: serial("id").primaryKey(),
+  termId: integer("term_id").references(() => academicTerms.id).notNull(),
+  class: text("class").notNull(),
+  section: text("section").notNull(),
+  subjectId: integer("subject_id").references(() => subjects.id),
+  status: text("status").default("pending").notNull(), // pending, approved, rejected, locked
+  submittedBy: varchar("submitted_by").notNull(),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  approvedBy: varchar("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  rejectionReasonBn: text("rejection_reason_bn"),
+  isLocked: boolean("is_locked").default(false),
+  lockedAt: timestamp("locked_at"),
+  lockedBy: varchar("locked_by"),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueTermClassSectionSubject: unique().on(table.termId, table.class, table.section, table.subjectId, table.schoolId),
+}));
+
+export const resultApprovalsInsertSchema = createInsertSchema(resultApprovals).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertResultApproval = z.infer<typeof resultApprovalsInsertSchema>;
+export type ResultApproval = typeof resultApprovals.$inferSelect;
+
+// Assignment Recurrences table - Track recurring assignments (weekly homework)
+export const assignmentRecurrences = pgTable("assignment_recurrences", {
+  id: serial("id").primaryKey(),
+  baseAssessmentId: integer("base_assessment_id").references(() => assessments.id, { onDelete: 'cascade' }).notNull(),
+  recurrenceType: text("recurrence_type").notNull(), // daily, weekly, biweekly, monthly
+  dayOfWeek: integer("day_of_week"), // 0-6 for weekly
+  dayOfMonth: integer("day_of_month"), // 1-31 for monthly
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date"),
+  isActive: boolean("is_active").default(true),
+  lastGenerated: date("last_generated"),
+  nextGeneration: date("next_generation"),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const assignmentRecurrencesInsertSchema = createInsertSchema(assignmentRecurrences).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAssignmentRecurrence = z.infer<typeof assignmentRecurrencesInsertSchema>;
+export type AssignmentRecurrence = typeof assignmentRecurrences.$inferSelect;
+
+// Attendance Reports table - Store generated attendance report cards
+export const attendanceReports = pgTable("attendance_reports", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").references(() => students.id).notNull(),
+  reportMonth: text("report_month").notNull(), // YYYY-MM format
+  totalDays: integer("total_days").notNull(),
+  presentDays: integer("present_days").notNull(),
+  absentDays: integer("absent_days").notNull(),
+  lateDays: integer("late_days").default(0),
+  excusedAbsences: integer("excused_absences").default(0),
+  attendancePercentage: decimal("attendance_percentage", { precision: 5, scale: 2 }).notNull(),
+  remarks: text("remarks"),
+  remarksBn: text("remarks_bn"),
+  generatedBy: varchar("generated_by"),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  schoolId: integer("school_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueStudentMonth: unique().on(table.studentId, table.reportMonth, table.schoolId),
+}));
+
+export const attendanceReportsInsertSchema = createInsertSchema(attendanceReports).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAttendanceReport = z.infer<typeof attendanceReportsInsertSchema>;
+export type AttendanceReport = typeof attendanceReports.$inferSelect;

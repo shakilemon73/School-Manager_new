@@ -51,20 +51,20 @@ class NotificationService {
       // If specific recipients provided, send to them
       if (recipientIds && recipientIds.length > 0) {
         const notifications: InsertNotification[] = recipientIds.map(recipientId => ({
-          school_id: schoolId,
+          schoolId,
           title,
-          title_bn: titleBn,
+          titleBn,
           message,
-          message_bn: messageBn,
-          recipient_id: recipientId,
-          recipient_type: recipientType,
+          messageBn,
+          recipientId,
+          recipientType,
           category,
-          category_bn: categoryBn,
+          categoryBn,
           type: type,
           priority,
-          is_read: false,
-          is_live: true,
-          is_active: true,
+          isRead: false,
+          isLive: true,
+          isActive: true,
         }));
 
         const { error } = await supabase
@@ -90,20 +90,20 @@ class NotificationService {
 
         if (users && users.length > 0) {
           const notifications: InsertNotification[] = users.map(user => ({
-            school_id: schoolId,
+            schoolId,
             title,
-            title_bn: titleBn,
+            titleBn,
             message,
-            message_bn: messageBn,
-            recipient_id: user.user_id,
-            recipient_type: recipientType,
+            messageBn,
+            recipientId: user.user_id,
+            recipientType,
             category,
-            category_bn: categoryBn,
+            categoryBn,
             type: type,
             priority,
-            is_read: false,
-            is_live: true,
-            is_active: true,
+            isRead: false,
+            isLive: true,
+            isActive: true,
           }));
 
           const { error } = await supabase
@@ -262,9 +262,9 @@ class NotificationService {
   async markAsRead(notificationId: number, schoolId: number): Promise<void> {
     const { error } = await supabase
       .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update({ isRead: true, readAt: new Date().toISOString() })
       .eq('id', notificationId)
-      .eq('school_id', schoolId);
+      .eq('schoolId', schoolId);
 
     if (error) throw error;
   }
@@ -276,10 +276,10 @@ class NotificationService {
     const { count, error } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
-      .eq('recipient_id', userId)
-      .eq('school_id', schoolId)
-      .eq('is_read', false)
-      .eq('is_active', true);
+      .eq('recipientId', userId)
+      .eq('schoolId', schoolId)
+      .eq('isRead', false)
+      .eq('isActive', true);
 
     if (error) throw error;
     return count || 0;
@@ -297,14 +297,14 @@ class NotificationService {
     let query = supabase
       .from('notifications')
       .select('*')
-      .eq('recipient_id', userId)
-      .eq('school_id', schoolId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+      .eq('recipientId', userId)
+      .eq('schoolId', schoolId)
+      .eq('isActive', true)
+      .order('createdAt', { ascending: false })
       .limit(limit);
 
     if (unreadOnly) {
-      query = query.eq('is_read', false);
+      query = query.eq('isRead', false);
     }
 
     const { data, error } = await query;
