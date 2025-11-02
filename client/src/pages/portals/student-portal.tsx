@@ -252,19 +252,19 @@ export default function StudentPortal() {
 
   if (authLoading || studentLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center" data-testid="loading-container">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600" data-testid="loading-spinner"></div>
       </div>
     );
   }
 
   if (!student) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <Card className="p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center" data-testid="error-container">
+        <Card className="p-6" data-testid="card-no-profile">
           <CardHeader>
-            <CardTitle>No Student Profile Found</CardTitle>
-            <CardDescription>Please contact your school administrator to set up your student profile.</CardDescription>
+            <CardTitle data-testid="text-no-profile-title">No Student Profile Found</CardTitle>
+            <CardDescription data-testid="text-no-profile-description">Please contact your school administrator to set up your student profile.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -340,7 +340,7 @@ export default function StudentPortal() {
       icon: FileText,
       link: "/student/assignments",
       color: "bg-pink-500",
-      available: false,
+      available: true,
     },
     {
       title: "Notifications",
@@ -370,18 +370,18 @@ export default function StudentPortal() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Enhanced Header */}
-      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg border-b border-blue-200/20">
+      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg border-b border-blue-200/20" data-testid="header-student-portal">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-4">
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl shadow-lg">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl shadow-lg" data-testid="icon-header-logo">
                 <GraduationCap className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent" data-testid="text-portal-title">
                   Student Portal
                 </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+                <p className="text-sm text-gray-600 dark:text-gray-300 font-medium" data-testid="text-portal-subtitle">
                   শিক্ষার্থী পোর্টাল • Your Academic Journey
                 </p>
               </div>
@@ -390,25 +390,25 @@ export default function StudentPortal() {
             <div className="flex items-center space-x-6">
               {/* Student Info Card */}
               {student && (
-                <div className="hidden md:flex items-center space-x-3 bg-white dark:bg-gray-700 rounded-xl p-3 shadow-md border border-gray-200 dark:border-gray-600">
-                  <Avatar className="h-10 w-10">
+                <div className="hidden md:flex items-center space-x-3 bg-white dark:bg-gray-700 rounded-xl p-3 shadow-md border border-gray-200 dark:border-gray-600" data-testid="card-student-info">
+                  <Avatar className="h-10 w-10" data-testid="avatar-student">
                     <AvatarImage src={student.photo} />
                     <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
                       {student.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm" data-testid="text-student-name">
                       {student.name}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500 dark:text-gray-400" data-testid="text-student-class-info">
                       Class {student.class}-{student.section} • Roll: {student.roll_number}
                     </p>
                   </div>
                 </div>
               )}
               
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 font-medium px-3 py-1">
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 font-medium px-3 py-1" data-testid="badge-user-role">
                 <Star className="h-3 w-3 mr-1" />
                 Student
               </Badge>
@@ -418,6 +418,7 @@ export default function StudentPortal() {
                 size="sm" 
                 onClick={handleLogout}
                 className={cn(designClasses.button.secondary, "border-red-200 text-red-600 hover:bg-red-50")}
+                data-testid="button-logout"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
@@ -431,18 +432,18 @@ export default function StudentPortal() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-xl" data-testid="card-welcome">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-bold mb-2">
+                <h2 className="text-3xl font-bold mb-2" data-testid="text-welcome-message">
                   Welcome back, {student.name}! 🎓
                 </h2>
-                <p className="text-blue-100 text-lg">
+                <p className="text-blue-100 text-lg" data-testid="text-welcome-subtitle">
                   Continue your learning journey with easy access to all your academic resources
                 </p>
               </div>
               <div className="hidden lg:block">
-                <div className="bg-white/20 rounded-xl p-4 backdrop-blur-sm">
+                <div className="bg-white/20 rounded-xl p-4 backdrop-blur-sm" data-testid="icon-welcome-target">
                   <Target className="h-12 w-12 text-white" />
                 </div>
               </div>
@@ -452,60 +453,60 @@ export default function StudentPortal() {
 
         {/* Enhanced Stats Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-stat-grade">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-yellow-700">{sampleAcademicStats.currentGrade}</p>
-                  <p className="text-sm text-yellow-600 font-medium">Current Grade</p>
-                  <p className="text-xs text-gray-500 mt-1">GPA: {sampleAcademicStats.gpa}</p>
+                  <p className="text-2xl font-bold text-yellow-700" data-testid="text-current-grade">{sampleAcademicStats.currentGrade}</p>
+                  <p className="text-sm text-yellow-600 font-medium" data-testid="text-grade-label">Current Grade</p>
+                  <p className="text-xs text-gray-500 mt-1" data-testid="text-gpa">GPA: {sampleAcademicStats.gpa}</p>
                 </div>
-                <div className="bg-yellow-500 p-3 rounded-xl">
+                <div className="bg-yellow-500 p-3 rounded-xl" data-testid="icon-stat-grade">
                   <Trophy className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-stat-attendance">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-green-700">{sampleAttendanceStats.percentage}%</p>
-                  <p className="text-sm text-green-600 font-medium">Attendance</p>
-                  <Progress value={sampleAttendanceStats.percentage} className="mt-2 h-2" />
+                  <p className="text-2xl font-bold text-green-700" data-testid="text-attendance-percentage">{sampleAttendanceStats.percentage}%</p>
+                  <p className="text-sm text-green-600 font-medium" data-testid="text-attendance-label">Attendance</p>
+                  <Progress value={sampleAttendanceStats.percentage} className="mt-2 h-2" data-testid="progress-attendance" />
                 </div>
-                <div className="bg-green-500 p-3 rounded-xl">
+                <div className="bg-green-500 p-3 rounded-xl" data-testid="icon-stat-attendance">
                   <CheckCircle2 className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-stat-books">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-blue-700">{borrowedBooks?.length || 0}</p>
-                  <p className="text-sm text-blue-600 font-medium">Borrowed Books</p>
-                  <p className="text-xs text-gray-500 mt-1">Library active</p>
+                  <p className="text-2xl font-bold text-blue-700" data-testid="text-borrowed-books-count">{borrowedBooks?.length || 0}</p>
+                  <p className="text-sm text-blue-600 font-medium" data-testid="text-books-label">Borrowed Books</p>
+                  <p className="text-xs text-gray-500 mt-1" data-testid="text-books-status">Library active</p>
                 </div>
-                <div className="bg-blue-500 p-3 rounded-xl">
+                <div className="bg-blue-500 p-3 rounded-xl" data-testid="icon-stat-books">
                   <BookMarked className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-stat-events">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-purple-700">{sampleUpcomingEvents.length}</p>
-                  <p className="text-sm text-purple-600 font-medium">Upcoming Events</p>
-                  <p className="text-xs text-gray-500 mt-1">This month</p>
+                  <p className="text-2xl font-bold text-purple-700" data-testid="text-upcoming-events-count">{sampleUpcomingEvents.length}</p>
+                  <p className="text-sm text-purple-600 font-medium" data-testid="text-events-label">Upcoming Events</p>
+                  <p className="text-xs text-gray-500 mt-1" data-testid="text-events-period">This month</p>
                 </div>
-                <div className="bg-purple-500 p-3 rounded-xl">
+                <div className="bg-purple-500 p-3 rounded-xl" data-testid="icon-stat-events">
                   <Calendar className="h-6 w-6 text-white" />
                 </div>
               </div>
@@ -518,10 +519,11 @@ export default function StudentPortal() {
           {/* Main Modules */}
           <div className="lg:col-span-2">
             <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Academic Modules</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4" data-testid="text-modules-title">Academic Modules</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {studentModules.map((module, index) => {
                   const IconComponent = module.icon;
+                  const moduleKey = module.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
                   return (
                     <Link key={index} href={module.available ? module.link : "#"}>
                       <Card className={cn(
@@ -529,28 +531,28 @@ export default function StudentPortal() {
                         module.available 
                           ? "hover:border-blue-300 bg-white dark:bg-gray-800" 
                           : "opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-900"
-                      )}>
+                      )} data-testid={`card-module-${moduleKey}`}>
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                              <div className={cn(module.color, "p-3 rounded-xl shadow-md")}>
+                              <div className={cn(module.color, "p-3 rounded-xl shadow-md")} data-testid={`icon-module-${moduleKey}`}>
                                 <IconComponent className="h-6 w-6 text-white" />
                               </div>
                               <div>
-                                <CardTitle className="text-lg font-semibold">{module.title}</CardTitle>
-                                <p className="text-sm text-gray-500 font-medium">{module.titleBn}</p>
+                                <CardTitle className="text-lg font-semibold" data-testid={`text-module-title-${moduleKey}`}>{module.title}</CardTitle>
+                                <p className="text-sm text-gray-500 font-medium" data-testid={`text-module-title-bn-${moduleKey}`}>{module.titleBn}</p>
                               </div>
                             </div>
                             {!module.available && (
-                              <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+                              <Badge variant="secondary" className="text-xs" data-testid={`badge-coming-soon-${moduleKey}`}>Coming Soon</Badge>
                             )}
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
+                          <CardDescription className="text-sm text-gray-600 dark:text-gray-300" data-testid={`text-module-desc-${moduleKey}`}>
                             {module.description}
                           </CardDescription>
-                          <CardDescription className="text-xs text-gray-500 mt-1">
+                          <CardDescription className="text-xs text-gray-500 mt-1" data-testid={`text-module-desc-bn-${moduleKey}`}>
                             {module.descriptionBn}
                           </CardDescription>
                         </CardContent>
@@ -565,30 +567,30 @@ export default function StudentPortal() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Recent Activities */}
-            <Card className="shadow-lg">
+            <Card className="shadow-lg" data-testid="card-recent-activities">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2" data-testid="text-activities-title">
                   <TrendingUp className="h-5 w-5 text-blue-600" />
                   <span>Recent Activities</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {sampleRecentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+                  <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700" data-testid={`activity-item-${activity.id}`}>
                     <div className={cn(
                       "p-2 rounded-full",
                       activity.status === 'success' ? 'bg-green-100 text-green-600' :
                       activity.status === 'warning' ? 'bg-yellow-100 text-yellow-600' :
                       'bg-blue-100 text-blue-600'
-                    )}>
+                    )} data-testid={`icon-activity-status-${activity.id}`}>
                       {activity.status === 'success' ? <CheckCircle2 className="h-4 w-4" /> :
                        activity.status === 'warning' ? <AlertCircle className="h-4 w-4" /> :
                        <Bell className="h-4 w-4" />}
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-sm text-gray-900 dark:text-white">{activity.title}</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-300">{activity.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">{activity.date}</p>
+                      <p className="font-medium text-sm text-gray-900 dark:text-white" data-testid={`text-activity-title-${activity.id}`}>{activity.title}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300" data-testid={`text-activity-desc-${activity.id}`}>{activity.description}</p>
+                      <p className="text-xs text-gray-500 mt-1" data-testid={`text-activity-date-${activity.id}`}>{activity.date}</p>
                     </div>
                   </div>
                 ))}
@@ -596,27 +598,27 @@ export default function StudentPortal() {
             </Card>
 
             {/* Upcoming Events */}
-            <Card className="shadow-lg">
+            <Card className="shadow-lg" data-testid="card-upcoming-events">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2" data-testid="text-events-title">
                   <Calendar className="h-5 w-5 text-purple-600" />
                   <span>Upcoming Events</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {sampleUpcomingEvents.map((event) => (
-                  <div key={event.id} className="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                    <div className="bg-purple-100 dark:bg-purple-900 p-2 rounded-lg">
+                  <div key={event.id} className="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600" data-testid={`event-item-${event.id}`}>
+                    <div className="bg-purple-100 dark:bg-purple-900 p-2 rounded-lg" data-testid={`icon-event-${event.id}`}>
                       <Calendar className="h-4 w-4 text-purple-600" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-sm text-gray-900 dark:text-white">{event.title}</p>
+                      <p className="font-medium text-sm text-gray-900 dark:text-white" data-testid={`text-event-title-${event.id}`}>{event.title}</p>
                       {event.subject && (
-                        <p className="text-xs text-gray-600 dark:text-gray-300">{event.subject}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-300" data-testid={`text-event-subject-${event.id}`}>{event.subject}</p>
                       )}
-                      <p className="text-xs text-gray-500">{event.date}</p>
+                      <p className="text-xs text-gray-500" data-testid={`text-event-date-${event.id}`}>{event.date}</p>
                     </div>
-                    <Badge variant={event.type === 'exam' ? 'destructive' : 'secondary'} className="text-xs">
+                    <Badge variant={event.type === 'exam' ? 'destructive' : 'secondary'} className="text-xs" data-testid={`badge-event-type-${event.id}`}>
                       {event.type}
                     </Badge>
                   </div>
@@ -625,27 +627,27 @@ export default function StudentPortal() {
             </Card>
 
             {/* Academic Performance */}
-            <Card className="shadow-lg">
+            <Card className="shadow-lg" data-testid="card-academic-standing">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2" data-testid="text-standing-title">
                   <Award className="h-5 w-5 text-yellow-600" />
                   <span>Academic Standing</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-center space-y-4">
-                  <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl p-4 text-white">
-                    <p className="text-2xl font-bold">{sampleAcademicStats.position}</p>
-                    <p className="text-sm opacity-90">Class Position</p>
+                  <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl p-4 text-white" data-testid="card-class-position">
+                    <p className="text-2xl font-bold" data-testid="text-position-number">{sampleAcademicStats.position}</p>
+                    <p className="text-sm opacity-90" data-testid="text-position-label">Class Position</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-center">
-                    <div>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{sampleAcademicStats.gpa}</p>
-                      <p className="text-xs text-gray-500">GPA</p>
+                    <div data-testid="card-gpa-detail">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-gpa-value">{sampleAcademicStats.gpa}</p>
+                      <p className="text-xs text-gray-500" data-testid="text-gpa-label">GPA</p>
                     </div>
-                    <div>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{sampleAcademicStats.totalStudents}</p>
-                      <p className="text-xs text-gray-500">Total Students</p>
+                    <div data-testid="card-total-students">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-total-students-count">{sampleAcademicStats.totalStudents}</p>
+                      <p className="text-xs text-gray-500" data-testid="text-total-students-label">Total Students</p>
                     </div>
                   </div>
                 </div>

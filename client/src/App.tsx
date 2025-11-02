@@ -18,15 +18,26 @@ import ParentPortal from "@/pages/portals/parent-portal";
 import StudentPortal from "@/pages/portals/student-portal";
 import StudentLogin from "@/pages/portals/student-login";
 import ParentLogin from "@/pages/portals/parent-login";
+import TeacherLogin from "@/pages/portals/teacher-login";
 
 // Student Portal Pages
 import StudentProfile from "@/pages/student/profile";
 import StudentAttendance from "@/pages/student/attendance";
+import StudentAssignments from "@/pages/student/assignments";
 import StudentFees from "@/pages/student/fees";
 import StudentLibrary from "@/pages/student/library";
 import StudentResults from "@/pages/student/results";
 import StudentSchedule from "@/pages/student/schedule";
 import StudentNotifications from "@/pages/student/notifications";
+
+// Staff Portal Pages
+import StaffLogin from "@/pages/portals/staff-login";
+import StaffPortal from "@/pages/portals/staff-portal";
+import StaffProfilePage from "@/pages/staff/profile";
+import StaffAttendancePage from "@/pages/staff/attendance";
+import StaffLeavePage from "@/pages/staff/leave";
+import StaffPayrollPage from "@/pages/staff/payroll";
+import StaffNotificationsPage from "@/pages/staff/notifications";
 
 // Teacher Portal Application (Separate System)
 import TeacherApp from "@/pages/teacher-portal/teacher-app";
@@ -204,6 +215,7 @@ function AppRoutes() {
       <Route path="/simple-login" component={SimpleLogin} />
       <Route path="/student-login" component={StudentLogin} />
       <Route path="/parent-login" component={ParentLogin} />
+      <Route path="/teacher-login" component={TeacherLogin} />
       <Route path="/register-admin" component={RegisterAdminPage} />
       <Route path="/enroll" component={SchoolEnrollment} />
       <Route path="/school-enrollment" component={SchoolEnrollment} />
@@ -350,11 +362,21 @@ function AppRoutes() {
       <ProtectedRoute path="/student" component={StudentPortal} />
       <ProtectedRoute path="/student/profile" component={StudentProfile} />
       <ProtectedRoute path="/student/attendance" component={StudentAttendance} />
+      <ProtectedRoute path="/student/assignments" component={StudentAssignments} />
       <ProtectedRoute path="/student/fees" component={StudentFees} />
       <ProtectedRoute path="/student/library" component={StudentLibrary} />
       <ProtectedRoute path="/student/results" component={StudentResults} />
       <ProtectedRoute path="/student/schedule" component={StudentSchedule} />
       <ProtectedRoute path="/student/notifications" component={StudentNotifications} />
+
+      {/* Staff Portal Routes */}
+      <Route path="/staff-login" component={StaffLogin} />
+      <ProtectedRoute path="/staff" component={StaffPortal} />
+      <ProtectedRoute path="/staff/profile" component={StaffProfilePage} />
+      <ProtectedRoute path="/staff/attendance" component={StaffAttendancePage} />
+      <ProtectedRoute path="/staff/leave" component={StaffLeavePage} />
+      <ProtectedRoute path="/staff/payroll" component={StaffPayrollPage} />
+      <ProtectedRoute path="/staff/notifications" component={StaffNotificationsPage} />
 
       {/* Teacher Portal Routes */}
       <ProtectedRoute path="/teacher" component={TeacherDashboard} />

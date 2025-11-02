@@ -206,19 +206,19 @@ export default function ParentPortal() {
 
   if (authLoading || parentLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center" data-testid="loading-container">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600" data-testid="loading-spinner"></div>
       </div>
     );
   }
 
   if (!parent) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <Card className="p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center" data-testid="error-container">
+        <Card className="p-6" data-testid="card-no-profile">
           <CardHeader>
-            <CardTitle>No Parent Profile Found</CardTitle>
-            <CardDescription>Please contact your school administrator to set up your parent profile.</CardDescription>
+            <CardTitle data-testid="text-no-profile-title">No Parent Profile Found</CardTitle>
+            <CardDescription data-testid="text-no-profile-description">Please contact your school administrator to set up your parent profile.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -324,35 +324,35 @@ export default function ParentPortal() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg border-b border-orange-200/20">
+      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg border-b border-orange-200/20" data-testid="header-parent-portal">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-4">
-              <div className="bg-gradient-to-r from-orange-600 to-red-600 p-3 rounded-xl shadow-lg">
+              <div className="bg-gradient-to-r from-orange-600 to-red-600 p-3 rounded-xl shadow-lg" data-testid="icon-header-logo">
                 <Users className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent" data-testid="text-portal-title">
                   Parent Portal
                 </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+                <p className="text-sm text-gray-600 dark:text-gray-300 font-medium" data-testid="text-portal-subtitle">
                   অভিভাবক পোর্টাল • Monitor Your Child's Education
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-6">
-              <div className="hidden md:block text-right">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <div className="hidden md:block text-right" data-testid="card-parent-info">
+                <p className="text-sm font-medium text-gray-900 dark:text-white" data-testid="text-parent-name">
                   {parent.father_name || parent.mother_name}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-500 dark:text-gray-400" data-testid="text-children-count">
                   {children?.length || 0} Child{children && children.length !== 1 ? 'ren' : ''}
                 </p>
               </div>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200 font-medium px-3 py-1">
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200 font-medium px-3 py-1" data-testid="badge-user-role">
                 Parent
               </Badge>
-              <Button variant="outline" size="sm" onClick={handleLogout} className="border-red-200 text-red-600 hover:bg-red-50">
+              <Button variant="outline" size="sm" onClick={handleLogout} className="border-red-200 text-red-600 hover:bg-red-50" data-testid="button-logout">
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
@@ -365,13 +365,13 @@ export default function ParentPortal() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-2xl p-8 text-white shadow-xl">
+          <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-2xl p-8 text-white shadow-xl" data-testid="card-welcome">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-bold mb-2">
+                <h2 className="text-3xl font-bold mb-2" data-testid="text-welcome-message">
                   Welcome, {parent.father_name || parent.mother_name}! 👨‍👩‍👧‍👦
                 </h2>
-                <p className="text-orange-100 text-lg">
+                <p className="text-orange-100 text-lg" data-testid="text-welcome-subtitle">
                   Stay connected with your {children && children.length > 1 ? "children's" : "child's"} educational journey
                 </p>
               </div>
@@ -382,22 +382,22 @@ export default function ParentPortal() {
         {/* Children Cards */}
         {children && children.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Your Children</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4" data-testid="text-children-title">Your Children</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {children.map((child, index) => {
                 const performance = childrenPerformance?.find(p => p.studentId === child.id);
                 return (
-                  <Card key={child.id} className="shadow-lg hover:shadow-xl transition-all duration-300">
+                  <Card key={child.id} className="shadow-lg hover:shadow-xl transition-all duration-300" data-testid={`card-child-${child.id}`}>
                     <CardHeader>
                       <div className="flex items-center space-x-3">
-                        <Avatar className="h-12 w-12">
+                        <Avatar className="h-12 w-12" data-testid={`avatar-child-${child.id}`}>
                           <AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-lg">
                             {child.name.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <CardTitle className="text-lg">{child.name}</CardTitle>
-                          <CardDescription>
+                          <CardTitle className="text-lg" data-testid={`text-child-name-${child.id}`}>{child.name}</CardTitle>
+                          <CardDescription data-testid={`text-child-class-${child.id}`}>
                             Class {child.class}-{child.section} • Roll: {child.roll_number}
                           </CardDescription>
                         </div>
@@ -405,21 +405,21 @@ export default function ParentPortal() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Performance</span>
-                        <Badge variant="secondary" className="bg-green-100 text-green-700">
+                        <span className="text-sm text-gray-600" data-testid={`text-performance-label-${child.id}`}>Performance</span>
+                        <Badge variant="secondary" className="bg-green-100 text-green-700" data-testid={`badge-performance-${child.id}`}>
                           {performance?.performance || 85}%
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Attendance</span>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                        <span className="text-sm text-gray-600" data-testid={`text-attendance-label-${child.id}`}>Attendance</span>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700" data-testid={`badge-attendance-${child.id}`}>
                           {performance?.attendance || 95}%
                         </Badge>
                       </div>
                       {performance && performance.fees > 0 && (
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Dues</span>
-                          <Badge variant="destructive">
+                          <span className="text-sm text-gray-600" data-testid={`text-dues-label-${child.id}`}>Dues</span>
+                          <Badge variant="destructive" data-testid={`badge-dues-${child.id}`}>
                             ৳{performance.fees}
                           </Badge>
                         </div>
@@ -434,45 +434,45 @@ export default function ParentPortal() {
 
         {/* Quick Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg">
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg" data-testid="card-stat-performance">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-green-700">{overallPerformance}%</p>
-                  <p className="text-sm text-green-600 font-medium">Overall Performance</p>
-                  <Progress value={overallPerformance} className="mt-2 h-2" />
+                  <p className="text-2xl font-bold text-green-700" data-testid="text-overall-performance">{overallPerformance}%</p>
+                  <p className="text-sm text-green-600 font-medium" data-testid="text-performance-label">Overall Performance</p>
+                  <Progress value={overallPerformance} className="mt-2 h-2" data-testid="progress-performance" />
                 </div>
-                <div className="bg-green-500 p-3 rounded-xl">
+                <div className="bg-green-500 p-3 rounded-xl" data-testid="icon-stat-performance">
                   <Trophy className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg">
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg" data-testid="card-stat-attendance">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-blue-700">{overallAttendance}%</p>
-                  <p className="text-sm text-blue-600 font-medium">Attendance Rate</p>
-                  <Progress value={overallAttendance} className="mt-2 h-2" />
+                  <p className="text-2xl font-bold text-blue-700" data-testid="text-overall-attendance">{overallAttendance}%</p>
+                  <p className="text-sm text-blue-600 font-medium" data-testid="text-attendance-label">Attendance Rate</p>
+                  <Progress value={overallAttendance} className="mt-2 h-2" data-testid="progress-attendance" />
                 </div>
-                <div className="bg-blue-500 p-3 rounded-xl">
+                <div className="bg-blue-500 p-3 rounded-xl" data-testid="icon-stat-attendance">
                   <Clock className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200 shadow-lg">
+          <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200 shadow-lg" data-testid="card-stat-fees">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-yellow-700">৳{totalOutstandingFees}</p>
-                  <p className="text-sm text-yellow-600 font-medium">Outstanding Fees</p>
-                  {totalOutstandingFees === 0 && <p className="text-xs text-green-600 mt-1">All paid ✓</p>}
+                  <p className="text-2xl font-bold text-yellow-700" data-testid="text-outstanding-fees">৳{totalOutstandingFees}</p>
+                  <p className="text-sm text-yellow-600 font-medium" data-testid="text-fees-label">Outstanding Fees</p>
+                  {totalOutstandingFees === 0 && <p className="text-xs text-green-600 mt-1" data-testid="text-fees-paid">All paid ✓</p>}
                 </div>
-                <div className="bg-yellow-500 p-3 rounded-xl">
+                <div className="bg-yellow-500 p-3 rounded-xl" data-testid="icon-stat-fees">
                   <DollarSign className="h-6 w-6 text-white" />
                 </div>
               </div>
@@ -482,10 +482,11 @@ export default function ParentPortal() {
 
         {/* Module Grid */}
         <div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Parent Features</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4" data-testid="text-modules-title">Parent Features</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {parentModules.map((module, index) => {
               const IconComponent = module.icon;
+              const moduleKey = module.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
               return (
                 <Card 
                   key={index} 
@@ -494,28 +495,29 @@ export default function ParentPortal() {
                       ? 'hover:border-orange-300 bg-white dark:bg-gray-800' 
                       : 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-900'
                   }`}
+                  data-testid={`card-module-${moduleKey}`}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className={`${module.color} p-3 rounded-xl shadow-md`}>
+                        <div className={`${module.color} p-3 rounded-xl shadow-md`} data-testid={`icon-module-${moduleKey}`}>
                           <IconComponent className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg font-semibold">{module.title}</CardTitle>
-                          <p className="text-sm text-gray-500 font-medium">{module.titleBn}</p>
+                          <CardTitle className="text-lg font-semibold" data-testid={`text-module-title-${moduleKey}`}>{module.title}</CardTitle>
+                          <p className="text-sm text-gray-500 font-medium" data-testid={`text-module-title-bn-${moduleKey}`}>{module.titleBn}</p>
                         </div>
                       </div>
                       {!module.available && (
-                        <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+                        <Badge variant="secondary" className="text-xs" data-testid={`badge-coming-soon-${moduleKey}`}>Coming Soon</Badge>
                       )}
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
+                    <CardDescription className="text-sm text-gray-600 dark:text-gray-300" data-testid={`text-module-desc-${moduleKey}`}>
                       {module.description}
                     </CardDescription>
-                    <CardDescription className="text-xs text-gray-500 mt-1">
+                    <CardDescription className="text-xs text-gray-500 mt-1" data-testid={`text-module-desc-bn-${moduleKey}`}>
                       {module.descriptionBn}
                     </CardDescription>
                   </CardContent>
@@ -528,18 +530,18 @@ export default function ParentPortal() {
         {/* Recent Notifications */}
         {notifications && notifications.length > 0 && (
           <div className="mt-8">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Recent Notifications</h3>
-            <Card className="shadow-lg">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4" data-testid="text-notifications-title">Recent Notifications</h3>
+            <Card className="shadow-lg" data-testid="card-notifications">
               <CardContent className="p-6 space-y-4">
                 {notifications.slice(0, 3).map((notification) => (
-                  <div key={notification.id} className="flex items-start space-x-3 p-3 rounded-lg bg-orange-50 dark:bg-gray-700">
-                    <div className="bg-orange-100 dark:bg-orange-900 p-2 rounded-full">
+                  <div key={notification.id} className="flex items-start space-x-3 p-3 rounded-lg bg-orange-50 dark:bg-gray-700" data-testid={`notification-item-${notification.id}`}>
+                    <div className="bg-orange-100 dark:bg-orange-900 p-2 rounded-full" data-testid={`icon-notification-${notification.id}`}>
                       <Bell className="h-4 w-4 text-orange-600" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-sm text-gray-900 dark:text-white">{notification.title}</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-300">{notification.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">{new Date(notification.created_at).toLocaleDateString()}</p>
+                      <p className="font-medium text-sm text-gray-900 dark:text-white" data-testid={`text-notification-title-${notification.id}`}>{notification.title}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300" data-testid={`text-notification-message-${notification.id}`}>{notification.message}</p>
+                      <p className="text-xs text-gray-500 mt-1" data-testid={`text-notification-date-${notification.id}`}>{new Date(notification.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
                 ))}
